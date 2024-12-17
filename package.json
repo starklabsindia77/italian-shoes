@@ -2,9 +2,10 @@
   "name": "horizon-admin-dashboard",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev -p 6323",
-    "dev2": "node --loader ts-node/esm script/run.ts",
+    "dev2": "ts-node lib/run.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

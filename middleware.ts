@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Public routes accessible to everyone
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/about'];
+const PUBLIC_ROUTES = ['/', '/auth', '/register', '/about'];
 
 // Private routes with role-based access
 const ROLE_BASED_ROUTES: { [key: string]: string[] } = {
@@ -41,7 +41,7 @@ export function middleware(request: NextRequest) {
 
     // Handle private routes
     if (!isAuthenticated) {
-        return NextResponse.redirect(new URL('/login', request.url)); // Redirect unauthenticated users
+        return NextResponse.redirect(new URL('/auth', request.url)); // Redirect unauthenticated users
     }
 
     // Handle role-based access control
@@ -56,7 +56,7 @@ export function middleware(request: NextRequest) {
 export const config = {
     matcher: [
         '/', 
-        '/login', 
+        '/auth', 
         '/register', 
         '/about',
         '/admin/:path*',

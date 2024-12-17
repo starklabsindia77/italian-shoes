@@ -1,0 +1,198 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Use PostgreSQL for scalability
+  url      = env("DATABASE_URL")
+}
+
+// ----------------- User Table -----------------
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  password       String
+  firstName      String?
+  lastName       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  isActive       Boolean  @default(true)
+  userLogs       UserLog[]
+  notifications  Notification[]
+  sessions       Session[]
+}
+
+// ----------------- UserLog Table -----------------
+model UserLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  activity  String
+  ipAddress String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ----------------- Notification Table -----------------
+model Notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  title       String
+  message     String
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// ----------------- Session Table -----------------
+model Session {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ----------------- Shopify Collection Table -----------------
+model ShopifyCollection {
+  id                 Int       @id @default(autoincrement())
+  collectionId       String    @unique // Shopify Collection ID as String
+  handle             String
+  title              String
+  description        String?   // body_html field
+  publishedAt        DateTime?
+  updatedAt          DateTime?
+  sortOrder          String
+  templateSuffix     String?
+  productsCount      Int       @default(0)
+  collectionType     String
+  publishedScope     String
+  adminGraphqlApiId  String
+  imageUrl           String?   // Image URL
+  imageAlt           String?   // Alternate text for image
+  imageWidth         Int?
+  imageHeight        Int?
+  
+  createdAt          DateTime  @default(now())
+  updatedAtField     DateTime  @updatedAt
+}
+
+
+
+// ----------------- Variant Table -----------------
+model Variant {
+  id                Int               @id @default(autoincrement())
+  variantId         String            @unique // Shopify Variant ID
+  sku               String?           @unique
+  price             Float
+  productId         Int
+  inventoryQuantity Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  variantProducts   VariantProduct[]
+}
+
+// ----------------- Variant Product Table -----------------
+model VariantProduct {
+  id                Int       @id @default(autoincrement())
+  variantId         Int
+  productId         Int
+
+  createdAt         DateTime  @default(now())
+
+  variant           Variant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+// ----------------- Shopify Collect Table -----------------
+model ShopifyCollect {
+  id            Int       @id @default(autoincrement())
+  collectId     String    @unique // Shopify Collect ID as String
+  collectionId  String    // Shopify Collection ID
+  productId     String    // Shopify Product ID
+  position      Int
+  sortValue     String
+  createdAt     DateTime? // Nullable
+  updatedAt     DateTime? // Nullable
+
+  createdAtField DateTime @default(now())
+}
+
+
+
+// ----------------- Shopify Product Table -----------------
+model ShopifyProduct {
+  id                  Int             @id @default(autoincrement())
+  productId           String          @unique // Shopify Product ID
+  title               String
+  description         String?         // body_html field
+  vendor              String
+  productType         String
+  handle              String          @unique
+  status              String          // active, draft, archived
+  tags                String?         // Comma-separated tags
+  templateSuffix      String?
+  publishedAt         DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  adminGraphqlApiId   String?         // Shopify GraphQL API ID
+  publishedScope      String?         // web, global, etc.
+
+  // Default Image
+  imageId             String?         // Reference to default image ID
+  imageUrl            String?         // Default image URL
+  imageWidth          Int?
+  imageHeight         Int?
+
+  variants            ShopifyVariant[] // One-to-many relationship with variants
+  images              ShopifyImage[]   // One-to-many relationship with images
+}
+
+// ----------------- Shopify Variant Table -----------------
+model ShopifyVariant {
+  id                  Int             @id @default(autoincrement())
+  variantId           String          @unique // Shopify Variant ID
+  productId           String          // Shopify Product ID
+  title               String
+  price               Float
+  sku                 String          @unique
+  position            Int
+  inventoryQuantity   Int             @default(0)
+  inventoryPolicy     String          // continue, deny
+  barcode             String?
+  weight              Float
+  weightUnit          String          // lb, kg, etc.
+  inventoryItemId     String?         // Shopify Inventory Item ID
+  fulfillmentService  String?
+  inventoryManagement String?
+  taxable             Boolean         @default(true)
+  requiresShipping    Boolean         @default(true)
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  product             ShopifyProduct  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+}
+
+// ----------------- Shopify Image Table -----------------
+model ShopifyImage {
+  id                  Int             @id @default(autoincrement())
+  imageId             String          @unique // Shopify Image ID
+  productId           String          // Shopify Product ID
+  src                 String          // Image URL
+  alt                 String?
+  position            Int?
+  width               Int?
+  height              Int?
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  product             ShopifyProduct  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+}
+

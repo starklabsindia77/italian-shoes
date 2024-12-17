@@ -11,17 +11,68 @@ datasource db {
 
 // ----------------- User Table -----------------
 model User {
-  id             Int      @id @default(autoincrement())
-  email          String   @unique
-  password       String
-  firstName      String?
-  lastName       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  isActive       Boolean  @default(true)
-  userLogs       UserLog[]
-  notifications  Notification[]
-  sessions       Session[]
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  userLogs      UserLog[]
+  notifications Notification[]
+  sessions      Session[]
+  roles         UserRole[]     // Many-to-many relation with Role
+}
+
+// ----------------- Role Table -----------------
+model Role {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique           // Role name (e.g., "admin", "editor", "user")
+  description   String?        // Optional description
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  users         UserRole[]     // Many-to-many relation with User
+  permissions   RolePermission[] // Many-to-many relation with Permission
+}
+
+// ----------------- Permission Table -----------------
+model Permission {
+  id            Int            @id @default(autoincrement())
+  name          String         @unique           // Permission name (e.g., "read", "write", "delete")
+  description   String?        // Optional description
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  roles         RolePermission[] // Many-to-many relation with Role
+}
+
+// ----------------- User-Role Junction Table -----------------
+model UserRole {
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  roleId        Int
+  assignedAt    DateTime       @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])   // Prevent duplicate role assignments
+}
+
+// ----------------- Role-Permission Junction Table -----------------
+model RolePermission {
+  id            Int            @id @default(autoincrement())
+  roleId        Int
+  permissionId  Int
+  assignedAt    DateTime       @default(now())
+
+  role          Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission     @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId]) // Prevent duplicate permissions for a role
 }
 
 // ----------------- UserLog Table -----------------
@@ -58,141 +109,162 @@ model Session {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+
 // ----------------- Shopify Collection Table -----------------
 model ShopifyCollection {
-  id                 Int       @id @default(autoincrement())
-  collectionId       String    @unique // Shopify Collection ID as String
-  handle             String
-  title              String
-  description        String?   // body_html field
-  publishedAt        DateTime?
-  updatedAt          DateTime?
-  sortOrder          String
-  templateSuffix     String?
-  productsCount      Int       @default(0)
-  collectionType     String
-  publishedScope     String
-  adminGraphqlApiId  String
-  imageUrl           String?   // Image URL
-  imageAlt           String?   // Alternate text for image
-  imageWidth         Int?
-  imageHeight        Int?
-  
-  createdAt          DateTime  @default(now())
-  updatedAtField     DateTime  @updatedAt
-}
-
-
-
-// ----------------- Variant Table -----------------
-model Variant {
-  id                Int               @id @default(autoincrement())
-  variantId         String            @unique // Shopify Variant ID
-  sku               String?           @unique
-  price             Float
-  productId         Int
-  inventoryQuantity Int               @default(0)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  variantProducts   VariantProduct[]
-}
-
-// ----------------- Variant Product Table -----------------
-model VariantProduct {
   id                Int       @id @default(autoincrement())
-  variantId         Int
-  productId         Int
+  collectionId      String    @unique // Shopify Collection ID as String
+  handle            String
+  title             String
+  description       String? // body_html field
+  publishedAt       DateTime?
+  updatedAt         DateTime?
+  sortOrder         String
+  templateSuffix    String?
+  productsCount     Int       @default(0)
+  collectionType    String
+  publishedScope    String
+  adminGraphqlApiId String
+  imageUrl          String? // Image URL
+  imageAlt          String? // Alternate text for image
+  imageWidth        Int?
+  imageHeight       Int?
 
-  createdAt         DateTime  @default(now())
+  createdAt      DateTime @default(now())
+  updatedAtField DateTime @updatedAt
+}
 
-  variant           Variant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+model Product {
+  id             Int       @id @default(autoincrement())
+  productId      String    @unique // Shopify Product ID from Shopify
+  title          String
+  description    String? // body_html
+  vendor         String
+  productType    String
+  handle         String    @unique
+  status         String // active, draft, archived
+  tags           String? // Comma-separated tags
+  templateSuffix String?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  variants       Variant[] // Relationship to Shopify Variants
+  VariantProduct VariantProduct[]
+}
+
+// ----------------- Shopify Variant Table -----------------
+model Variant {
+  id                Int     @id @default(autoincrement())
+  variantId         String  @unique // Shopify Variant ID
+  title             String
+  sku               String? @unique
+  price             Float
+  inventoryQuantity Int     @default(0)
+  inventoryPolicy   String // continue, deny
+  inventoryItemId   String? // Shopify Inventory Item ID
+  productId         Int // Foreign key to ShopifyProduct
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  VariantProduct VariantProduct[]
+}
+
+// ----------------- Variant Product Table (Optional Junction Table) -----------------
+model VariantProduct {
+  id        Int @id @default(autoincrement())
+  variantId Int
+  productId Int
+
+  createdAt DateTime @default(now())
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // ----------------- Shopify Collect Table -----------------
 model ShopifyCollect {
-  id            Int       @id @default(autoincrement())
-  collectId     String    @unique // Shopify Collect ID as String
-  collectionId  String    // Shopify Collection ID
-  productId     String    // Shopify Product ID
-  position      Int
-  sortValue     String
-  createdAt     DateTime? // Nullable
-  updatedAt     DateTime? // Nullable
+  id           Int       @id @default(autoincrement())
+  collectId    String    @unique // Shopify Collect ID as String
+  collectionId String // Shopify Collection ID
+  productId    String // Shopify Product ID
+  position     Int
+  sortValue    String
+  createdAt    DateTime? // Nullable
+  updatedAt    DateTime? // Nullable
 
   createdAtField DateTime @default(now())
 }
 
-
-
 // ----------------- Shopify Product Table -----------------
 model ShopifyProduct {
-  id                  Int             @id @default(autoincrement())
-  productId           String          @unique // Shopify Product ID
-  title               String
-  description         String?         // body_html field
-  vendor              String
-  productType         String
-  handle              String          @unique
-  status              String          // active, draft, archived
-  tags                String?         // Comma-separated tags
-  templateSuffix      String?
-  publishedAt         DateTime?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  adminGraphqlApiId   String?         // Shopify GraphQL API ID
-  publishedScope      String?         // web, global, etc.
+  id                Int       @id @default(autoincrement())
+  productId         String    @unique // Shopify Product ID
+  title             String
+  description       String? // body_html field
+  vendor            String
+  productType       String
+  handle            String    @unique
+  status            String // active, draft, archived
+  tags              String? // Comma-separated tags
+  templateSuffix    String?
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  adminGraphqlApiId String? // Shopify GraphQL API ID
+  publishedScope    String? // web, global, etc.
 
   // Default Image
-  imageId             String?         // Reference to default image ID
-  imageUrl            String?         // Default image URL
-  imageWidth          Int?
-  imageHeight         Int?
+  imageId     String? // Reference to default image ID
+  imageUrl    String? // Default image URL
+  imageWidth  Int?
+  imageHeight Int?
 
-  variants            ShopifyVariant[] // One-to-many relationship with variants
-  images              ShopifyImage[]   // One-to-many relationship with images
+  variants ShopifyVariant[] // One-to-many relationship with variants
+  images   ShopifyImage[] // One-to-many relationship with images
 }
 
 // ----------------- Shopify Variant Table -----------------
 model ShopifyVariant {
-  id                  Int             @id @default(autoincrement())
-  variantId           String          @unique // Shopify Variant ID
-  productId           String          // Shopify Product ID
+  id                  Int     @id @default(autoincrement())
+  variantId           String  @unique // Shopify Variant ID
+  productId           String // Shopify Product ID
   title               String
   price               Float
-  sku                 String          @unique
+  sku                 String  @unique
   position            Int
-  inventoryQuantity   Int             @default(0)
-  inventoryPolicy     String          // continue, deny
+  inventoryQuantity   Int     @default(0)
+  inventoryPolicy     String // continue, deny
   barcode             String?
   weight              Float
-  weightUnit          String          // lb, kg, etc.
-  inventoryItemId     String?         // Shopify Inventory Item ID
+  weightUnit          String // lb, kg, etc.
+  inventoryItemId     String? // Shopify Inventory Item ID
   fulfillmentService  String?
   inventoryManagement String?
-  taxable             Boolean         @default(true)
-  requiresShipping    Boolean         @default(true)
+  taxable             Boolean @default(true)
+  requiresShipping    Boolean @default(true)
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  product             ShopifyProduct  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  product ShopifyProduct @relation(fields: [productId], references: [productId], onDelete: Cascade)
 }
 
 // ----------------- Shopify Image Table -----------------
 model ShopifyImage {
-  id                  Int             @id @default(autoincrement())
-  imageId             String          @unique // Shopify Image ID
-  productId           String          // Shopify Product ID
-  src                 String          // Image URL
-  alt                 String?
-  position            Int?
-  width               Int?
-  height              Int?
+  id        Int     @id @default(autoincrement())
+  imageId   String  @unique // Shopify Image ID
+  productId String // Shopify Product ID
+  src       String // Image URL
+  alt       String?
+  position  Int?
+  width     Int?
+  height    Int?
 
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  product             ShopifyProduct  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  product ShopifyProduct @relation(fields: [productId], references: [productId], onDelete: Cascade)
 }
-

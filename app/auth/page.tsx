@@ -34,6 +34,7 @@ const AuthPage: FC<Props> = () => {
             // Store token in cookies
         Cookies.set('auth_token', token, { expires: 1, path: '/' }); // Expires in 1 day
         Cookies.set('user_role', user.roles[0], { expires: 1, path: '/' }); // Store user role
+        Cookies.set('user', JSON.stringify(user), { expires: 1, path: '/' });
 
             // Redirect on successful login
             router.push('/dashboard');

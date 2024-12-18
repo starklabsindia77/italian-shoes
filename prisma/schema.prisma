@@ -233,7 +233,7 @@ model ShopifyVariant {
   productId           String // Shopify Product ID
   title               String
   price               Float
-  sku                 String  @unique
+  sku                 String
   position            Int
   inventoryQuantity   Int     @default(0)
   inventoryPolicy     String // continue, deny
@@ -268,3 +268,29 @@ model ShopifyImage {
 
   product ShopifyProduct @relation(fields: [productId], references: [productId], onDelete: Cascade)
 }
+
+model Shopify_Custom_Collection {
+  id                Int       @id @default(autoincrement())
+  collectionId      String    @unique // Shopify Collection ID
+  title             String
+  description       String?   // body_html field
+  handle            String    @unique
+  sortOrder         String    // manual, etc.
+  templateSuffix    String?
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  adminGraphqlApiId String?   // Shopify GraphQL API ID
+  publishedScope    String?   // web, global, etc.
+
+  // Default Image
+  imageId     String?  // Reference to default image ID (if any)
+  imageAlt    String?  // Alt text for the image
+  imageUrl    String?  // Default image URL
+  imageWidth  Int?
+  imageHeight Int?
+
+  // Relations (if applicable)
+  // You could add relationships to products, metafields, or other models if needed.
+}
+

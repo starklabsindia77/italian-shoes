@@ -52,7 +52,7 @@ const CheckTable = (props: Props) => {
     <Card className={"w-full sm:overflow-auto p-4"}>
       <header className="relative flex items-center justify-between">
         <div className="text-xl font-bold text-navy-700 dark:text-white">
-          Check Table
+          {/* Check Table */}
         </div>
         <div className="flex items-center gap-4">
           {showIcons && (

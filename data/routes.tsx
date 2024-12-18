@@ -27,6 +27,12 @@ const routes = [
     path: "product",
   },
   {
+    name: "Data Tables",
+    layout: "/dashboard",
+    icon: <MdBarChart className="h-6 w-6" />,
+    path: "data-tables",
+  },
+  {
     name: "Profile",
     layout: "/dashboard",
     path: "profile",

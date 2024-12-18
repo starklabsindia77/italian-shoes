@@ -2,7 +2,6 @@
   "name": "horizon-admin-dashboard",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "next dev -p 6323",
     "dev2": "ts-node lib/run.ts",
@@ -13,6 +12,8 @@
   "dependencies": {
     "@prisma/client": "^6.0.1",
     "@types/bcrypt": "^5.0.2",
+    "@types/js-cookie": "^3.0.6",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "20.2.5",
     "@types/react": "18.2.8",
     "@types/react-dom": "18.2.4",
@@ -22,6 +23,7 @@
     "bcryptjs": "^2.4.3",
     "eslint": "8.42.0",
     "eslint-config-next": "13.4.4",
+    "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "next": "13.4.4",
     "next-auth": "^4.24.11",

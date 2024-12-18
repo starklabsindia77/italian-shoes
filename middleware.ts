@@ -24,10 +24,14 @@ function hasAccess(path: string, userRole: string | undefined): boolean {
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    console.log('path =====>', pathname);
 
     // Simulated authentication check (replace with real logic)
-    const authToken = request.cookies.get('auth_token');
+    const authToken = request.cookies.get('auth_token')?.value;
     const userRole = request.cookies.get('user_role')?.value; // e.g., 'admin' or 'user'
+
+    console.log('authToken ====>', authToken);
+    console.log('userRole ====>', userRole);
 
     const isAuthenticated = !!authToken;
 
@@ -43,6 +47,7 @@ export function middleware(request: NextRequest) {
     if (!isAuthenticated) {
         return NextResponse.redirect(new URL('/auth', request.url)); // Redirect unauthenticated users
     }
+
 
     // Handle role-based access control
     if (!hasAccess(pathname, userRole)) {

@@ -64,6 +64,8 @@ export async function POST(request: Request) {
                     id: user.id,
                     email: user.email,
                     roles: user.roles.map((role: { role: { name: any; }; }) => role.role.name),
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                 },
             },
             { status: 200 }

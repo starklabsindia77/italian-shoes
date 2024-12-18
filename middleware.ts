@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import cron from 'node-cron';
 
-let cronInitialized = false;
 
 // Public routes accessible to everyone
 const PUBLIC_ROUTES = ['/', '/auth', '/register', '/about'];
@@ -25,34 +23,10 @@ function hasAccess(path: string, userRole: string | undefined): boolean {
     return false; // Deny access if no match is found
 }
 
-// Cron Job Initialization
-function initializeCronJob() {
-    if (!cronInitialized) {
-        cronInitialized = true;
 
-        console.log('Initializing cron job to sync Shopify products...');
-        cron.schedule('*/30 * * * *', async () => {
-            try {
-                console.log('Triggering Shopify product sync...');
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cron/sync`);
-                if (response.ok) {
-                    console.log('Shopify product sync completed successfully.');
-                } else {
-                    console.error('Error syncing products:', await response.text());
-                }
-            } catch (error) {
-                console.error('Cron job error:', error);
-            }
-        });
-    }
-}
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-
-    // Initialize cron job once
-    initializeCronJob();
-
     // Simulated authentication check (replace with real logic)
     const authToken = request.cookies.get('auth_token')?.value;
     const userRole = request.cookies.get('user_role')?.value;

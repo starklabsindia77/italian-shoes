@@ -21,10 +21,10 @@ const routes = [
     secondary: true,
   },
   {
-    name: "Data Tables",
+    name: "Products",
     layout: "/dashboard",
     icon: <MdBarChart className="h-6 w-6" />,
-    path: "data-tables",
+    path: "product",
   },
   {
     name: "Profile",

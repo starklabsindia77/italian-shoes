@@ -1,48 +1,32 @@
-import { type Metadata } from "next";
-import CheckTable from "../data-tables/components/CheckTable";
-import DevelopmentTable from "../data-tables/components/DevelopmentTable";
-import ColumnsTable from "../data-tables/components/ColumnsTable";
-import ComplexTable from "../data-tables/components/ComplexTable";
+'use client'
 
-import {
-  columnsDataDevelopment,
-  columnsDataCheck,
-  columnsDataColumns,
-  columnsDataComplex,
-} from "../data-tables/variables/columnsData";
-import tableDataDevelopment from "../data-tables/variables/tableDataDevelopment.json";
-import tableDataCheck from "../data-tables/variables/tableDataCheck.json";
-import tableDataColumns from "../data-tables/variables/tableDataColumns.json";
-import tableDataComplex from "../data-tables/variables/tableDataComplex.json";
+import { type Metadata } from "next";
+import { useCallback } from 'react';
+import CheckTable from "@/components/data-tables/components/CheckTable";
+
+import { columnsDataCheck } from "@/components/data-tables/variables/columnsData";
+
+import tableDataCheck from "@/components/data-tables/variables/tableDataCheck.json";
 
 export const metadata: Metadata = {
-    title: 'DataTables | Horizon UI by Ories',
-  }
-  
-  const DataTablesPage = () => {
-    return (
-      <div>
-        <div className="mt-5 grid h-full grid-cols-1 gap-5 ">
-          {/* <DevelopmentTable
-            columnsData={columnsDataDevelopment}
-            tableData={tableDataDevelopment}
-          /> */}
-          <CheckTable columnsData={columnsDataCheck} tableData={tableDataCheck} />
-        </div>
-  
-        {/* <div className="mt-5 grid h-full grid-cols-1 gap-5 md:grid-cols-2">
-          <ColumnsTable
-            columnsData={columnsDataColumns}
-            tableData={tableDataColumns}
-          />
-  
-          <ComplexTable
-            columnsData={columnsDataComplex}
-            tableData={tableDataComplex}
-          />
-        </div> */}
-      </div>
-    );
-  };
-  
-  export default DataTablesPage;
+  title: "DataTables | Horizon UI by Ories",
+};
+
+const ShopifyProductList = () => {
+  const handleRefresh = useCallback(() => {
+    console.log('Refresh triggered');
+  }, []);
+
+  const handleSync = useCallback(() => {
+    console.log('Sync triggered');
+  }, []);
+  return (
+    <div>
+      <div className="mt-5 grid h-full grid-cols-1 gap-5 ">        
+        <CheckTable columnsData={columnsDataCheck} tableData={[]} showIcons={true} onRefresh={handleRefresh} onSync={handleSync} />
+      </div>      
+    </div>
+  );
+};
+
+export default ShopifyProductList;

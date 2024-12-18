@@ -5,7 +5,7 @@ import { useCallback, useState, useEffect  } from 'react';
 import CheckTable from "@/components/data-tables/components/CheckTable";
 import { columnsDataCheck } from "@/components/data-tables/variables/columnsData";
 import tableDataCheck from "@/components/data-tables/variables/tableDataCheck.json";
-import { triggerProductSync } from "@/services/productService";
+import { triggerProductSync, triggerProductRefresh } from "@/services/productService";
 
 import { toast } from 'react-hot-toast';
 import Cookies from 'js-cookie';
@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 const ShopifyProductList = () => {
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState<string>('');
+  const [tableData, setTableData] = useState([]);
 
   useEffect(() => {
     const userData = Cookies.get('auth_token'); // Assuming user data is stored in cookies as JSON
@@ -31,9 +32,20 @@ const ShopifyProductList = () => {
 }, []);
 
     // Refresh logic (for future implementation)
-    const handleRefresh = useCallback(() => {
-        console.log('Refresh triggered');
-        toast('Refresh functionality is not implemented yet!', { icon: '🔄' });
+    const handleRefresh = useCallback(async () => {
+      setLoading(true); // Start loading
+      toast.loading('Refreshing products...');
+      try {
+          const response = await triggerProductRefresh(token);   // Trigger the sync
+          toast.dismiss(); // Clear any previous loaders
+          toast.success('Products refreshed successfully!');
+          setTableData(response);
+      } catch (error: any) {
+          toast.dismiss();
+          toast.error(`Failed to refresh products: ${error.message}`);
+      } finally {
+          setLoading(false); // Stop loading
+      }
     }, []);
 
     // Sync Shopify Products
@@ -54,7 +66,7 @@ const ShopifyProductList = () => {
   return (
     <div>
       <div className="mt-5 grid h-full grid-cols-1 gap-5 ">        
-        <CheckTable columnsData={columnsDataCheck} tableData={[]} showIcons={true} onRefresh={handleRefresh} onSync={handleSync} />
+        <CheckTable columnsData={columnsDataCheck} tableData={tableData} showIcons={true} onRefresh={handleRefresh} onSync={handleSync} />
       </div>      
     </div>
   );

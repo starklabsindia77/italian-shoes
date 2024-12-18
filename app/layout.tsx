@@ -1,8 +1,11 @@
+'use client';
+
 import { type Metadata } from 'next'
 import './globals.css'
 // import "react-calendar/dist/Calendar.css";
 import "@/components/calendar/MiniCalendar.css";
 import ThemeProvider from '@/providers/ThemeProvider';
+import { Toaster } from 'react-hot-toast';
 
 
 export const metadata: Metadata = {
@@ -30,6 +33,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           {children}
+          <Toaster position="top-right" reverseOrder={false} />
         </ThemeProvider>
       </body>
     </html>

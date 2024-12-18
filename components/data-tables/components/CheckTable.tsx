@@ -115,7 +115,7 @@ const CheckTable = (props: Props) => {
                           <div className="flex items-center gap-2">
                             <Checkbox />
                             <p className="text-sm font-bold text-navy-700 dark:text-white">
-                              {cell.value[0]}
+                              {cell.value}
                             </p>
                           </div>
                         );

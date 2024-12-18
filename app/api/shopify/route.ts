@@ -1,5 +1,6 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+
 import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
 const prisma = new PrismaClient();
 
 type ResponseData = {
@@ -8,32 +9,19 @@ type ResponseData = {
   message?: string;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ResponseData>
-): Promise<void> {
+export async function GET() {
   try {
-    if (req.method === "GET") {
-      // Fetch all Shopify_Custom_Collection data
-      const collections = await prisma.shopifyProduct.findMany();
+    
+    const collections = await prisma.shopifyProduct.findMany();
 
-      return res.status(200).json({
-        success: true,
-        data: collections,
-      });
-    } else {
-      // Handle unsupported HTTP methods
-      res.setHeader("Allow", ["GET"]);
-      return res.status(405).json({
-        success: false,
-        message: `Method ${req.method} Not Allowed`,
-      });
-    }
+    return NextResponse.json({ message: "Shopify data sync completed", status: true, data: collections });
   } catch (error) {
-    console.error("Error fetching collections:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-  }
+    console.error("Error syncing Shopify data:", (error as Error).message);
+    return NextResponse.json(
+      { success: false,
+        message: "Internal Server Error", },
+      { status: 500 }
+    );
+  } 
 }
+

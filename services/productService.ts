@@ -47,8 +47,7 @@ export const triggerProductRefresh = async (token: string): Promise<any> => {
         }
 
         const data = await response.json();
-        console.log('Product sync triggered successfully:', data);
-        return data;
+        return data?.data;
     } catch (error: any) {
         console.error('Error triggering product sync:', error.message);
         throw new Error(error.message || 'Unexpected error occurred');

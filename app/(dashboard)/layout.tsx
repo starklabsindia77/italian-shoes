@@ -7,6 +7,7 @@ import SidebarProvider from "@/providers/SidebarProvider";
 
 
 
+
 export default function DashboardLayout({
     children, // will be a page or nested layout
 }: {
@@ -43,6 +44,7 @@ export default function DashboardLayout({
                     </div>
 
                 </section>
+                
             </SidebarProvider>
         </>
     );

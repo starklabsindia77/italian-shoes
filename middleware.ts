@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+
 // Public routes accessible to everyone
 const PUBLIC_ROUTES = ['/', '/auth', '/register', '/about'];
 
@@ -22,12 +23,13 @@ function hasAccess(path: string, userRole: string | undefined): boolean {
     return false; // Deny access if no match is found
 }
 
+
+
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
-
     // Simulated authentication check (replace with real logic)
-    const authToken = request.cookies.get('auth_token');
-    const userRole = request.cookies.get('user_role')?.value; // e.g., 'admin' or 'user'
+    const authToken = request.cookies.get('auth_token')?.value;
+    const userRole = request.cookies.get('user_role')?.value;
 
     const isAuthenticated = !!authToken;
 

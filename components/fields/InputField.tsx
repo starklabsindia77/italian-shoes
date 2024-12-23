@@ -8,12 +8,14 @@ type Props = {
   placeholder?: string
   variant?: any
   state?: 'error' | 'success' | string
-  disabled?: boolean
+  disabled?: boolean,
+  value?: any,
+  onChange?: any
 }
 
 // Custom components
 function InputField(props: Props) {
-  const { label, id, extra, type, placeholder, variant, state, disabled } = props;
+  const { label, id, extra, type, placeholder, variant, state, disabled, value, onChange } = props;
 
   return (
     <div className={`${extra}`}>
@@ -36,6 +38,8 @@ function InputField(props: Props) {
               ? "border-green-500 text-green-500 placeholder:text-green-500 dark:!border-green-400 dark:!text-green-400 dark:placeholder:!text-green-400"
               : "border-gray-200 dark:border-white/10 focus:border-blueSecondary dark:focus:border-blueSecondary dark:text-white"
           }`}
+        value={value}
+        onChange={onChange}
       />
     </div>
   );

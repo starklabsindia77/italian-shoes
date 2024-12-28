@@ -19,6 +19,8 @@ type CheckTableProps = {
   fetchData: (params: FetchParams) => Promise<{ data: any[]; total: number }>;
   columnsData: any[];
   showIcons?: boolean;
+  showRefresh?: boolean;
+  showSync?: boolean;
   actions?: {
     onRefresh?: () => void;
     onSync?: () => void;
@@ -30,6 +32,8 @@ const CheckTable = ({
   columnsData,
   fetchData,
   showIcons = true,
+  showRefresh = true,
+  showSync = true,
   actions = {},
   rowsPerPageOptions = [5, 10, 20, 50],
 }: CheckTableProps) => {
@@ -107,7 +111,7 @@ const CheckTable = ({
         <div className="flex items-center gap-4">
           {showIcons && (
             <>
-              {actions.onRefresh && (
+              {actions.onRefresh && showRefresh && (
                 <button
                   onClick={actions.onRefresh}
                   className="text-gray-500 hover:text-navy-700 dark:hover:text-white"
@@ -115,7 +119,7 @@ const CheckTable = ({
                   <FiRefreshCw size={20} />
                 </button>
               )}
-              {actions.onSync && (
+              {actions.onSync && showSync && (
                 <button
                   onClick={actions.onSync}
                   className="text-gray-500 hover:text-navy-700 dark:hover:text-white"

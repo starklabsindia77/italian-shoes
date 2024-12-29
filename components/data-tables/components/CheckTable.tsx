@@ -141,7 +141,14 @@ const CheckTable = ({
             <thead>
               <tr>
                 <th className="border border-gray-300 px-4 py-2 text-center">
-                  <Checkbox onChange={() => setSelectedRows(new Set(tableData.map((_, index) => index)))} checked={selectedRows.size === tableData.length} />
+                  <Checkbox
+                    onChange={() =>
+                      setSelectedRows(
+                        new Set(tableData.map((_, index) => index))
+                      )
+                    }
+                    checked={selectedRows.size === tableData.length}
+                  />
                 </th>
                 {columns.map((column, index) => (
                   <th
@@ -164,7 +171,10 @@ const CheckTable = ({
               {tableData.map((row, rowIndex) => (
                 <tr key={rowIndex}>
                   <td className="border border-gray-300 px-4 py-2 text-center">
-                    <Checkbox onChange={() => toggleRowSelection(rowIndex)} checked={selectedRows.has(rowIndex)} />
+                    <Checkbox
+                      onChange={() => toggleRowSelection(rowIndex)}
+                      checked={selectedRows.has(rowIndex)}
+                    />
                   </td>
                   {columns.map((column, colIndex) => {
                     const cellValue = row[column.accessor]; // Extract cell value for reuse
@@ -173,13 +183,15 @@ const CheckTable = ({
                         key={colIndex}
                         className="border border-gray-300 px-4 py-2 text-center"
                       >
-                        {column.Header === "Image" ? (
+                        {["image", "thumbnail", "avatar"].includes(
+                          column.Header.toLowerCase()
+                        ) ? (
                           <img
                             src={cellValue}
                             className="h-20 w-20 object-cover mx-auto"
                             alt="Row"
                           />
-                        ) : column.Header === "Date" ? (
+                        ) : column.Header.toLowerCase() === "date" ? (
                           moment(cellValue).format("MMM DD, YYYY") // Format date directly
                         ) : (
                           cellValue

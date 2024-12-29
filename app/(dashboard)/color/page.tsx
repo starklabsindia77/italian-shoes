@@ -30,7 +30,7 @@ const ColorListPage = () => {
   });
 
   const columnsData = [
-    { Header: "ID", accessor: "id" },
+    { Header: "IMAGE", accessor: "imageUrl" },
     { Header: "NAME", accessor: "name" },
     { Header: "HEX CODE", accessor: "hexCode" },
     { Header: "DATE", accessor: "createdAt" },
@@ -105,7 +105,9 @@ const ColorListPage = () => {
   return (
     <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Color List</h1>
+        <h1 className="text-xl font-bold">
+          {/* Color List */}
+        </h1>
         <button
           onClick={() => setModalOpen(true)}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

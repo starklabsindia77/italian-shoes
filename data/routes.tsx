@@ -32,12 +32,12 @@ const routes = [
     icon: <MdBarChart className="h-6 w-6" />,
     path: "variants",
   },
-  // {
-  //   name: "Profile",
-  //   layout: "/dashboard",
-  //   path: "profile",
-  //   icon: <MdPerson className="h-6 w-6" />,
-  // },
+  {
+    name: "Color",
+    layout: "/dashboard",
+    path: "color",
+    icon: <MdPerson className="h-6 w-6" />,
+  },
   // {
   //   name: "RTL Admin",
   //   layout: "/rtl",

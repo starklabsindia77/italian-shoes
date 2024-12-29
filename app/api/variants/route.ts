@@ -5,34 +5,41 @@ const prisma = new PrismaClient();
 
 // GET Handler
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '10', 10);
-
-    // Fetch data with pagination
-    const totalVariants = await prisma.variant.count();
-    const variants = await prisma.variant.findMany({
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: { product: true, VariantProduct: true },
-    });
-
-    return NextResponse.json({
-      data: variants,
-      meta: {
-        totalItems: totalVariants,
-        totalPages: Math.ceil(totalVariants / pageSize),
-        currentPage: page,
-        itemsPerPage: pageSize,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Error fetching variants' }, { status: 500 });
+    try {
+      // Parse query parameters
+      const { searchParams } = new URL(req.url);
+      const page = parseInt(searchParams.get("page") || "1", 10);
+      const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+      const sortBy = searchParams.get("sortBy") || "createdAt";
+      const sortOrder = searchParams.get("sortOrder") || "asc";
+  
+      // Fetch total count of variants
+      const totalVariants = await prisma.variant.count();
+  
+      // Fetch paginated variant data with relations
+      const variants = await prisma.variant.findMany({
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+      });
+  
+      return NextResponse.json({
+        data: variants,
+        meta: {
+          totalItems: totalVariants,
+          totalPages: Math.ceil(totalVariants / pageSize),
+          currentPage: page,
+          itemsPerPage: pageSize,
+        },
+        total: totalVariants
+      });
+    } catch (error) {
+      console.error("Error fetching variants:", error);
+      return NextResponse.json({ error: "Error fetching variants" }, { status: 500 });
+    }
   }
-}
-
 // POST Handler
 export async function POST(req: NextRequest) {
   try {

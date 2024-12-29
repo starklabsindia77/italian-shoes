@@ -35,7 +35,7 @@ export default function DashboardLayout({
                                     {children}
                                 </div>
 
-                                <div className="p-3">
+                                <div className="pl-3 pr-3">
                                     <Footer />
                                 </div>
                             </div>

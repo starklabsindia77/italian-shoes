@@ -11,66 +11,66 @@ datasource db {
 
 // ----------------- User Table -----------------
 model User {
-  id            Int            @id @default(autoincrement())
-  email         String         @unique
-  password      String
-  firstName     String?
-  lastName      String?
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userLogs      UserLog[]
   notifications Notification[]
   sessions      Session[]
-  roles         UserRole[]     // Many-to-many relation with Role
+  roles         UserRole[] // Many-to-many relation with Role
 }
 
 // ----------------- Role Table -----------------
 model Role {
-  id            Int            @id @default(autoincrement())
-  name          String         @unique           // Role name (e.g., "admin", "editor", "user")
-  description   String?        // Optional description
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // Role name (e.g., "admin", "editor", "user")
+  description String? // Optional description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  users         UserRole[]     // Many-to-many relation with User
-  permissions   RolePermission[] // Many-to-many relation with Permission
+  users       UserRole[] // Many-to-many relation with User
+  permissions RolePermission[] // Many-to-many relation with Permission
 }
 
 // ----------------- Permission Table -----------------
 model Permission {
-  id            Int            @id @default(autoincrement())
-  name          String         @unique           // Permission name (e.g., "read", "write", "delete")
-  description   String?        // Optional description
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // Permission name (e.g., "read", "write", "delete")
+  description String? // Optional description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  roles         RolePermission[] // Many-to-many relation with Role
+  roles RolePermission[] // Many-to-many relation with Role
 }
 
 // ----------------- User-Role Junction Table -----------------
 model UserRole {
-  id            Int            @id @default(autoincrement())
-  userId        Int
-  roleId        Int
-  assignedAt    DateTime       @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  roleId     Int
+  assignedAt DateTime @default(now())
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role          Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, roleId])   // Prevent duplicate role assignments
+  @@unique([userId, roleId]) // Prevent duplicate role assignments
 }
 
 // ----------------- Role-Permission Junction Table -----------------
 model RolePermission {
-  id            Int            @id @default(autoincrement())
-  roleId        Int
-  permissionId  Int
-  assignedAt    DateTime       @default(now())
+  id           Int      @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+  assignedAt   DateTime @default(now())
 
-  role          Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission    Permission     @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId]) // Prevent duplicate permissions for a role
 }
@@ -83,32 +83,31 @@ model UserLog {
   ipAddress String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ----------------- Notification Table -----------------
 model Notification {
-  id          Int      @id @default(autoincrement())
-  userId      Int?
-  title       String
-  message     String
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 // ----------------- Session Table -----------------
 model Session {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
 
 // ----------------- Shopify Collection Table -----------------
 model ShopifyCollection {
@@ -149,39 +148,119 @@ model Product {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  variants       Variant[] // Relationship to Shopify Variants
-  VariantProduct VariantProduct[]
+  productVariants ProductVariant[] // Specific product-variant relationships
 }
 
-// ----------------- Shopify Variant Table -----------------
-model Variant {
+model ProductVariant {
   id                Int     @id @default(autoincrement())
-  variantId         String  @unique // Shopify Variant ID
-  title             String
-  sku               String? @unique
-  price             Float
-  inventoryQuantity Int     @default(0)
-  inventoryPolicy   String // continue, deny
-  inventoryItemId   String? // Shopify Inventory Item ID
-  productId         Int // Foreign key to ShopifyProduct
+  productId         Int // Foreign key to Product
+  variantId         Int // Foreign key to shared Variant
+  price             Float // Price specific to this product-variant
+  inventoryQuantity Int     @default(0) // Quantity in stock
+  images            Image[] // Images specific to this product-variant
+  seoMetadata       SEO?    @relation(fields: [seoMetadataId], references: [id]) // Make the relation optional
+  seoMetadataId     Int? // Make this field optional
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  VariantProduct VariantProduct[]
 }
 
-// ----------------- Variant Product Table (Optional Junction Table) -----------------
-model VariantProduct {
-  id        Int @id @default(autoincrement())
-  variantId Int
-  productId Int
+model Variant {
+  id       Int          @id @default(autoincrement())
+  size     SizeOption?  @relation(fields: [sizeOptionId], references: [id]) // Linked size
+  style    StyleOption? @relation(fields: [styleOptionId], references: [id]) // Linked style
+  sole     SoleOption?  @relation(fields: [soleOptionId], references: [id]) // Linked sole
+  material Material?    @relation(fields: [materialId], references: [id]) // Linked material
+  color    Color?       @relation(fields: [colorId], references: [id]) // Linked color
+  panel    Panel?       @relation(fields: [panelId], references: [id]) // Linked Panel
+
+  sizeOptionId  Int?
+  styleOptionId Int?
+  soleOptionId  Int?
+  materialId    Int?
+  colorId       Int?
+  panelId       Int?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ProductVariant ProductVariant[]
+}
+
+model Image {
+  id               Int            @id @default(autoincrement())
+  url              String // Image URL
+  altText          String? // Alt text for accessibility/SEO
+  productVariantId Int
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
 
-  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+model SEO {
+  id             Int              @id @default(autoincrement())
+  title          String? // SEO title
+  description    String? // Meta description
+  keywords       String? // Keywords
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  ProductVariant ProductVariant[]
+}
+
+model SizeOption {
+  id         Int     @id @default(autoincrement())
+  sizeSystem String // e.g., "US", "EU", "UK"
+  size       String // e.g., "8", "9"
+  width      String? // e.g., "Standard", "Wide"
+
+  createdAt DateTime  @default(now())
+  Variant   Variant[]
+}
+
+model StyleOption {
+  id       Int     @id @default(autoincrement())
+  name     String // Style name (e.g., "Classic", "Modern")
+  imageUrl String? // Optional style image
+
+  createdAt DateTime  @default(now())
+  Variant   Variant[]
+}
+
+model SoleOption {
+  id     Int     @id @default(autoincrement())
+  type   String // Sole type (e.g., "Rubber", "Leather")
+  height String? // Height (e.g., "0.79 in")
+
+  createdAt DateTime  @default(now())
+  Variant   Variant[]
+}
+
+model Material {
+  id          Int     @id @default(autoincrement())
+  name        String // Material name (e.g., "Premium leather", "Metallic finish")
+  description String? // Material description
+
+  createdAt DateTime  @default(now())
+  Variant   Variant[]
+}
+
+model Color {
+  id      Int     @id @default(autoincrement())
+  name    String // Color name (e.g., "Blue", "Red")
+  hexCode String? // HEX code for the color (e.g., "#0000FF")
+
+  createdAt DateTime  @default(now())
+  Variant   Variant[]
+}
+
+model Panel {
+  id          Int       @id @default(autoincrement())
+  name        String // Panel name (e.g., "Upper", "Quarter")
+  description String? // Material description
+  createdAt   DateTime  @default(now())
+  Variant     Variant[]
 }
 
 // ----------------- Shopify Collect Table -----------------
@@ -273,24 +352,23 @@ model Shopify_Custom_Collection {
   id                Int       @id @default(autoincrement())
   collectionId      String    @unique // Shopify Collection ID
   title             String
-  description       String?   // body_html field
+  description       String? // body_html field
   handle            String    @unique
-  sortOrder         String    // manual, etc.
+  sortOrder         String // manual, etc.
   templateSuffix    String?
   publishedAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  adminGraphqlApiId String?   // Shopify GraphQL API ID
-  publishedScope    String?   // web, global, etc.
+  adminGraphqlApiId String? // Shopify GraphQL API ID
+  publishedScope    String? // web, global, etc.
 
   // Default Image
-  imageId     String?  // Reference to default image ID (if any)
-  imageAlt    String?  // Alt text for the image
-  imageUrl    String?  // Default image URL
+  imageId     String? // Reference to default image ID (if any)
+  imageAlt    String? // Alt text for the image
+  imageUrl    String? // Default image URL
   imageWidth  Int?
   imageHeight Int?
 
   // Relations (if applicable)
   // You could add relationships to products, metafields, or other models if needed.
 }
-

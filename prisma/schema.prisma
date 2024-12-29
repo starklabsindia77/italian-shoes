@@ -250,7 +250,7 @@ model Color {
   id      Int     @id @default(autoincrement())
   name    String // Color name (e.g., "Blue", "Red")
   hexCode String? // HEX code for the color (e.g., "#0000FF")
-
+  imageUrl String?  // Optional color image
   createdAt DateTime  @default(now())
   Variant   Variant[]
 }

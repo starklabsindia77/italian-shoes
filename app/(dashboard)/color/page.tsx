@@ -5,6 +5,8 @@ import { useCallback, useState, useEffect } from "react";
 import CheckTable from "@/components/data-tables/components/CheckTable";
 import { toast } from "react-hot-toast";
 import Cookies from "js-cookie";
+import Modal from "@/components/Modal";
+import ColorForm from "@/components/forms/ColorForm"; // Create this component for the form
 
 export const metadata: Metadata = {
   title: "Colors | Horizon UI",
@@ -14,6 +16,7 @@ const ColorListPage = () => {
   const [loading, setLoading] = useState(false);
   const [tableData, setTableData] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [isModalOpen, setModalOpen] = useState(false); // Track modal state
   const [token] = useState<string>(() => {
     const userData = Cookies.get("auth_token");
     if (userData) {
@@ -56,7 +59,6 @@ const ColorListPage = () => {
         setTotalRecords(data.meta.totalItems || 0);
         toast.success("Colors loaded successfully!");
         return data;
-        
       } catch (error: any) {
         toast.error(`Failed to fetch colors: ${error.message}`);
       } finally {
@@ -70,6 +72,32 @@ const ColorListPage = () => {
     await fetchColors({ page: 1, pageSize: 10 }); // Reset to the first page with default params
   }, [fetchColors]);
 
+  const handleAddColor = async (colorData: FormData) => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/colors", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: colorData, // FormData is directly passed as body
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add color");
+      }
+  
+      toast.success("Color added successfully!");
+      setModalOpen(false);
+      await handleRefresh();
+    } catch (error: any) {
+      toast.error(`Failed to add color: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchColors();
   }, [fetchColors]);
@@ -77,9 +105,13 @@ const ColorListPage = () => {
   return (
     <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">
-          {/* Color List */}
-        </h1>
+        <h1 className="text-xl font-bold">Color List</h1>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Add New Color
+        </button>
       </div>
       <CheckTable
         columnsData={columnsData}
@@ -90,6 +122,12 @@ const ColorListPage = () => {
           onRefresh: handleRefresh, // Handle refresh action
         }}
       />
+
+      {isModalOpen && (
+        <Modal onClose={() => setModalOpen(false)} title="Add New Color">
+          <ColorForm onSubmit={handleAddColor} onCancel={() => setModalOpen(false)} />
+        </Modal>
+      )}
     </div>
   );
 };

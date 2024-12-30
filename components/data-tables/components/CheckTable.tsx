@@ -176,7 +176,7 @@ const CheckTable = ({
                       checked={selectedRows.has(rowIndex)}
                     />
                   </td>
-                  {columns.map((column, colIndex) => {
+                  {/* {columns.map((column, colIndex) => {
                     const cellValue = row[column.accessor]; // Extract cell value for reuse
                     return (
                       <td
@@ -198,7 +198,30 @@ const CheckTable = ({
                         )}
                       </td>
                     );
-                  })}
+                  })} */}
+                  {columnsData.map((column, colIndex) => 
+                  { 
+                    console.log('column', column);
+                    return  (
+                    <td
+                      key={colIndex}
+                      className="border border-gray-300 px-4 py-2 text-center items-center"
+                    >
+                      {column.Cell ? (
+                        column.Cell({ row }) // Custom Cell renderer for Actions
+                      ) : column.accessor === "createdAt" ? (
+                        moment(row[column.accessor]).format("MMM DD, YYYY") // Format date
+                      ) : column.accessor === "imageUrl" ? (
+                        <img
+                          src={row[column.accessor]}
+                          alt="Row"
+                          className="h-20 w-20 object-cover mx-auto"
+                        />
+                      ) : (
+                        row[column.accessor] // Default rendering
+                      )}
+                    </td>
+                  )})}
                 </tr>
               ))}
             </tbody>

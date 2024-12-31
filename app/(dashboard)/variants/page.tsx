@@ -45,19 +45,19 @@ const VariantListPage = () => {
       Cell: ({ row }: { row: any }) => (
         <div className="flex justify-center space-x-2">
           <button
-            onClick={() => handleView(row.original)}
+            onClick={() => handleView(row)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEye size={16} />
           </button>
           <button
-            onClick={() => handleEdit(row.original)}
+            onClick={() => handleEdit(row)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEdit size={16} />
           </button>
           <button
-            onClick={() => confirmDelete(row.original.id)}
+            onClick={() => confirmDelete(row.id)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiTrash size={16} />

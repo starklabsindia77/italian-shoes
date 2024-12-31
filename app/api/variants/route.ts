@@ -33,21 +33,6 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Format response to include the names of linked entities and the variant name
-    // const formattedVariants = variants.map((variant) => ({
-    //   id: variant.id,
-    //   name: variant.name || null,
-    //   size: variant.size?.size || null,
-    //   sizeSystem: variant.size?.sizeSystem || null,
-    //   style: variant.style?.name || null,
-    //   sole: variant.sole?.type || null,
-    //   material: variant.material?.name || null,
-    //   color: variant.color?.name || null,
-    //   panel: variant.panel?.name || null,
-    //   createdAt: variant.createdAt,
-    //   updatedAt: variant.updatedAt,
-    // }));
-
     return NextResponse.json({
       data: variants,
       meta: {

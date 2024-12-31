@@ -59,6 +59,13 @@ const routes = [
     path: "size",
     icon: <MdPerson className="h-6 w-6" />,
   },
+
+  {
+    name: "Sole Options",
+    layout: "/dashboard",
+    path: "sole-options",
+    icon: <MdPerson className="h-6 w-6" />,
+  },
   // {
   //   name: "RTL Admin",
   //   layout: "/rtl",

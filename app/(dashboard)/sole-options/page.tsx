@@ -3,20 +3,20 @@
 import { useState, useCallback, useEffect } from "react";
 import CheckTable from "@/components/data-tables/components/CheckTable";
 import Modal from "@/components/Modal";
-import SizeForm from "@/components/forms/SizeForm";
+import SoleForm from "@/components/forms/SoleForm";
 import { FiEye, FiEdit, FiTrash } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import Cookies from "js-cookie";
 
-const SizeListPage = () => {
-  const [sizeOptions, setSizeOptions] = useState([]);
+const SoleOptionsListPage = () => {
+  const [soleOptions, setSoleOptions] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
-  const [selectedSizeOption, setSelectedSizeOption] = useState<any>(null);
+  const [selectedSoleOption, setSelectedSoleOption] = useState<any>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteSizeId, setDeleteSizeId] = useState<number | null>(null);
+  const [deleteSoleId, setDeleteSoleId] = useState<number | null>(null);
   const [token] = useState<string>(() => {
     const userData = Cookies.get("auth_token");
     if (userData) {
@@ -29,91 +29,91 @@ const SizeListPage = () => {
     return "";
   });
 
-  const fetchSizeOptions = useCallback(
-    async ({
-      page = 1,
-      pageSize = 10,
-      sortBy = "createdAt",
-      sortOrder = "asc",
-    } = {}) => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          `/api/size-options?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
-          {
+  const fetchSoleOptions = useCallback(async ({
+    page = 1,
+    pageSize = 10,
+    sortBy = "createdAt",
+    sortOrder = "asc",
+  } = {}) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/sole-options?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`, {
             method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }
-        );
-        if (!response.ok) throw new Error("Failed to fetch size options");
-        const data = await response.json();
-        setSizeOptions(data.data || []);
-        setTotalRecords(data.meta.totalItems || 0);
-        toast.success("Size Options loaded successfully!");
-        setLoading(false);
-        return data;
-      } catch (error) {
-        toast.error("Error fetching size options");
-      }
-    },
-    []
-  );
+      );
+      if (!response.ok) throw new Error("Failed to fetch sole options");
+      const data = await response.json();
+      setLoading(false);
+      setSoleOptions(data.data || []);
+      setTotalRecords(data.meta.totalItems || 0);
+      toast.success("Sole Options loaded successfully!");
+      return data;
+    } catch (error) {
+      toast.error("Error fetching sole options");
+    }
+  }, []);
 
   useEffect(() => {
-    fetchSizeOptions();
-  }, [fetchSizeOptions]);
+    fetchSoleOptions();
+  }, [fetchSoleOptions]);
 
-  const handleAddSizeOption = async (sizeOptionData: any) => {
+  const handleRefresh = useCallback(async () => {
+    await fetchSoleOptions({ page: 1, pageSize: 10 });
+  }, [fetchSoleOptions]);
+
+
+  const handleAddSoleOption = async (soleOptionData: any) => {
     try {
-      const response = await fetch("/api/size-options", {
+      const response = await fetch("/api/sole-options", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(sizeOptionData),
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        body: JSON.stringify(soleOptionData),
       });
-      if (!response.ok) throw new Error("Failed to add size option");
-      toast.success("Size option added successfully!");
+      if (!response.ok) throw new Error("Failed to add sole option");
+      toast.success("Sole option added successfully!");
       setModalOpen(false);
       await handleRefresh();
     } catch (error) {
-      toast.error("Error adding size option");
+      toast.error("Error adding sole option");
     }
   };
 
-  const handleEditSizeOption = async (sizeOptionData: any) => {
+  const handleEditSoleOption = async (soleOptionData: any) => {
     try {
       const response = await fetch(
-        `/api/size-options/${selectedSizeOption.id}`,
+        `/api/sole-options/${selectedSoleOption.id}`,
         {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(sizeOptionData),
+          body: JSON.stringify(soleOptionData),
         }
       );
-      if (!response.ok) throw new Error("Failed to update size option");
-      toast.success("Size option updated successfully!");
+      if (!response.ok) throw new Error("Failed to update sole option");
+      toast.success("Sole option updated successfully!");
       setModalOpen(false);
       await handleRefresh();
     } catch (error) {
-      toast.error("Error updating size option");
+      toast.error("Error updating sole option");
     }
   };
 
-
   const handleDelete = async () => {
-    if (!deleteSizeId) return;
+    if (!deleteSoleId) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/size-options/${deleteSizeId}`, {
+      const response = await fetch(`/api/sole-options/${deleteSoleId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -132,35 +132,30 @@ const SizeListPage = () => {
     } finally {
       setLoading(false);
       setDeleteModalOpen(false);
-      setDeleteSizeId(null);
+      setDeleteSoleId(null);
     }
   };
 
-  const handleRefresh = useCallback(async () => {
-    await fetchSizeOptions({ page: 1, pageSize: 10 });
-  }, [fetchSizeOptions]);
 
-  const handleEdit = (sizeOption: any) => {
-    setSelectedSizeOption(sizeOption);
+  const handleEdit = (soleOption: any) => {
+    setSelectedSoleOption(soleOption);
     setModalMode("edit");
     setModalOpen(true);
   };
 
-  const handleView = (sizeOption: any) => {
-    setSelectedSizeOption(sizeOption);
+  const handleView = (soleOption: any) => {
+    setSelectedSoleOption(soleOption);
     setModalMode("view");
     setModalOpen(true);
   };
 
   const confirmDelete = (id: number) => {
-    setDeleteSizeId(id);
+    setDeleteSoleId(id);
     setDeleteModalOpen(true);
   };
-
   const columnsData = [
-    { Header: "SIZE SYSTEM", accessor: "sizeSystem" },
-    { Header: "SIZE", accessor: "size" },
-    { Header: "WIDTH", accessor: "width" },
+    { Header: "TYPE", accessor: "type" },
+    { Header: "HEIGHT", accessor: "height" },
     { Header: "DATE", accessor: "createdAt" },
     {
       Header: "ACTIONS",
@@ -196,47 +191,40 @@ const SizeListPage = () => {
         {/* <button onClick={() => setModalMode("add")}>Add Size Option</button> */}
         <button
           onClick={() => {
-            setSelectedSizeOption(null);
+            setSelectedSoleOption(null);
             setModalMode("add");
             setModalOpen(true);
           }}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          Add Size Option
+          Add Sole Option
         </button>
       </div>
-      <CheckTable
-        columnsData={columnsData}
-        fetchData={fetchSizeOptions}
-        showIcons={true}
+      <CheckTable columnsData={columnsData} fetchData={fetchSoleOptions} showIcons={true}
         showSync={false}
         actions={{
           onRefresh: handleRefresh,
-        }}
-      />
+        }} />
       {isModalOpen && (
-        <Modal
-          onClose={() => setModalOpen(false)}
-          title={
+        <Modal onClose={() => setModalOpen(false)} title={
             modalMode === "add"
-              ? "Add Size Option"
+              ? "Add Sole Option"
               : modalMode === "edit"
-              ? "Edit Size Option"
-              : "View Size Option"
-          }
-        >
-          <SizeForm
+              ? "Edit Sole Option"
+              : "View Sole Option"
+          }>
+          <SoleForm
             mode={modalMode}
-            defaultValues={selectedSizeOption}
+            defaultValues={selectedSoleOption}
             onSubmit={
-              modalMode === "edit" ? handleEditSizeOption : handleAddSizeOption
+              modalMode === "edit" ? handleEditSoleOption : handleAddSoleOption
             }
             onCancel={() => setModalOpen(false)}
           />
         </Modal>
       )}
 
-      {isDeleteModalOpen && (
+{isDeleteModalOpen && (
         <Modal onClose={() => setDeleteModalOpen(false)} title="Confirm Delete">
           <div className="p-4 dark:text-white">
             <p>
@@ -264,4 +252,4 @@ const SizeListPage = () => {
   );
 };
 
-export default SizeListPage;
+export default SoleOptionsListPage;

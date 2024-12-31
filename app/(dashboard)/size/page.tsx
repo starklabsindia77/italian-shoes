@@ -3,20 +3,20 @@
 import { useState, useCallback, useEffect } from "react";
 import CheckTable from "@/components/data-tables/components/CheckTable";
 import Modal from "@/components/Modal";
-import MaterialForm from "@/components/forms/MaterialForm";
+import SizeForm from "@/components/forms/SizeForm";
 import { FiEye, FiEdit, FiTrash } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import Cookies from "js-cookie";
 
-const MaterialListPage = () => {
-  const [materials, setMaterials] = useState([]);
+const SizeListPage = () => {
+  const [sizeOptions, setSizeOptions] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
-  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+  const [selectedSizeOption, setSelectedSizeOption] = useState<any>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteMaterialId, setDeleteMaterialId] = useState<number | null>(null);
+  const [deleteSizeId, setDeleteSizeId] = useState<number | null>(null);
   const [token] = useState<string>(() => {
     const userData = Cookies.get("auth_token");
     if (userData) {
@@ -29,7 +29,7 @@ const MaterialListPage = () => {
     return "";
   });
 
-  const fetchMaterials = useCallback(
+  const fetchSizeOptions = useCallback(
     async ({
       page = 1,
       pageSize = 10,
@@ -39,7 +39,7 @@ const MaterialListPage = () => {
       setLoading(true);
       try {
         const response = await fetch(
-          `/api/materials?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
+          `/api/size-options?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
           {
             method: "GET",
             headers: {
@@ -48,69 +48,84 @@ const MaterialListPage = () => {
             },
           }
         );
-        if (!response.ok) throw new Error("Failed to fetch materials");
+        if (!response.ok) throw new Error("Failed to fetch size options");
         const data = await response.json();
-        setMaterials(data.data || []);
+        setSizeOptions(data.data || []);
         setTotalRecords(data.meta.totalItems || 0);
-        toast.success("Materials loaded successfully!");
+        toast.success("Size Options loaded successfully!");
         return data;
       } catch (error) {
-        toast.error("Error fetching materials");
+        toast.error("Error fetching size options");
       }
     },
     []
   );
-  const handleRefresh = useCallback(async () => {
-    await fetchMaterials({ page: 1, pageSize: 10 });
-  }, [fetchMaterials]);
 
   useEffect(() => {
-    fetchMaterials();
-  }, [fetchMaterials]);
+    fetchSizeOptions();
+  }, [fetchSizeOptions]);
 
-  const handleAddMaterial = async (materialData: any) => {
-    console.log("materialData ====>", materialData);
+  const handleAddSizeOption = async (sizeOptionData: any) => {
     try {
-      const response = await fetch("/api/materials", {
+      const response = await fetch("/api/size-options", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(materialData),
+        body: JSON.stringify(sizeOptionData),
       });
-      if (!response.ok) throw new Error("Failed to add material");
-      toast.success("Material added successfully!");
+      if (!response.ok) throw new Error("Failed to add size option");
+      toast.success("Size option added successfully!");
       setModalOpen(false);
-      fetchMaterials();
+      fetchSizeOptions();
     } catch (error) {
-      toast.error("Error adding material");
+      toast.error("Error adding size option");
     }
   };
 
-  const handleEditMaterial = async (materialData: any) => {
+  const handleEditSizeOption = async (sizeOptionData: any) => {
     try {
-      const response = await fetch(`/api/materials/${selectedMaterial.id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(materialData),
-      });
-      if (!response.ok) throw new Error("Failed to update material");
-      toast.success("Material updated successfully!");
+      const response = await fetch(
+        `/api/size-options/${selectedSizeOption.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(sizeOptionData),
+        }
+      );
+      if (!response.ok) throw new Error("Failed to update size option");
+      toast.success("Size option updated successfully!");
       setModalOpen(false);
-      fetchMaterials();
+      fetchSizeOptions();
     } catch (error) {
-      toast.error("Error updating material");
+      toast.error("Error updating size option");
+    }
+  };
+
+  const handleDeleteSizeOption = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this size option?")) return;
+    try {
+      const response = await fetch(`/api/size-options/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete size option");
+      toast.success("Size option deleted successfully!");
+      fetchSizeOptions();
+    } catch (error) {
+      toast.error("Error deleting size option");
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteMaterialId) return;
+    if (!deleteSizeId) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/materials/${deleteMaterialId}`, {
+      const response = await fetch(`/api/size-options/${deleteSizeId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -119,40 +134,45 @@ const MaterialListPage = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete material");
+        throw new Error(errorData.message || "Failed to delete size option");
       }
 
-      toast.success("Material deleted successfully!");
+      toast.success("Size option deleted successfully!");
       await handleRefresh();
     } catch (error: any) {
-      toast.error(`Failed to delete material: ${error.message}`);
+      toast.error(`Failed to delete size option: ${error.message}`);
     } finally {
       setLoading(false);
       setDeleteModalOpen(false);
-      setDeleteMaterialId(null);
+      setDeleteSizeId(null);
     }
   };
 
-  const handleEdit = (material: any) => {
-    setSelectedMaterial(material);
+  const handleRefresh = useCallback(async () => {
+    await fetchSizeOptions({ page: 1, pageSize: 10 });
+  }, [fetchSizeOptions]);
+
+  const handleEdit = (sizeOption: any) => {
+    setSelectedSizeOption(sizeOption);
     setModalMode("edit");
     setModalOpen(true);
   };
 
-  const handleView = (material: any) => {
-    setSelectedMaterial(material);
+  const handleView = (sizeOption: any) => {
+    setSelectedSizeOption(sizeOption);
     setModalMode("view");
     setModalOpen(true);
   };
 
   const confirmDelete = (id: number) => {
-    setDeleteMaterialId(id);
+    setDeleteSizeId(id);
     setDeleteModalOpen(true);
   };
 
   const columnsData = [
-    { Header: "NAME", accessor: "name" },
-    { Header: "DESCRIPTION", accessor: "description" },
+    { Header: "SIZE SYSTEM", accessor: "sizeSystem" },
+    { Header: "SIZE", accessor: "size" },
+    { Header: "WIDTH", accessor: "width" },
     { Header: "DATE", accessor: "createdAt" },
     {
       Header: "ACTIONS",
@@ -180,37 +200,60 @@ const MaterialListPage = () => {
       ),
     },
   ];
+
   return (
     <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">{/* material List */}</h1>
+        <h1 className="text-xl font-bold">{/* Panel List */}</h1>
+        {/* <button onClick={() => setModalMode("add")}>Add Size Option</button> */}
         <button
           onClick={() => {
-            setSelectedMaterial(null);
+            setSelectedSizeOption(null);
             setModalMode("add");
             setModalOpen(true);
           }}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
-          Add New material
+          Add Size Option
         </button>
       </div>
       <CheckTable
         columnsData={columnsData}
-        fetchData={fetchMaterials}
+        fetchData={fetchSizeOptions}
         showIcons={true}
         showSync={false}
         actions={{
           onRefresh: handleRefresh,
         }}
       />
+      {isModalOpen && (
+        <Modal
+          onClose={() => setModalOpen(false)}
+          title={
+            modalMode === "add"
+              ? "Add Size Option"
+              : modalMode === "edit"
+              ? "Edit Size Option"
+              : "View Size Option"
+          }
+        >
+          <SizeForm
+            mode={modalMode}
+            defaultValues={selectedSizeOption}
+            onSubmit={
+              modalMode === "edit" ? handleEditSizeOption : handleAddSizeOption
+            }
+            onCancel={() => setModalOpen(false)}
+          />
+        </Modal>
+      )}
 
       {isDeleteModalOpen && (
         <Modal onClose={() => setDeleteModalOpen(false)} title="Confirm Delete">
           <div className="p-4 dark:text-white">
             <p>
-              Are you sure you want to delete this material? This action cannot
-              be undone.
+              Are you sure you want to delete this Size Option? This action
+              cannot be undone.
             </p>
             <div className="flex justify-end space-x-4 mt-4">
               <button
@@ -229,30 +272,8 @@ const MaterialListPage = () => {
           </div>
         </Modal>
       )}
-
-      {isModalOpen && (
-        <Modal
-          onClose={() => setModalOpen(false)}
-          title={
-            modalMode === "add"
-              ? "Add New Material"
-              : modalMode === "edit"
-              ? "Edit Material"
-              : "View Material"
-          }
-        >
-          <MaterialForm
-            mode={modalMode}
-            defaultValues={selectedMaterial}
-            onSubmit={
-              modalMode === "edit" ? handleEditMaterial : handleAddMaterial
-            }
-            onCancel={() => setModalOpen(false)}
-          />
-        </Modal>
-      )}
     </div>
   );
 };
 
-export default MaterialListPage;
+export default SizeListPage;

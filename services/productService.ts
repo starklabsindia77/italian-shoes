@@ -31,25 +31,58 @@ export const triggerProductSync = async (token: string): Promise<any> => {
 
 
 
-export const triggerProductRefresh = async (token: string): Promise<any> => {
+// export const triggerProductRefresh = async (token: string): Promise<any> => {
+//     try {
+//         const response = await fetch(`/api/shopify`, {
+//             method: 'GET',
+//             headers: {
+//                 Authorization: `Bearer ${token}`,
+//                 'Content-Type': 'application/json',
+//             },
+//         });
+
+//         if (!response.ok) {
+//             const errorData = await response.json();
+//             throw new Error(errorData.message || 'Failed to trigger product sync');
+//         }
+
+//         const data = await response.json();
+//         return data?.data;
+//     } catch (error: any) {
+//         console.error('Error triggering product sync:', error.message);
+//         throw new Error(error.message || 'Unexpected error occurred');
+//     }
+// };
+
+export const triggerProductRefresh = async (
+    token: string,
+    page: number = 1,
+    pageSize: number = 10,
+    sortBy: string = "createdAt",
+    sortOrder: "asc" | "desc" = "desc"
+  ): Promise<any> => {
     try {
-        const response = await fetch(`/api/shopify`, {
-            method: 'GET',
-            headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to trigger product sync');
+      const response = await fetch(
+        `/api/shopify?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-
-        const data = await response.json();
-        return data?.data;
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to refresh products");
+      }
+  
+      const data = await response.json();
+      return data;
     } catch (error: any) {
-        console.error('Error triggering product sync:', error.message);
-        throw new Error(error.message || 'Unexpected error occurred');
+      console.error("Error refreshing products:", error.message);
+      throw new Error(error.message || "Unexpected error occurred");
     }
-};
+  };
+  

@@ -3,14 +3,14 @@
 import { useState, FormEvent } from "react";
 import InputField from "../fields/InputField";
 
-interface ColorFormProps {
-  onSubmit?: (formData: FormData) => void; // Optional in view mode
+interface PanelFormProps {
+  onSubmit?: (formData: any) => void; // Optional in view mode
   onCancel: () => void;
-  defaultValues?: { name: string; hexCode: string; imageFile?: string }; // For edit/view case
+  defaultValues?: { name: string; description: string }; // For edit/view case
   mode?: "add" | "edit" | "view"; // Determines form behavior
 }
 
-const ColorForm: React.FC<ColorFormProps> = ({
+const PanelForm: React.FC<PanelFormProps> = ({
   onSubmit,
   onCancel,
   defaultValues,
@@ -20,14 +20,10 @@ const ColorForm: React.FC<ColorFormProps> = ({
 
   const [formData, setFormData] = useState<{
     name: string;
-    hexCode: string;
-    imageFile: File | null;
-    imagePreview: string | null; // For displaying the existing image in edit/view mode
+    description: string;
   }>({
     name: defaultValues?.name || "",
-    hexCode: defaultValues?.hexCode || "",
-    imageFile: null,
-    imagePreview: defaultValues?.imageFile || null,
+    description: defaultValues?.description || "",
   });
 
   const [errors, setErrors] = useState<Partial<typeof formData>>({});
@@ -37,9 +33,7 @@ const ColorForm: React.FC<ColorFormProps> = ({
 
     const newErrors: Partial<typeof formData> = {};
     if (!formData.name) newErrors.name = "Name is required.";
-    if (!formData.hexCode) newErrors.hexCode = "Hex code is required.";
-    else if (!/^#([0-9A-F]{3}){1,2}$/i.test(formData.hexCode))
-      newErrors.hexCode = "Invalid hex code format.";
+    if (!formData.description) newErrors.description = "Description is required.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -48,11 +42,7 @@ const ColorForm: React.FC<ColorFormProps> = ({
     e.preventDefault();
     if (isViewMode) return; // Prevent submission in view mode
     if (validate() && onSubmit) {
-      const formDataToSubmit = new FormData();
-      formDataToSubmit.append("name", formData.name);
-      formDataToSubmit.append("hexCode", formData.hexCode);
-      if (formData.imageFile) formDataToSubmit.append("imageFile", formData.imageFile);
-      onSubmit(formDataToSubmit);
+      onSubmit(formData);
     }
   };
 
@@ -67,7 +57,7 @@ const ColorForm: React.FC<ColorFormProps> = ({
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({ ...prev, name: e.target.value }))
           }
-          placeholder="Enter color name"
+          placeholder="Enter panel name"
           disabled={isViewMode} // Disable input in view mode
         />
         {errors.name && !isViewMode && (
@@ -76,48 +66,18 @@ const ColorForm: React.FC<ColorFormProps> = ({
       </div>
       <div>
         <InputField
-          label="Hex Code"
-          id="hexCode"
+          label="Description"
+          id="description"
           type="text"
-          value={formData.hexCode}
+          value={formData.description}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFormData((prev) => ({ ...prev, hexCode: e.target.value }))
+            setFormData((prev) => ({ ...prev, description: e.target.value }))
           }
-          placeholder="#FFFFFF"
+          placeholder="Enter panel description"
           disabled={isViewMode} // Disable input in view mode
         />
-        {errors.hexCode && !isViewMode && (
-          <p className="text-red-500 text-sm mt-1">{errors.hexCode}</p>
-        )}
-      </div>
-      <div>
-        <label htmlFor="imageFile" className="block text-sm font-medium text-gray-700">
-          Image
-        </label>
-        {formData.imagePreview && (
-          <img
-            src={formData.imagePreview}
-            alt="Preview"
-            className="mb-2 h-20 w-20 object-cover rounded"
-          />
-        )}
-        {!isViewMode && (
-          <input
-            type="file"
-            name="imageFile"
-            id="imageFile"
-            accept="image/*"
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                imageFile: e.target.files ? e.target.files[0] : null,
-                imagePreview: e.target.files
-                  ? URL.createObjectURL(e.target.files[0])
-                  : prev.imagePreview,
-              }))
-            }
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
+        {errors.description && !isViewMode && (
+          <p className="text-red-500 text-sm mt-1">{errors.description}</p>
         )}
       </div>
       <div className="flex justify-end space-x-2">
@@ -151,4 +111,4 @@ const ColorForm: React.FC<ColorFormProps> = ({
   );
 };
 
-export default ColorForm;
+export default PanelForm;

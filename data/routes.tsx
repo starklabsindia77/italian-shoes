@@ -38,6 +38,20 @@ const routes = [
     path: "color",
     icon: <MdPerson className="h-6 w-6" />,
   },
+
+  {
+    name: "Panel",
+    layout: "/dashboard",
+    path: "panel",
+    icon: <MdPerson className="h-6 w-6" />,
+  },
+
+  {
+    name: "Materials",
+    layout: "/dashboard",
+    path: "material",
+    icon: <MdPerson className="h-6 w-6" />,
+  },
   // {
   //   name: "RTL Admin",
   //   layout: "/rtl",

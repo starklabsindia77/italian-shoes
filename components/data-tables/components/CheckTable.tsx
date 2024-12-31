@@ -176,52 +176,45 @@ const CheckTable = ({
                       checked={selectedRows.has(rowIndex)}
                     />
                   </td>
-                  {/* {columns.map((column, colIndex) => {
-                    const cellValue = row[column.accessor]; // Extract cell value for reuse
+                  {columnsData.map((column, colIndex) => {
+                    // Helper to handle nested accessor
+                    const getValue = (
+                      accessor: string | number,
+                      row: Record<string, any>
+                    ): any => {
+                      if (
+                        typeof accessor === "string" &&
+                        accessor.includes(".")
+                      ) {
+                        const [part1, part2] = accessor.split(".");
+                        return row[part1]?.[part2];
+                      }
+                      return row[accessor];
+                    };
+
                     return (
                       <td
                         key={colIndex}
-                        className="border border-gray-300 px-4 py-2 text-center"
+                        className="border border-gray-300 px-4 py-2 text-center items-center"
                       >
-                        {["image", "thumbnail", "avatar"].includes(
-                          column.Header.toLowerCase()
-                        ) ? (
+                        {column.Cell ? (
+                          column.Cell({ row }) // Custom Cell renderer for Actions
+                        ) : column.accessor === "createdAt" ? (
+                          moment(getValue(column.accessor, row)).format(
+                            "MMM DD, YYYY"
+                          ) // Format date
+                        ) : column.accessor === "imageUrl" ? (
                           <img
-                            src={cellValue}
-                            className="h-20 w-20 object-cover mx-auto"
+                            src={getValue(column.accessor, row)}
                             alt="Row"
+                            className="h-20 w-20 object-cover mx-auto"
                           />
-                        ) : column.Header.toLowerCase() === "date" ? (
-                          moment(cellValue).format("MMM DD, YYYY") // Format date directly
                         ) : (
-                          cellValue
+                          getValue(column.accessor, row) // Default rendering
                         )}
                       </td>
                     );
-                  })} */}
-                  {columnsData.map((column, colIndex) => 
-                  { 
-                    console.log('column', column);
-                    return  (
-                    <td
-                      key={colIndex}
-                      className="border border-gray-300 px-4 py-2 text-center items-center"
-                    >
-                      {column.Cell ? (
-                        column.Cell({ row }) // Custom Cell renderer for Actions
-                      ) : column.accessor === "createdAt" ? (
-                        moment(row[column.accessor]).format("MMM DD, YYYY") // Format date
-                      ) : column.accessor === "imageUrl" ? (
-                        <img
-                          src={row[column.accessor]}
-                          alt="Row"
-                          className="h-20 w-20 object-cover mx-auto"
-                        />
-                      ) : (
-                        row[column.accessor] // Default rendering
-                      )}
-                    </td>
-                  )})}
+                  })}
                 </tr>
               ))}
             </tbody>

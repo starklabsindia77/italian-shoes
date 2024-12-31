@@ -1,142 +1,128 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// GET Handler
+// GET: Fetch Variants
 export async function GET(req: NextRequest) {
-    try {
-      // Parse query parameters
-      const { searchParams } = new URL(req.url);
-      const page = parseInt(searchParams.get("page") || "1", 10);
-      const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
-      const sortBy = searchParams.get("sortBy") || "createdAt";
-      const sortOrder = searchParams.get("sortOrder") || "asc";
-  
-      // Fetch total count of variants
-      const totalVariants = await prisma.variant.count();
-  
-      // Fetch paginated variant data with relations
-      const variants = await prisma.variant.findMany({
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
-      });
-  
-      return NextResponse.json({
-        data: variants,
-        meta: {
-          totalItems: totalVariants,
-          totalPages: Math.ceil(totalVariants / pageSize),
-          currentPage: page,
-          itemsPerPage: pageSize,
-        },
-        total: totalVariants
-      });
-    } catch (error) {
-      console.error("Error fetching variants:", error);
-      return NextResponse.json({ error: "Error fetching variants" }, { status: 500 });
-    }
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "asc";
+
+    const totalVariants = await prisma.variant.count();
+    const variants = await prisma.variant.findMany({
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { [sortBy]: sortOrder },
+      include: {
+        size: true,
+        style: true,
+        sole: true,
+        material: true,
+        color: true,
+        panel: true,
+      },
+    });
+
+    return NextResponse.json({
+      data: variants,
+      meta: {
+        totalItems: totalVariants,
+        totalPages: Math.ceil(totalVariants / pageSize),
+        currentPage: page,
+        itemsPerPage: pageSize,
+      },
+      total: totalVariants,
+    });
+  } catch (error) {
+    console.error("Error fetching variants:", error);
+    return NextResponse.json({ error: "Error fetching variants" }, { status: 500 });
   }
-// POST Handler
+}
+
+// POST: Create Variant
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      title,
-      sku,
-      price,
-      inventoryQuantity,
-      inventoryPolicy,
-      inventoryItemId,
-      productId,
+      sizeOptionId,
+      styleOptionId,
+      soleOptionId,
+      materialId,
+      colorId,
+      panelId,
     } = body;
 
-    // Generate a unique `variantId` if not provided
-    const variantId = `VARIANT_${Date.now()}`;
+    if (!sizeOptionId || !styleOptionId || !soleOptionId || !materialId || !colorId || !panelId) {
+      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
+    }
 
     const newVariant = await prisma.variant.create({
       data: {
-        title,
-        sku,
-        price,
-        inventoryQuantity,
-        inventoryPolicy,
-        inventoryItemId,
-        variantId,
-        product: {
-          connect: { id: productId },
-        },
+        sizeOptionId,
+        styleOptionId,
+        soleOptionId,
+        materialId,
+        colorId,
+        panelId,
       },
     });
 
     return NextResponse.json(newVariant, { status: 201 });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Error creating variant', details: error }, { status: 500 });
+    console.error("Error creating variant:", error);
+    return NextResponse.json({ error: "Error creating variant" }, { status: 500 });
   }
 }
 
-// GET Handler for Specific Variant
-export async function GETVariant(req: NextRequest, { params }: { params: { id: string } }) {
+// PUT: Update Variant
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
     const { id } = params;
-  
-    if (isNaN(Number(id))) {
-      return NextResponse.json({ error: 'Invalid ID parameter' }, { status: 400 });
-    }
-  
-    try {
-      const variant = await prisma.variant.findUnique({
-        where: { id: parseInt(id) },
-        include: { product: true, VariantProduct: true },
-      });
-      if (!variant) return NextResponse.json({ error: 'Variant not found' }, { status: 404 });
-      return NextResponse.json(variant);
-    } catch (error) {
-      return NextResponse.json({ error: 'Error fetching variant' }, { status: 500 });
-    }
+    const body = await req.json();
+    const {
+      sizeOptionId,
+      styleOptionId,
+      soleOptionId,
+      materialId,
+      colorId,
+      panelId,
+    } = body;
+
+    const updatedVariant = await prisma.variant.update({
+      where: { id: parseInt(id, 10) },
+      data: {
+        sizeOptionId,
+        styleOptionId,
+        soleOptionId,
+        materialId,
+        colorId,
+        panelId,
+      },
+    });
+
+    return NextResponse.json(updatedVariant, { status: 200 });
+  } catch (error) {
+    console.error("Error updating variant:", error);
+    return NextResponse.json({ error: "Error updating variant" }, { status: 500 });
   }
-  
-  // PUT Handler for Specific Variant
-  export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+}
+
+// DELETE: Delete Variant
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
     const { id } = params;
-  
-    if (isNaN(Number(id))) {
-      return NextResponse.json({ error: 'Invalid ID parameter' }, { status: 400 });
-    }
-  
-    try {
-      const body = await req.json();
-      const { title, sku, price, inventoryQuantity, inventoryPolicy, inventoryItemId, productId } = body;
-      const updatedVariant = await prisma.variant.update({
-        where: { id: parseInt(id) },
-        data: { title, sku, price, inventoryQuantity, inventoryPolicy, inventoryItemId, productId },
-      });
-      return NextResponse.json(updatedVariant);
-    } catch (error) {
-      return NextResponse.json({ error: 'Error updating variant' }, { status: 500 });
-    }
+
+    await prisma.variant.delete({
+      where: { id: parseInt(id, 10) },
+    });
+
+    return NextResponse.json({ message: "Variant deleted successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Error deleting variant:", error);
+    return NextResponse.json({ error: "Error deleting variant" }, { status: 500 });
   }
-  
-  // DELETE Handler for Specific Variant
-  export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-    const { id } = params;
-  
-    if (isNaN(Number(id))) {
-      return NextResponse.json({ error: 'Invalid ID parameter' }, { status: 400 });
-    }
-  
-    try {
-      await prisma.variant.delete({ where: { id: parseInt(id) } });
-      return NextResponse.json(null, { status: 204 });
-    } catch (error) {
-      return NextResponse.json({ error: 'Error deleting variant' }, { status: 500 });
-    }
-  }
-  
-  // Method not allowed handler
-  export async function PATCH() {
-    return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
-  }
+}

@@ -1,32 +1,4 @@
 
-// import { PrismaClient } from "@prisma/client";
-// import { NextResponse } from "next/server";
-// const prisma = new PrismaClient();
-
-// type ResponseData = {
-//   success: boolean;
-//   data?: any;
-//   message?: string;
-// };
-
-// export async function GET() {
-//   try {
-    
-//     const collections = await prisma.shopifyProduct.findMany();
-
-//     return NextResponse.json({ message: "Shopify data sync completed", status: true, data: collections });
-//   } catch (error) {
-//     console.error("Error syncing Shopify data:", (error as Error).message);
-//     return NextResponse.json(
-//       { success: false,
-//         message: "Internal Server Error", },
-//       { status: 500 }
-//     );
-//   } 
-// }
-
-
-
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 
@@ -65,13 +37,18 @@ export async function GET(request: Request) {
 
     // Get total count for pagination
     const total = await prisma.shopifyProduct.count();
-
     return NextResponse.json({
-      success: true,
-      message: "Shopify data fetched successfully",
       data: collections,
-      total,
+      meta: {
+        totalItems: total,
+        totalPages: Math.ceil(total / pageSize),
+        currentPage: page,
+        itemsPerPage: pageSize,
+      },
+      total: total,
     });
+
+
   } catch (error) {
     console.error("Error fetching Shopify products:", (error as Error).message);
     return NextResponse.json(

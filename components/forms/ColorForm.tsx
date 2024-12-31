@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -6,7 +7,7 @@ import InputField from "../fields/InputField";
 interface ColorFormProps {
   onSubmit?: (formData: FormData) => void; // Optional in view mode
   onCancel: () => void;
-  defaultValues?: { name: string; hexCode: string; imageFile?: string }; // For edit/view case
+  defaultValues?: { name: string; hexCode: string; imageFile?: string; imageUrl?: string }; // For edit/view case
   mode?: "add" | "edit" | "view"; // Determines form behavior
 }
 
@@ -97,6 +98,13 @@ const ColorForm: React.FC<ColorFormProps> = ({
         {formData.imagePreview && (
           <img
             src={formData.imagePreview}
+            alt="Preview"
+            className="mb-2 h-20 w-20 object-cover rounded"
+          />
+        )}
+        {isViewMode && defaultValues?.imageUrl && (
+          <img
+            src={defaultValues?.imageUrl}
             alt="Preview"
             className="mb-2 h-20 w-20 object-cover rounded"
           />

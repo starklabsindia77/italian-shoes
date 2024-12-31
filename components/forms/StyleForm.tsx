@@ -7,7 +7,7 @@ import InputField from "../fields/InputField";
 interface StyleFormProps {
   onSubmit?: (formData: FormData) => void; // Optional in view mode
   onCancel: () => void;
-  defaultValues?: { name: string; imageFile?: string }; // For edit/view case
+  defaultValues?: { name: string; imageFile?: string; imageUrl?: string }; // For edit/view case
   mode?: "add" | "edit" | "view"; // Determines form behavior
 }
 
@@ -76,6 +76,13 @@ const StyleForm: React.FC<StyleFormProps> = ({
         {formData.imagePreview && (
           <img
             src={formData.imagePreview}
+            alt="Preview"
+            className="mb-2 h-20 w-20 object-cover rounded"
+          />
+        )}
+        {isViewMode && defaultValues?.imageUrl && (
+          <img
+            src={defaultValues?.imageUrl}
             alt="Preview"
             className="mb-2 h-20 w-20 object-cover rounded"
           />

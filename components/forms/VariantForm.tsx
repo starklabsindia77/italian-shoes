@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import InputField from "../fields/InputField";
 import SelectField from "../fields/SelectField"; // Assume SelectField is a reusable dropdown component
 
 interface VariantFormProps {
   onSubmit?: (formData: any) => void; // Optional in view mode
   onCancel: () => void;
   defaultValues?: {
+    name?: string;
     sizeOptionId?: number;
     styleOptionId?: number;
     soleOptionId?: number;
@@ -32,6 +34,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
   const isViewMode = mode === "view";
 
   const [formData, setFormData] = useState<{
+    name: string | "";  
     sizeOptionId: number | "";
     styleOptionId: number | "";
     soleOptionId: number | "";
@@ -39,6 +42,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
     colorId: number | "";
     panelId: number | "";
   }>({
+    name: defaultValues?.name || "",
     sizeOptionId: defaultValues?.sizeOptionId || "",
     styleOptionId: defaultValues?.styleOptionId || "",
     soleOptionId: defaultValues?.soleOptionId || "",
@@ -116,6 +120,14 @@ const VariantForm: React.FC<VariantFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
+      <InputField
+        label="Name"
+        value={formData.name}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
+        disabled={isViewMode}
+      />
+      </div>
+      <div>
         <SelectField
           label="Size"
           options={dropdownData.sizes.map((size) => ({
@@ -123,7 +135,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: `${size.sizeSystem} - ${size.size} (${size.width || "Standard"})`,
           }))}
           value={formData.sizeOptionId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               sizeOptionId: parseInt(e.target.value) || "",
@@ -143,7 +155,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: style.name,
           }))}
           value={formData.styleOptionId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               styleOptionId: parseInt(e.target.value) || "",
@@ -163,7 +175,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: `${sole.type} (${sole.height || "N/A"})`,
           }))}
           value={formData.soleOptionId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               soleOptionId: parseInt(e.target.value) || "",
@@ -183,7 +195,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: material.name,
           }))}
           value={formData.materialId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               materialId: parseInt(e.target.value) || "",
@@ -203,7 +215,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: `${color.name} (${color.hexCode})`,
           }))}
           value={formData.colorId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               colorId: parseInt(e.target.value) || "",
@@ -223,7 +235,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
             label: panel.name,
           }))}
           value={formData.panelId}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setFormData((prev) => ({
               ...prev,
               panelId: parseInt(e.target.value) || "",

@@ -170,6 +170,7 @@ model ProductVariant {
 
 model Variant {
   id       Int          @id @default(autoincrement())
+  name     String?      // variant name (e.g., "Classic", "Modern")
   size     SizeOption?  @relation(fields: [sizeOptionId], references: [id]) // Linked size
   style    StyleOption? @relation(fields: [styleOptionId], references: [id]) // Linked style
   sole     SoleOption?  @relation(fields: [soleOptionId], references: [id]) // Linked sole

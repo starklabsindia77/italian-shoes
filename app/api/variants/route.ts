@@ -17,14 +17,6 @@ export async function GET(req: NextRequest) {
       skip: (page - 1) * pageSize,
       take: pageSize,
       orderBy: { [sortBy]: sortOrder },
-      include: {
-        size: true,
-        style: true,
-        sole: true,
-        material: true,
-        color: true,
-        panel: true,
-      },
     });
 
     return NextResponse.json({
@@ -48,6 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
+      name,
       sizeOptionId,
       styleOptionId,
       soleOptionId,
@@ -56,12 +49,13 @@ export async function POST(req: NextRequest) {
       panelId,
     } = body;
 
-    if (!sizeOptionId || !styleOptionId || !soleOptionId || !materialId || !colorId || !panelId) {
+    if (!name || !sizeOptionId || !styleOptionId || !soleOptionId || !materialId || !colorId || !panelId) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
     const newVariant = await prisma.variant.create({
       data: {
+        name,
         sizeOptionId,
         styleOptionId,
         soleOptionId,
@@ -84,6 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { id } = params;
     const body = await req.json();
     const {
+      name,
       sizeOptionId,
       styleOptionId,
       soleOptionId,
@@ -95,6 +90,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const updatedVariant = await prisma.variant.update({
       where: { id: parseInt(id, 10) },
       data: {
+        name,
         sizeOptionId,
         styleOptionId,
         soleOptionId,

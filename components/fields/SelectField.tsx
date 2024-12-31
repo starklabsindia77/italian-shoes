@@ -4,9 +4,9 @@ interface SelectFieldProps {
   label: string;
   id?: string;
   name?: string;
-  value: string | number | undefined; // Ensure value matches allowed types
+  value: string | number; // Ensure value matches allowed types
   options: { value: string | number; label: string }[];
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onChange?: any
   disabled?: boolean;
   placeholder?: string;
   error?: string; // Validation error message

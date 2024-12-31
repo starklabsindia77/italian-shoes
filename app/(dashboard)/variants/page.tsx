@@ -32,6 +32,7 @@ const VariantListPage = () => {
 
   const columnsData = [
     { Header: "ID", accessor: "id" },
+    { Header: "Name", accessor: "name" },
     { Header: "Size", accessor: "size.name" },
     { Header: "Style", accessor: "style.name" },
     { Header: "Sole", accessor: "sole.name" },

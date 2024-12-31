@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/extension-accelerate": "^1.2.1",
     "@types/bcrypt": "^5.0.2",
     "@types/js-cookie": "^3.0.6",
     "@types/jsonwebtoken": "^9.0.7",

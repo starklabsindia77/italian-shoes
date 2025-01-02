@@ -133,36 +133,27 @@ model ShopifyCollection {
   updatedAtField DateTime @updatedAt
 }
 
-model Product {
-  id             Int       @id @default(autoincrement())
-  productId      String    @unique // Shopify Product ID from Shopify
-  title          String
-  description    String? // body_html
-  vendor         String
-  productType    String
-  handle         String    @unique
-  status         String // active, draft, archived
-  tags           String? // Comma-separated tags
-  templateSuffix String?
-  publishedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  productVariants ProductVariant[] // Specific product-variant relationships
-}
-
 model ProductVariant {
-  id                Int     @id @default(autoincrement())
-  productId         Int // Foreign key to Product
+  id                Int       @id @default(autoincrement())
+  shopifyProductId  Int // Foreign key to ShopifyProduct
   variantId         Int // Foreign key to shared Variant
-  price             Float // Price specific to this product-variant
-  inventoryQuantity Int     @default(0) // Quantity in stock
+  title             String?
+  description       String? // body_html
+  vendor            String?
+  productType       String?
+  handle            String?    @unique
+  status            String? // active, draft, archived
+  tags              String? // Comma-separated tags
+  templateSuffix    String?
+  publishedAt       DateTime?
+  price             Float? // Price specific to this product-variant
+  inventoryQuantity Int?       @default(0) // Quantity in stock
   images            Image[] // Images specific to this product-variant
-  seoMetadata       SEO?    @relation(fields: [seoMetadataId], references: [id]) // Make the relation optional
-  seoMetadataId     Int? // Make this field optional
+  seoMetadata       SEO?      @relation(fields: [seoMetadataId], references: [id]) // Optional relation
+  seoMetadataId     Int? // Optional SEO metadata ID
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  shopifyProduct ShopifyProduct @relation(fields: [shopifyProductId], references: [id], onDelete: Cascade)
+  variant        Variant        @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -170,7 +161,7 @@ model ProductVariant {
 
 model Variant {
   id       Int          @id @default(autoincrement())
-  name     String?      // variant name (e.g., "Classic", "Modern")
+  name     String? // variant name (e.g., "Classic", "Modern")
   size     SizeOption?  @relation(fields: [sizeOptionId], references: [id]) // Linked size
   style    StyleOption? @relation(fields: [styleOptionId], references: [id]) // Linked style
   sole     SoleOption?  @relation(fields: [soleOptionId], references: [id]) // Linked sole
@@ -248,10 +239,10 @@ model Material {
 }
 
 model Color {
-  id      Int     @id @default(autoincrement())
-  name    String // Color name (e.g., "Blue", "Red")
-  hexCode String? // HEX code for the color (e.g., "#0000FF")
-  imageUrl String?  // Optional color image
+  id        Int       @id @default(autoincrement())
+  name      String // Color name (e.g., "Blue", "Red")
+  hexCode   String? // HEX code for the color (e.g., "#0000FF")
+  imageUrl  String? // Optional color image
   createdAt DateTime  @default(now())
   Variant   Variant[]
 }
@@ -302,8 +293,9 @@ model ShopifyProduct {
   imageWidth  Int?
   imageHeight Int?
 
-  variants ShopifyVariant[] // One-to-many relationship with variants
-  images   ShopifyImage[] // One-to-many relationship with images
+  variants       ShopifyVariant[] // One-to-many relationship with variants
+  images         ShopifyImage[] // One-to-many relationship with images
+  ProductVariant ProductVariant[]
 }
 
 // ----------------- Shopify Variant Table -----------------

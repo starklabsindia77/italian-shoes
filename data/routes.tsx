@@ -27,6 +27,12 @@ const routes = [
     path: "product",
   },
   {
+    name: "Custom Products",
+    layout: "/dashboard",
+    icon: <MdBarChart className="h-6 w-6" />,
+    path: "product-variants",
+  },
+  {
     name: "Variants",
     layout: "/dashboard",
     icon: <MdBarChart className="h-6 w-6" />,

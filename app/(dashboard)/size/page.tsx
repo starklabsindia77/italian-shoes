@@ -88,7 +88,7 @@ const SizeListPage = () => {
   const handleEditSizeOption = async (sizeOptionData: any) => {
     try {
       const response = await fetch(
-        `/api/size-options/${selectedSizeOption.id}`,
+        `/api/size-options?id=${String(selectedSizeOption.id)}`,
         {
           method: "PUT",
           headers: {
@@ -113,7 +113,7 @@ const SizeListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/size-options/${deleteSizeId}`, {
+      const response = await fetch(`/api/size-options?id=${String(deleteSizeId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

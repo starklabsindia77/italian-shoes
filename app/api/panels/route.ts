@@ -89,7 +89,7 @@ export async function PUT(req: NextRequest) {
     if (description) updatedData.description = description;
 
     const updatedPanel = await prisma.panel.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: updatedData,
     });
 
@@ -113,7 +113,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.panel.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     return NextResponse.json({ message: "Panel deleted successfully" });

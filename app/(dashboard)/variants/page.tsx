@@ -132,7 +132,7 @@ const VariantListPage = () => {
   const handleEditVariant = async (variantData: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/variants/${selectedVariant.id}`, {
+      const response = await fetch(`/api/variants?id=${String(selectedVariant.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -160,7 +160,7 @@ const VariantListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/variants/${deleteVariantId}`, {
+      const response = await fetch(`/api/variants?id=${String(deleteVariantId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

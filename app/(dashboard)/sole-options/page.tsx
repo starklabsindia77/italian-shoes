@@ -89,7 +89,7 @@ const SoleOptionsListPage = () => {
   const handleEditSoleOption = async (soleOptionData: any) => {
     try {
       const response = await fetch(
-        `/api/sole-options/${selectedSoleOption.id}`,
+        `/api/sole-options?id=${String(selectedSoleOption.id)}`,
         {
           method: "PUT",
           headers: {
@@ -113,7 +113,7 @@ const SoleOptionsListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/sole-options/${deleteSoleId}`, {
+      const response = await fetch(`/api/sole-options?id=${String(deleteSoleId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

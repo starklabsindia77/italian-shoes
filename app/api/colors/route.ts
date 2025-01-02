@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
+    console.log('formData ====>', formData);
     const name = formData.get("name") as string;
     const hexCode = formData.get("hexCode") as string;
     const imageFile = formData.get("imageFile") as File;
@@ -95,16 +96,17 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET_SINGLE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET_SINGLE(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
 
     if (!id) {
       return NextResponse.json({ error: "Color ID is required" }, { status: 400 });
     }
 
     const color = await prisma.color.findUnique({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     if (!color) {
@@ -118,9 +120,10 @@ export async function GET_SINGLE(req: NextRequest, { params }: { params: { id: s
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const hexCode = formData.get("hexCode") as string;
@@ -160,7 +163,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (imageUrl) updatedData.imageUrl = imageUrl;
 
     const updatedColor = await prisma.color.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: updatedData,
     });
 
@@ -171,16 +174,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = params;
-
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     if (!id) {
       return NextResponse.json({ error: "Color ID is required" }, { status: 400 });
     }
 
     await prisma.color.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     return NextResponse.json({ message: "Color deleted successfully" }, { status: 200 });

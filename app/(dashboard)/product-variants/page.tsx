@@ -42,19 +42,19 @@ const ProductVariantListPage = () => {
       Cell: ({ row }: { row: any }) => (
         <div className="flex justify-center space-x-2">
           <button
-            onClick={() => handleView(row.original)}
+            onClick={() => handleView(row)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEye size={16} />
           </button>
           <button
-            onClick={() => handleEdit(row.original)}
+            onClick={() => handleEdit(row)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEdit size={16} />
           </button>
           <button
-            onClick={() => confirmDelete(row.original.id)}
+            onClick={() => confirmDelete(row.id)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiTrash size={16} />
@@ -107,9 +107,8 @@ const ProductVariantListPage = () => {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify(variantData),
+        body: variantData,
       });
 
       if (!response.ok) {
@@ -130,7 +129,7 @@ const ProductVariantListPage = () => {
   const handleEditProductVariant = async (variantData: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/product-variants/${selectedProductVariant.id}`, {
+      const response = await fetch(`/api/product-variants?id=${String(selectedProductVariant.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -159,7 +158,7 @@ const ProductVariantListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/product-variants/${deleteProductVariantId}`, {
+      const response = await fetch(`/api/product-variants?id=${String(deleteProductVariantId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -207,7 +206,7 @@ const ProductVariantListPage = () => {
     <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">
-          Product Variant List
+          {/* Product Variant List */}
         </h1>
         <button
           onClick={() => {

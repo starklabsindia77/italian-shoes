@@ -130,7 +130,7 @@ const PanelListPage = () => {
   const handleEditPanel = async (panelData: any) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/panels/${selectedPanel.id}`, {
+      const response = await fetch(`/api/panels?id=${String(selectedPanel.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -158,7 +158,7 @@ const PanelListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/panels/${deletePanelId}`, {
+      const response = await fetch(`/api/panels?id=${String(deletePanelId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

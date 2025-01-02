@@ -89,7 +89,7 @@ const MaterialListPage = () => {
 
   const handleEditMaterial = async (materialData: any) => {
     try {
-      const response = await fetch(`/api/materials/${selectedMaterial.id}`, {
+      const response = await fetch(`/api/materials?id=${String(selectedMaterial.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -110,7 +110,7 @@ const MaterialListPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/materials/${deleteMaterialId}`, {
+      const response = await fetch(`/api/materials?id=${String(deleteMaterialId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

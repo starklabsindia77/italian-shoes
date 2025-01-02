@@ -133,7 +133,7 @@ const StyleOptionsPage = () => {
   const handleEditStyle = async (styleData: FormData) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/style-options/${selectedStyle.id}`, {
+      const response = await fetch(`/api/style-options?id=${String(selectedStyle.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -161,7 +161,7 @@ const StyleOptionsPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/style-options/${deleteStyleId}`, {
+      const response = await fetch(`/api/style-options?id=${String(deleteStyleId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

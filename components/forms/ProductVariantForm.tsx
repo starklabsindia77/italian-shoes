@@ -23,13 +23,13 @@ interface ProductVariantFormProps {
       images?: { url: string }[]; // Preloaded images for edit/view mode
     }; // Default values for edit/view mode
     mode?: "add" | "edit" | "view"; // Determines form behavior
-  }
+}
   
-  interface DropdownOption {
+interface DropdownOption {
     id: number;
     name: string;
     [key: string]: any; // Handle additional properties
-  }
+}
 
 // The drop zone component for image uploads
 const ImageDropzone: React.FC<{
@@ -55,7 +55,7 @@ const ImageDropzone: React.FC<{
     <div className="mt-4">
       <div
         {...getRootProps()}
-        className="border-2 border-dashed border-gray-300 p-4 rounded cursor-pointer text-center"
+        className="border-2 border-dashed border-gray-300 p-4 rounded cursor-pointer text-center dark:text-white"
       >
         <input {...getInputProps()} />
         <p>Drag and drop images here, or click to select files</p>
@@ -65,7 +65,7 @@ const ImageDropzone: React.FC<{
           {images.map((file, index) => (
             <div
               key={index}
-              className="flex items-center justify-between border border-gray-300 p-2 rounded"
+              className="flex items-center justify-between border border-gray-300 p-2 rounded dark:text-white"
             >
               <p className="text-sm truncate">{file.name}</p>
               <button
@@ -139,7 +139,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     if (isViewMode) return true;
 
     const newErrors: Partial<typeof formData> = {};
-    if (!formData.shopifyProductId) newErrors.shopifyProductId = "Shopify Product is required.";
+    if (!formData.shopifyProductId) newErrors .shopifyProductId = "Shopify Product is required.";
     if (!formData.variantId) newErrors.variantId = "Variant is required.";
     if (!formData.title) newErrors.title = "Title is required.";
     if (!formData.price) newErrors.price = "Price is required.";
@@ -149,106 +149,133 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isViewMode) return;
+  
+    if (isViewMode) return; // Prevent submission in view mode
+  
     if (validate() && onSubmit) {
-      const payload = {
-        ...formData,
-        images, // Include the images in the payload
-      };
-      onSubmit(payload);
+      const formDataToSubmit = new FormData();
+  
+      // Append basic fields
+      formDataToSubmit.append("shopifyProductId", String(formData.shopifyProductId));
+      formDataToSubmit.append("variantId", String(formData.variantId));
+      formDataToSubmit.append("title", formData.title);
+      formDataToSubmit.append("description", formData.description);
+      formDataToSubmit.append("price", String(formData.price));
+      formDataToSubmit.append("inventoryQuantity", String(formData.inventoryQuantity));
+  
+      // Append SEO metadata
+      if (formData.seoMetadata) {
+        formDataToSubmit.append("seoMetadata[title]", formData.seoMetadata.title);
+        formDataToSubmit.append("seoMetadata[description]", formData.seoMetadata.description);
+        formDataToSubmit.append("seoMetadata[keywords]", formData.seoMetadata.keywords);
+      }
+  
+      // Append images
+      // Append images with correct keys
+      images.forEach((image, index) => {
+        formDataToSubmit.append(`images[${index}]`, image, image.name);
+      });
+
+  
+      // Submit the FormData payload
+      onSubmit(formDataToSubmit);
     }
   };
+  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <SelectField
-          label="Shopify Product"
-          options={dropdownData.shopifyProducts.map((product) => ({
-            value: product.id,
-            label: product.title,
-          }))}
-          value={formData.shopifyProductId}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-            setFormData((prev) => ({ ...prev, shopifyProductId: parseInt(e.target.value) || "" }))
-          }
-          disabled={isViewMode}
-        />
-        {errors.shopifyProductId && <p className="text-red-500 text-sm mt-1">{errors.shopifyProductId}</p>}
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <SelectField
+            label="Shopify Product"
+            options={dropdownData.shopifyProducts.map((product) => ({
+              value: product.id,
+              label: product.title,
+            }))}
+            value={formData.shopifyProductId}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setFormData((prev) => ({ ...prev, shopifyProductId: parseInt(e.target.value) || "" }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.shopifyProductId && <p className="text-red-500 text-sm mt-1">{errors.shopifyProductId}</p>}
+        </div>
 
-      <div>
-        <SelectField
-          label="Variant"
-          options={dropdownData.variants.map((variant) => ({
-            value: variant.id,
-            label: variant.name,
-          }))}
-          value={formData.variantId}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-            setFormData((prev) => ({ ...prev, variantId: parseInt(e.target.value) || "" }))
-          }
-          disabled={isViewMode}
-        />
-        {errors.variantId && <p className="text-red-500 text-sm mt-1">{errors.variantId}</p>}
-      </div>
+        <div>
+          <SelectField
+            label="Variant"
+            options={dropdownData.variants.map((variant) => ({
+              value: variant.id,
+              label: variant.name,
+            }))}
+            value={formData.variantId}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setFormData((prev) => ({ ...prev, variantId: parseInt(e.target.value) || "" }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.variantId && <p className="text-red-500 text-sm mt-1">{errors.variantId}</p>}
+        </div>
 
-      <div>
-        <InputField
-          label="Title"
-          value={formData.title}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFormData((prev) => ({ ...prev, title: e.target.value }))
-          }
-          disabled={isViewMode}
-        />
-        {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-      </div>
+        <div>
+          <InputField
+            label="Title"
+            value={formData.title}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFormData((prev) => ({ ...prev, title: e.target.value }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+        </div>
 
-      <div>
-        <InputField
-          label="Description"
-          value={formData.description}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFormData((prev) => ({ ...prev, description: e.target.value }))
-          }
-          disabled={isViewMode}
-        />
-      </div>
+        <div>
+          <InputField
+            label="Description"
+            value={formData.description}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            disabled={isViewMode}
+          />
+        </div>
 
-      <div>
-        <InputField
-          label="Price"
-          type="number"
-          value={formData.price}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFormData((prev) => ({ ...prev, price: parseFloat(e.target.value) || "" }))
-          }
-          disabled={isViewMode}
-        />
-        {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
-      </div>
+        <div>
+          <InputField
+            label="Price"
+            type="number"
+            value={formData.price}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFormData((prev) => ({ ...prev, price: parseFloat(e.target.value) || "" }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+        </div>
 
-      <div>
-        <InputField
-          label="Inventory Quantity"
-          type="number"
-          value={formData.inventoryQuantity}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFormData((prev) => ({ ...prev, inventoryQuantity: parseInt(e.target.value) || "" }))
-          }
-          disabled={isViewMode}
-        />
-        {errors.inventoryQuantity && (
-          <p className="text-red-500 text-sm mt-1">{errors.inventoryQuantity}</p>
-        )}
+        <div>
+          <InputField
+            label="Inventory Quantity"
+            type="number"
+            value={formData.inventoryQuantity}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFormData((prev) => ({ ...prev, inventoryQuantity: parseInt(e.target.value) || "" }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.inventoryQuantity && (
+            <p className="text-red-500 text-sm mt-1">{errors.inventoryQuantity}</p>
+          )}
+        </div>
       </div>
 
       {/* SEO Metadata Section */}
       <fieldset className="border border-gray-300 p-4 rounded">
-        <legend className="text-sm font-semibold">SEO Metadata</legend>
+        <legend className="text-sm font-semibold dark:text-white">SEO Metadata</legend>
         <div>
           <InputField
             label="SEO Title"

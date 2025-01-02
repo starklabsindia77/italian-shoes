@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import cloudinary from "cloudinary";
+
 
 const prisma = new PrismaClient();
+
+// Configure Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+
 
 // GET: Fetch all product variants with related data
 export async function GET(req: NextRequest) {
@@ -41,79 +52,85 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Create a new product variant
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const {
-      shopifyProductId,
-      variantId,
-      title,
-      description,
-      price,
-      inventoryQuantity,
-      images,
-      seoMetadata,
-      vendor, // Required
-      productType, // Required
-      handle, // Required
-      status, // Required
-    } = body;
-    
-    if (!vendor || !productType || !handle || !status) {
+    // Parse formData and extract necessary fields
+    const formData = await req.formData();  
+
+    // Extract simple fields
+    const shopifyProductId = formData.get("shopifyProductId") as string;
+    const variantId = formData.get("variantId") as string;
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const price = parseFloat(formData.get("price") as string);
+    const inventoryQuantity = parseInt(formData.get("inventoryQuantity") as string, 10);
+    const vendor = formData.get("vendor") as string || "Default Vendor";
+    const productType = formData.get("productType") as string || "Default Type";
+    const handle = formData.get("handle") as string || "sample-product-variant";
+    const status = formData.get("status") as string || "active";
+
+    // Extract nested SEO metadata fields
+    const seoMetadata = {
+      title: formData.get("seoMetadata[title]") as string,
+      description: formData.get("seoMetadata[description]") as string,
+      keywords: formData.get("seoMetadata[keywords]") as string,
+    };
+    const images: File[] = [];
+    formData.forEach((value, key) => {
+      if (key.startsWith("images[") && value instanceof File) {
+        images.push(value);
+      }
+    });
+
+    // Validate required fields
+    if (!shopifyProductId || !variantId || !title || !price || !inventoryQuantity) {
       return NextResponse.json(
-        { error: "vendor, productType, handle, and status are required fields" },
+        { error: "Missing required fields: shopifyProductId, variantId, title, price, inventoryQuantity" },
         { status: 400 }
       );
     }
-    
-    // const newProductVariant = await prisma.productVariant.create({
-    //   data: {
-    //     shopifyProductId: shopifyProductId || null,
-    //     variantId: variantId || null,
-    //     title: title || null,
-    //     description : description || null,
-    //     price: price || null,
-    //     inventoryQuantity: inventoryQuantity || null,
-    //     vendor: vendor || "Default Vendor", // Default value
-    //     productType: productType || "Default Type", // Default value
-    //     handle: handle || `${title}-${variantId}`, // Generate handle if not provided
-    //     status: status || "active", // Default status
-    //     images: {
-    //       create: images || [], // Default to an empty array
-    //     },
-    //     seoMetadata: seoMetadata
-    //       ? {
-    //           create: {
-    //             title: seoMetadata.title || null,
-    //             description: seoMetadata.description || null,
-    //             keywords: seoMetadata.keywords || null,
-    //           },
-    //         }
-    //       : undefined,
-    //   },
-    // });
 
+    if (images.length === 0) {
+      return NextResponse.json(
+        { error: "At least one image file is required" },
+        { status: 400 }
+      );
+    }
+
+    // // Upload images to Cloudinary
+    const uploadedImages = await Promise.all(
+      images.map(async (file) => {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.v2.uploader.upload_stream(
+            { folder: "product-variants" },
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          uploadStream.end(buffer);
+        });
+      })
+    );
+
+    // Create Product Variant in the database
     const newProductVariant = await prisma.productVariant.create({
       data: {
-        shopifyProduct: {
-          connect: { id: shopifyProductId }, // Assuming shopifyProductId is the ID of the related shopifyProduct
-        },
-        variant: {
-          connect: { id: variantId }, // Assuming variantId is the ID of the related variant
-        },
-        title: title || null,
-        description: description || null,
-        price: price || null,
-        inventoryQuantity: inventoryQuantity || null,
-        vendor: vendor || "Default Vendor", // Default value
-        productType: productType || "Default Type", // Default value
-        handle: handle || `${title}-${variantId}`, // Generate handle if not provided
-        status: status || "active", // Default status
-        images: {
-          create: images || [], // Default to an empty array
-        },
-        seoMetadata: seoMetadata
+        shopifyProduct: { connect: { id: Number(shopifyProductId) } },
+        variant: { connect: { id: Number(variantId) } },
+        title,
+        description,
+        price,
+        inventoryQuantity,
+        vendor,
+        productType,
+        handle,
+        status,
+        seoMetadata: seoMetadata.title || seoMetadata.description || seoMetadata.keywords
           ? {
               create: {
                 title: seoMetadata.title || null,
@@ -122,60 +139,122 @@ export async function POST(req: NextRequest) {
               },
             }
           : undefined,
+        images: {
+          create: (uploadedImages as any[]).map(({ secure_url }: any) => ({
+            url: secure_url,
+          })),
+        },
       },
     });
-    
+
     return NextResponse.json(newProductVariant, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating product variant:", error);
-    return NextResponse.json({ error: "Failed to create product variant" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create product variant", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
 // PUT: Update an existing product variant
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest) {
   try {
-    const { id } = params;
-    const body = await req.json();
-    const {
-      shopifyProductId,
-      variantId,
-      title,
-      description,
-      price,
-      inventoryQuantity,
-      images,
-      seoMetadata,
-    } = body;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
+    const formData = await req.formData();
 
+    // Extract simple fields
+    const shopifyProductId = formData.get("shopifyProductId") as string;
+    const variantId = formData.get("variantId") as string;
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const price = parseFloat(formData.get("price") as string);
+    const inventoryQuantity = parseInt(formData.get("inventoryQuantity") as string, 10);
+    const vendor = formData.get("vendor") as string || "Default Vendor";
+    const productType = formData.get("productType") as string || "Default Type";
+    const handle = formData.get("handle") as string || "sample-product-variant";
+    const status = formData.get("status") as string || "active";
+
+    // Extract nested SEO metadata fields
+    const seoMetadata = {
+      title: formData.get("seoMetadata[title]") as string,
+      description: formData.get("seoMetadata[description]") as string,
+      keywords: formData.get("seoMetadata[keywords]") as string,
+    };
+
+    // Extract and process image files
+    const images: File[] = [];
+    formData.forEach((value, key) => {
+      if (key.startsWith("images[") && value instanceof File) {
+        images.push(value);
+      }
+    });
+
+    // Validate required fields
+    if (!id || !title || !price || !inventoryQuantity) {
+      return NextResponse.json(
+        { error: "Missing required fields: id, title, price, inventoryQuantity" },
+        { status: 400 }
+      );
+    }
+
+    // Upload new images to Cloudinary if provided
+    const uploadedImages = images.length > 0
+      ? await Promise.all(
+          images.map(async (file) => {
+            const buffer = Buffer.from(await file.arrayBuffer());
+            return new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.v2.uploader.upload_stream(
+                { folder: "product-variants" },
+                (error, result) => {
+                  if (error) {
+                    reject(error);
+                  } else {
+                    resolve(result);
+                  }
+                }
+              );
+              uploadStream.end(buffer);
+            });
+          })
+        )
+      : [];
+
+    // Update Product Variant in the database
     const updatedVariant = await prisma.productVariant.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: {
-        shopifyProductId,
-        variantId,
+        shopifyProduct: shopifyProductId ? { connect: { id: Number(shopifyProductId) } } : undefined,
+        variant: variantId ? { connect: { id: Number(variantId) } } : undefined,
         title,
         description,
         price,
         inventoryQuantity,
-        images: {
-          deleteMany: {},
-          create: images.map((image: { url: string; altText?: string }) => ({
-            url: image.url,
-            altText: image.altText,
-          })),
-        },
-        seoMetadata: seoMetadata
+        vendor,
+        productType,
+        handle,
+        status,
+        images: images.length > 0
+          ? {
+              deleteMany: {}, // Clear old images
+              create: (uploadedImages as any[]).map(({ secure_url }: any) => ({
+                url: secure_url,
+              })),
+            }
+          : undefined,
+        seoMetadata: seoMetadata.title || seoMetadata.description || seoMetadata.keywords
           ? {
               upsert: {
                 create: {
-                  title: seoMetadata.title,
-                  description: seoMetadata.description,
-                  keywords: seoMetadata.keywords,
+                  title: seoMetadata.title || null,
+                  description: seoMetadata.description || null,
+                  keywords: seoMetadata.keywords || null,
                 },
                 update: {
-                  title: seoMetadata.title,
-                  description: seoMetadata.description,
-                  keywords: seoMetadata.keywords,
+                  title: seoMetadata.title || null,
+                  description: seoMetadata.description || null,
+                  keywords: seoMetadata.keywords || null,
                 },
               },
             }
@@ -184,19 +263,23 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     });
 
     return NextResponse.json(updatedVariant, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating product variant:", error);
-    return NextResponse.json({ error: "Failed to update product variant" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update product variant", details: error.message },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE: Delete a product variant
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { id } = params;
 
+// DELETE: Delete a product variant
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     await prisma.productVariant.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     return NextResponse.json({ message: "Product variant deleted successfully" }, { status: 200 });

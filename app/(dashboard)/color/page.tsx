@@ -132,7 +132,7 @@ const ColorListPage = () => {
   const handleEditColor = async (colorData: FormData) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/colors/${selectedColor.id}`, {
+      const response = await fetch(`/api/colors?id=${String(selectedColor.id)}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -160,7 +160,7 @@ const ColorListPage = () => {
   
     setLoading(true);
     try {
-      const response = await fetch(`/api/colors/${deleteColorId}`, {
+      const response = await fetch(`/api/colors?id=${String(deleteColorId)}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

@@ -76,9 +76,10 @@ export async function POST(req: NextRequest) {
 }
 
 // PUT: Update an existing style option
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     const formData = await req.formData();
     const name = formData.get("name") as string;
     const imageFile = formData.get("imageFile") as File;
@@ -103,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (imageUrl) updatedData.imageUrl = imageUrl;
 
     const updatedStyleOption = await prisma.styleOption.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: updatedData,
     });
 
@@ -115,15 +116,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE: Remove a style option
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
 
     if (!id) {
       return NextResponse.json({ error: "StyleOption ID is required" }, { status: 400 });
     }
 
-    await prisma.styleOption.delete({ where: { id: parseInt(id, 10) } });
+    await prisma.styleOption.delete({ where: { id: id } });
 
     return NextResponse.json({ message: "StyleOption deleted successfully" }, { status: 200 });
   } catch (error) {

@@ -87,9 +87,10 @@ export async function POST(req: NextRequest) {
 }
 
 // PUT: Update Variant
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     const body = await req.json();
     const {
       name,
@@ -102,7 +103,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     } = body;
 
     const updatedVariant = await prisma.variant.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: {
         name,
         sizeOptionId,
@@ -122,12 +123,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE: Delete Variant
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
 
     await prisma.variant.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     return NextResponse.json({ message: "Variant deleted successfully" }, { status: 200 });

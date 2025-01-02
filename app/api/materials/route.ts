@@ -57,9 +57,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
     const formData = await req.json();
     const { name, description } = formData;
 
@@ -68,7 +69,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const updatedMaterial = await prisma.material.update({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
       data: { name, description },
     });
 
@@ -79,16 +80,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest) {
   try {
-    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const id = parseInt(searchParams.get("id") || "1", 10);
 
     if (!id) {
       return NextResponse.json({ error: "Material ID is required" }, { status: 400 });
     }
 
     await prisma.material.delete({
-      where: { id: parseInt(id, 10) },
+      where: { id: id },
     });
 
     return NextResponse.json({ message: "Material deleted successfully" }, { status: 200 });

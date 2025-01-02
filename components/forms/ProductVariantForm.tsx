@@ -4,9 +4,12 @@ import { useState, useEffect } from "react";
 import InputField from "../fields/InputField";
 import SelectField from "../fields/SelectField"; 
 import { useDropzone } from "react-dropzone";
+import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
+import { Editor } from "react-draft-wysiwyg";
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
 interface ProductVariantFormProps {
-    onSubmit?: (formData: any) => void; // Callback function for form submission
+    onSubmit?: (formData: any) => void;
     onCancel: () => void;
     defaultValues?: {
       shopifyProductId?: number;
@@ -20,18 +23,17 @@ interface ProductVariantFormProps {
         description?: string;
         keywords?: string;
       };
-      images?: { url: string }[]; // Preloaded images for edit/view mode
-    }; // Default values for edit/view mode
-    mode?: "add" | "edit" | "view"; // Determines form behavior
+      images?: { url: string }[];
+    };
+    mode?: "add" | "edit" | "view";
 }
-  
+
 interface DropdownOption {
     id: number;
     name: string;
-    [key: string]: any; // Handle additional properties
+    [key: string]: any;
 }
 
-// The drop zone component for image uploads
 const ImageDropzone: React.FC<{
   images: File[];
   setImages: React.Dispatch<React.SetStateAction<File[]>>;
@@ -43,7 +45,7 @@ const ImageDropzone: React.FC<{
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: {
-      "image/*": [], // Accept all image types
+      "image/*": [],
     },
   });
 
@@ -95,7 +97,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     shopifyProductId: defaultValues?.shopifyProductId || "",
     variantId: defaultValues?.variantId || "",
     title: defaultValues?.title || "",
-    description: defaultValues?.description || "",
+    description: EditorState.createEmpty(),
     price: defaultValues?.price || "",
     inventoryQuantity: defaultValues?.inventoryQuantity || "",
     seoMetadata: {
@@ -116,7 +118,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
 
   const [errors, setErrors] = useState<Partial<typeof formData>>({});
 
-  // Fetch dropdown data
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -139,7 +140,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     if (isViewMode) return true;
 
     const newErrors: Partial<typeof formData> = {};
-    if (!formData.shopifyProductId) newErrors .shopifyProductId = "Shopify Product is required.";
+    if (!formData.shopifyProductId) newErrors.shopifyProductId = "Shopify Product is required.";
     if (!formData.variantId) newErrors.variantId = "Variant is required.";
     if (!formData.title) newErrors.title = "Title is required.";
     if (!formData.price) newErrors.price = "Price is required.";
@@ -149,45 +150,71 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-  
-    if (isViewMode) return; // Prevent submission in view mode
-  
+
+    if (isViewMode) return;
+
     if (validate() && onSubmit) {
       const formDataToSubmit = new FormData();
-  
-      // Append basic fields
+
       formDataToSubmit.append("shopifyProductId", String(formData.shopifyProductId));
       formDataToSubmit.append("variantId", String(formData.variantId));
       formDataToSubmit.append("title", formData.title);
-      formDataToSubmit.append("description", formData.description);
+
+      // Convert description from EditorState to raw string
+      const descriptionRaw = JSON.stringify(
+        convertToRaw(formData.description.getCurrentContent())
+      );
+      formDataToSubmit.append("description", descriptionRaw);
+
       formDataToSubmit.append("price", String(formData.price));
       formDataToSubmit.append("inventoryQuantity", String(formData.inventoryQuantity));
-  
-      // Append SEO metadata
+
       if (formData.seoMetadata) {
         formDataToSubmit.append("seoMetadata[title]", formData.seoMetadata.title);
         formDataToSubmit.append("seoMetadata[description]", formData.seoMetadata.description);
         formDataToSubmit.append("seoMetadata[keywords]", formData.seoMetadata.keywords);
       }
-  
-      // Append images
-      // Append images with correct keys
+
       images.forEach((image, index) => {
         formDataToSubmit.append(`images[${index}]`, image, image.name);
       });
 
-  
-      // Submit the FormData payload
       onSubmit(formDataToSubmit);
     }
   };
-  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <InputField
+            label="Title"
+            value={formData.title}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFormData((prev) => ({ ...prev, title: e.target.value }))
+            }
+            disabled={isViewMode}
+          />
+          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+        </div>
+
+        <fieldset className="border border-gray-300 p-4 rounded dark:text-white">
+         <legend className="text-sm font-semibold dark:text-white">Description</legend>
+           <Editor
+            editorState={formData.description}
+            onEditorStateChange={(editorState) =>
+              setFormData((prev) => ({ ...prev, description: editorState }))
+            }
+            toolbarClassName="toolbarClassName"
+            wrapperClassName="wrapperClassName"
+            editorClassName="editorClassName"
+            readOnly={isViewMode}
+          />
+        </fieldset>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <SelectField
@@ -223,29 +250,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
 
         <div>
           <InputField
-            label="Title"
-            value={formData.title}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFormData((prev) => ({ ...prev, title: e.target.value }))
-            }
-            disabled={isViewMode}
-          />
-          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-        </div>
-
-        <div>
-          <InputField
-            label="Description"
-            value={formData.description}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFormData((prev) => ({ ...prev, description: e.target.value }))
-            }
-            disabled={isViewMode}
-          />
-        </div>
-
-        <div>
-          <InputField
             label="Price"
             type="number"
             value={formData.price}
@@ -273,52 +277,52 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
         </div>
       </div>
 
-      {/* SEO Metadata Section */}
-      <fieldset className="border border-gray-300 p-4 rounded">
-        <legend className="text-sm font-semibold dark:text-white">SEO Metadata</legend>
-        <div>
-          <InputField
-            label="SEO Title"
-            value={formData.seoMetadata.title}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFormData((prev) => ({
-                ...prev,
-                seoMetadata: { ...prev.seoMetadata, title: e.target.value },
-              }))
-            }
-            disabled={isViewMode}
-          />
-        </div>
-        <div>
-          <InputField
-            label="SEO Description"
-            value={formData.seoMetadata.description}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFormData((prev) => ({
-                ...prev,
-                seoMetadata: { ...prev.seoMetadata, description: e.target.value },
-              }))
-            }
-            disabled={isViewMode}
-          />
-        </div>
-        <div>
-          <InputField
-            label="SEO Keywords"
-            value={formData.seoMetadata.keywords}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFormData((prev) => ({
-                ...prev,
-                seoMetadata: { ...prev.seoMetadata, keywords: e.target.value },
-              }))
-            }
-            disabled={isViewMode}
-          />
-        </div>
-      </fieldset>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <fieldset className="border border-gray-300 p-4 rounded">
+          <legend className="text-sm font-semibold dark:text-white">SEO Metadata</legend>
+          <div>
+            <InputField
+              label="SEO Title"
+              value={formData.seoMetadata.title}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  seoMetadata: { ...prev.seoMetadata, title: e.target.value },
+                }))
+              }
+              disabled={isViewMode}
+            />
+          </div>
+          <div>
+            <InputField
+              label="SEO Description"
+              value={formData.seoMetadata.description}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  seoMetadata: { ...prev.seoMetadata, description: e.target.value },
+                }))
+              }
+              disabled={isViewMode}
+            />
+          </div>
+          <div>
+            <InputField
+              label="SEO Keywords"
+              value={formData.seoMetadata.keywords}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  seoMetadata: { ...prev.seoMetadata, keywords: e.target.value },
+                }))
+              }
+              disabled={isViewMode}
+            />
+          </div>
+        </fieldset>
 
-      {/* Image Upload Section */}
-      <ImageDropzone images={images} setImages={setImages} />
+        <ImageDropzone images={images} setImages={setImages} />
+      </div>
 
       <div className="flex justify-end space-x-2">
         {isViewMode ? (

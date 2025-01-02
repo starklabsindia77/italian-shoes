@@ -265,6 +265,8 @@ const ProductVariantListPage = () => {
               ? "Edit Product Variant"
               : "View Product Variant"
           }
+          width="w-2/3"
+          scrollable={true}
         >
           <ProductVariantForm
             onSubmit={

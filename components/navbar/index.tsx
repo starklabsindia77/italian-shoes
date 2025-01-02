@@ -46,16 +46,23 @@ const Navbar = () => {
         router.push('/auth');
     };
 
-    // Get the active route based on pathname
     const getActiveRoute = (routes: RouteType[]) => {
+        const pathnameSegments = pathname.split('/').filter(Boolean); // Split pathname into segments
+    
         for (const route of routes) {
-            if (pathname.includes(route.path)) {
+            const routeSegments = route.path.split('/').filter(Boolean); // Split route path into segments
+            if (
+                pathnameSegments.length === routeSegments.length &&
+                pathnameSegments.every((seg, i) => seg === routeSegments[i])
+            ) {
                 setCurrentRoute(route.name);
                 return;
             }
         }
+    
         setCurrentRoute('Main Dashboard');
     };
+    
 
     useEffect(() => {
         getActiveRoute(routes);

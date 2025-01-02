@@ -3,7 +3,11 @@ import {
   MdHome,
   MdOutlineShoppingCart,
   MdBarChart,
-  MdPerson,
+  MdColorLens,
+  MdBuild,
+  MdStraighten,
+  MdOutlineStyle,
+  MdCategory,
 } from "react-icons/md";
 
 const routes = [
@@ -13,78 +17,60 @@ const routes = [
     path: "dashboard",
     icon: <MdHome className="h-6 w-6" />,
   },
-  // {
-  //   name: "NFT Marketplace",
-  //   layout: "/dashboard",
-  //   path: "nft-marketplace",
-  //   icon: <MdOutlineShoppingCart className="h-6 w-6" />,
-  //   secondary: true,
-  // },
   {
     name: "Shopify Products",
     layout: "/dashboard",
-    icon: <MdBarChart className="h-6 w-6" />,
     path: "product",
+    icon: <MdOutlineShoppingCart className="h-6 w-6" />,
   },
   {
     name: "Custom Products",
     layout: "/dashboard",
-    icon: <MdBarChart className="h-6 w-6" />,
     path: "product-variants",
+    icon: <MdCategory className="h-6 w-6" />,
   },
   {
     name: "Variants",
     layout: "/dashboard",
-    icon: <MdBarChart className="h-6 w-6" />,
     path: "variants",
+    icon: <MdBarChart className="h-6 w-6" />,
   },
   {
     name: "Color",
     layout: "/dashboard",
     path: "color",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdColorLens className="h-6 w-6" />,
   },
-
   {
     name: "Panel",
     layout: "/dashboard",
     path: "panel",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdBuild className="h-6 w-6" />,
   },
-
   {
     name: "Materials",
     layout: "/dashboard",
     path: "material",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdCategory className="h-6 w-6" />,
   },
-
   {
     name: "Size Options",
     layout: "/dashboard",
     path: "size",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdStraighten className="h-6 w-6" />,
   },
-
   {
     name: "Sole Options",
     layout: "/dashboard",
     path: "sole-options",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdBuild className="h-6 w-6" />,
   },
-
   {
     name: "Style Options",
     layout: "/dashboard",
     path: "style-options",
-    icon: <MdPerson className="h-6 w-6" />,
+    icon: <MdOutlineStyle className="h-6 w-6" />,
   },
-  // {
-  //   name: "RTL Admin",
-  //   layout: "/rtl",
-  //   path: "rtl",
-  //   icon: <MdHome className="h-6 w-6" />,
-  // },
 ];
 
 export default routes;

@@ -19,7 +19,8 @@ export function SidebarLinks({ onClickRoute }: Props) {
 
   // verifies if routeName is the one active (in browser input)
   const activeRoute = (routeName: string) => {
-    return pathname.includes(routeName);
+    const pathnameSegments = pathname.split('/').filter(Boolean); // Split and remove empty segments
+    return pathnameSegments.includes(routeName);
   };
 
   const createLinks = (routes: any) => {
@@ -69,3 +70,6 @@ export function SidebarLinks({ onClickRoute }: Props) {
 }
 
 export default SidebarLinks;
+
+
+

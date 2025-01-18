@@ -54,3 +54,44 @@ input:checked.defaultCheckbox::before {
     cursor: pointer;
 }
 /* END SCROLLBAR */
+
+
+.dropdown-arrow {
+	appearance: none;
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+	background-position: right 0.5rem center;
+	background-repeat: no-repeat;
+	background-size: 1.5em 1.5em;
+	padding-right: 2.5rem;
+}
+
+.custom-tooltip {
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	margin-top: 0.5rem;
+	padding: 0.5rem;
+	background-color: white;
+	border-radius: 0.375rem;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	white-space: nowrap;
+	z-index: 50;
+}
+
+.color-swatch:hover .custom-tooltip {
+	display: block;
+}
+
+
+/* Ensure slider overflow is clipped */
+.relative {
+	position: relative;
+  }
+  .overflow-hidden {
+	overflow: hidden;
+  }
+  .transition-transform {
+	transition: transform 0.3s ease-in-out;
+  }

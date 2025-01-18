@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+ /* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -261,48 +261,65 @@ const ProductPage = () => {
     </div>
   );
 
-  const MaterialSelector = () =>  {
+  const MaterialSelector = () => {
     const colorPalette = [
-        'bg-blue-200', 'bg-red-200', 'bg-green-200', 'bg-yellow-200', 
-        'bg-purple-200', 'bg-pink-200', 'bg-indigo-200', 'bg-teal-200',
-        'bg-orange-200', 'bg-cyan-200', 'bg-rose-200', 'bg-violet-200',
-        'bg-emerald-200', 'bg-sky-200', 'bg-amber-200', 'bg-lime-200',
-        'bg-fuchsia-200', 'bg-slate-200', 'bg-gray-200', 'bg-neutral-200'
-      ];
-    
-      // Function to get a random color from the palette
-      const getRandomColor = () => {
-        const randomIndex = Math.floor(Math.random() * colorPalette.length);
-        return colorPalette[randomIndex];
-      };
+      "bg-blue-200",
+      "bg-red-200",
+      "bg-green-200",
+      "bg-yellow-200",
+      "bg-purple-200",
+      "bg-pink-200",
+      "bg-indigo-200",
+      "bg-teal-200",
+      "bg-orange-200",
+      "bg-cyan-200",
+      "bg-rose-200",
+      "bg-violet-200",
+      "bg-emerald-200",
+      "bg-sky-200",
+      "bg-amber-200",
+      "bg-lime-200",
+      "bg-fuchsia-200",
+      "bg-slate-200",
+      "bg-gray-200",
+      "bg-neutral-200",
+    ];
+
+    // Function to get a random color from the palette
+    const getRandomColor = () => {
+      const randomIndex = Math.floor(Math.random() * colorPalette.length);
+      return colorPalette[randomIndex];
+    };
     return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Select a panel:</span>
-        <select
-          value={selectedPanel}
-          onChange={(e) => setSelectedPanel(e.target.value)}
-          className="border rounded-md px-2 py-1"
-        >
-          <option>Toe cap</option>
-          <option>Side panel</option>
-          <option>Heel</option>
-        </select>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Select a panel:</span>
+          <select
+            value={selectedPanel}
+            onChange={(e) => setSelectedPanel(e.target.value)}
+            className="border rounded-md px-2 py-1"
+          >
+            <option>Toe cap</option>
+            <option>Side panel</option>
+            <option>Heel</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-10 gap-2">
+          {Array(20)
+            .fill(null)
+            .map((_, i) => {
+              const randomColor = getRandomColor();
+              return (
+                <button
+                  key={i}
+                  className={`w-12 h-12 rounded-md ${randomColor} hover:ring-2 ring-offset-2 ring-blue-500 transition-all duration-200`}
+                />
+              );
+            })}
+        </div>
       </div>
-      <div className="grid grid-cols-10 gap-2">
-      {Array(20).fill(null).map((_, i) => {
-          const randomColor = getRandomColor();
-          return (
-            <button
-              key={i}
-              className={`w-12 h-12 rounded-md ${randomColor} hover:ring-2 ring-offset-2 ring-blue-500 transition-all duration-200`}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-    }
+    );
+  };
 
   const SoleSelector = () => (
     <div className="grid grid-cols-5 gap-4">

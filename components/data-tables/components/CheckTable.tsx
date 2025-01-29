@@ -182,7 +182,9 @@ const CheckTable = ({
                       accessor: string | number,
                       row: Record<string, any>
                     ): any => {
-                      if (
+                      if(accessor === "id"){
+                        return rowIndex + 1
+                      }else if (
                         typeof accessor === "string" &&
                         accessor.includes(".")
                       ) {

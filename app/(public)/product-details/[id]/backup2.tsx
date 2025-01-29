@@ -1,11 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Heart,
+  Share2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
+
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import { Heart, Share2, X } from "lucide-react";
 
-// Interfaces for Product Data
 interface Size {
   id: number;
   sizeSystem: string;
@@ -43,11 +49,11 @@ interface Panel {
   name: string;
   description: string;
 }
-
 interface ProductImage {
   url: string;
   altText: string | null;
 }
+
 
 interface ProductVariant {
   id: number;
@@ -126,12 +132,11 @@ const relatedProducts = [
   },
 ];
 
+
 const ProductPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedTab, setSelectedTab] = useState("Materials");
-  const [modalOpen, setModalOpen] = useState(false);
 
-  // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
     size: Size | null;
     style: Style | null;
@@ -147,45 +152,47 @@ const ProductPage = () => {
     color: null,
     panel: null,
   });
-
-  // **Variant After Applying Selection**
   const [currentVariant, setCurrentVariant] = useState<ProductVariant | null>(
     null
   );
+  const [modalOpen, setModalOpen] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch("/api/product/8982116565284");
+        const response = await fetch("/api/product/8982116565284"); // Dynamic Product ID
         const data = await response.json();
         setProduct(data);
-        setCurrentVariant(data.variants[0]); // Default variant
+        setCurrentVariant(data.variants[0]);
       } catch (error) {
         console.error("Error fetching product:", error);
       }
     };
+
     fetchProduct();
   }, []);
 
-  // **Apply Selections and Check for Variant**
-  const applySelection = () => {
+  const updateCombination = (optionType: string, optionValue: any) => {
+    const updatedCombination = { ...selectedCombination, [optionType]: optionValue };
+
     if (!product) return;
 
     const matchingVariant = product.variants.find((variant) => {
       return (
-        variant.options.size?.id === selectedCombination.size?.id &&
-        variant.options.style?.id === selectedCombination.style?.id &&
-        variant.options.sole?.id === selectedCombination.sole?.id &&
-        variant.options.material?.id === selectedCombination.material?.id &&
-        variant.options.color?.id === selectedCombination.color?.id &&
-        variant.options.panel?.id === selectedCombination.panel?.id
+        variant.options.size?.id === updatedCombination.size?.id &&
+        variant.options.style?.id === updatedCombination.style?.id &&
+        variant.options.sole?.id === updatedCombination.sole?.id &&
+        variant.options.material?.id === updatedCombination.material?.id &&
+        variant.options.color?.id === updatedCombination.color?.id &&
+        variant.options.panel?.id === updatedCombination.panel?.id
       );
     });
 
-    if (matchingVariant) {
-      setCurrentVariant(matchingVariant);
-    } else {
-      setCurrentVariant(null);
+    setSelectedCombination(updatedCombination);
+    setCurrentVariant(matchingVariant || null);
+
+    if (!matchingVariant) {
       setModalOpen(true);
     }
   };
@@ -218,24 +225,14 @@ const ProductPage = () => {
         <h2 className="text-3xl font-bold mb-8">You May Also Like</h2>
         <div className="relative">
           <div className="overflow-hidden">
-            <Swiper
-              spaceBetween={10}
-              slidesPerView={4}
-              className="related-products-slider"
-            >
+            <Swiper spaceBetween={10} slidesPerView={4} className="related-products-slider">
               {relatedProducts.map((related) => (
                 <SwiperSlide key={related.id}>
                   <div className="bg-white rounded-lg overflow-hidden">
-                    <img
-                      src={related.image}
-                      alt={related.title}
-                      className="object-cover w-full h-32"
-                    />
+                    <img src={related.image} alt={related.title} className="object-cover w-full h-32" />
                     <div className="p-4">
                       <h3 className="font-medium mb-2">{related.title}</h3>
-                      <p className="text-lg font-semibold text-red-500">
-                        ${related.price}
-                      </p>
+                      <p className="text-lg font-semibold text-red-500">${related.price}</p>
                     </div>
                   </div>
                 </SwiperSlide>
@@ -247,22 +244,18 @@ const ProductPage = () => {
     </div>
   );
 
-  const CombinationNotAvailableModal = () =>
+  const CombinationNotAvailableModal = () => (
     modalOpen && (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold">Combination Not Available</h2>
-            <button
-              onClick={() => setModalOpen(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
+            <button onClick={() => setModalOpen(false)} className="text-gray-500 hover:text-gray-700">
               <X className="w-6 h-6" />
             </button>
           </div>
           <p className="text-gray-600 mt-2">
-            The selected combination is currently unavailable. Please try a
-            different combination.
+            The selected combination is currently unavailable. Please try a different combination.
           </p>
           <button
             onClick={() => setModalOpen(false)}
@@ -272,7 +265,8 @@ const ProductPage = () => {
           </button>
         </div>
       </div>
-    );
+    )
+  );
 
   const ImageGallery = () => (
     <div className="space-y-4">
@@ -285,9 +279,7 @@ const ProductPage = () => {
           />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <span className="text-gray-500">
-              Current combination not available
-            </span>
+            <span className="text-gray-500">Current combination not available</span>
           </div>
         )}
       </div>
@@ -312,45 +304,14 @@ const ProductPage = () => {
 
   const MaterialSelector = () => (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium mb-2">
-          Select Materials and Colors
-        </h3>
-        {/* Panel Selection Dropdown */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium">Select Panel:</label>
-          <select
-            value={selectedCombination.panel?.id || ""}
-            onChange={(e) => {
-              const panelInfo = product.variantsOptions.panels.find(
-                (p) => p.id === Number(e.target.value)
-              );
-              setSelectedCombination({
-                ...selectedCombination,
-                panel: panelInfo || null,
-              });
-            }}
-            className="border rounded-lg px-2 py-1 w-48"
-          >
-            <option value="">Choose a Panel</option>
-            {product.variantsOptions.panels.map((panel) => (
-              <option key={panel.id} value={panel.id}>
-                {panel.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
+      <h3 className="text-lg font-medium mb-2">Select Materials and Colors</h3>
       <div className="space-y-4">
         {product.variantsOptions.materials.map((material) => (
           <div key={material.id} className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{material.name}</span>
               {material.description && (
-                <span className="text-xs text-gray-500">
-                  {material.description}
-                </span>
+                <span className="text-xs text-gray-500">{material.description}</span>
               )}
             </div>
 
@@ -360,11 +321,8 @@ const ProductPage = () => {
                 <button
                   key={color.id}
                   onClick={() => {
-                    setSelectedCombination({
-                      ...selectedCombination,
-                      material,
-                      color,
-                    });
+                    updateCombination("material", material);
+                    updateCombination("color", color);
                   }}
                   className={`relative w-10 h-10 rounded-full border overflow-hidden ${
                     selectedCombination.material?.id === material.id &&
@@ -395,13 +353,9 @@ const ProductPage = () => {
         {product.variantsOptions.soles.map((sole) => (
           <button
             key={sole.id}
-            onClick={() =>
-              setSelectedCombination({ ...selectedCombination, sole })
-            }
+            onClick={() => updateCombination("sole", sole)}
             className={`relative p-2 border rounded-lg overflow-hidden ${
-              selectedCombination.sole?.id === sole.id
-                ? "border-red-500"
-                : "hover:border-red-500"
+              selectedCombination.sole?.id === sole.id ? "border-red-500" : "hover:border-red-500"
             }`}
             title={sole.type}
           >
@@ -410,14 +364,13 @@ const ProductPage = () => {
               alt={`${sole.type}`}
               className="w-full h-20 object-cover"
             />
-            <div className="text-center mt-1 text-xs text-gray-700">
-              {sole.height}
-            </div>
+            <div className="text-center mt-1 text-xs text-gray-700">{sole.height}</div>
           </button>
         ))}
       </div>
     </div>
   );
+
 
   const StyleSelector = () => (
     <div className="space-y-4">
@@ -426,13 +379,9 @@ const ProductPage = () => {
         {product.variantsOptions.styles.map((style) => (
           <button
             key={style.id}
-            onClick={() =>
-              setSelectedCombination({ ...selectedCombination, style })
-            }
+            onClick={() => updateCombination("style", style)}
             className={`p-2 border rounded-lg ${
-              selectedCombination.style?.id === style.id
-                ? "border-red-500"
-                : "hover:border-red-500"
+              selectedCombination.style?.id === style.id ? "border-red-500" : "hover:border-red-500"
             }`}
           >
             <img
@@ -462,7 +411,7 @@ const ProductPage = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-xl font-bold">{product.title}</h1>
+                <h1 className="text-2xl font-bold">{product.title}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-2xl text-red-500">
                     ${product.variants[0].price}
@@ -470,48 +419,12 @@ const ProductPage = () => {
                 </div>
               </div>
               {currentVariant ? (
-                <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                  ADD TO CART
-                </button>
-              ) : (
-                <div className="text-red-500">Combination not available</div>
-              )}
-            </div>
-
-            {/* <p className="text-gray-600" onClick={applySelection}>
-              {"Apply Selection"}
-            </p> */}
-            <div className="flex justify-between items-center">             
-              {/* Size Selection Dropdown */}
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium">Select Size:</label>
-                <select
-                  value={selectedCombination.size?.id || ""}
-                  onChange={(e) => {
-                    const size = product.variantsOptions.sizes.find(
-                      (s) => s.id === Number(e.target.value)
-                    );
-                    setSelectedCombination({
-                      ...selectedCombination,
-                      size: size || null,
-                    });
-                  }}
-                  className="border rounded-lg px-2 py-1 w-48"
-                >
-                  <option value="">Choose a Size</option>
-                  {product.variantsOptions.sizes.map((size) => (
-                    <option key={size.id} value={size.id}>
-                      {`${size.size} (${size.sizeSystem}${
-                        size.width ? ` - ${size.width}` : ""
-                      })`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Apply Selection Button */}
-              <p className="text-gray-600 cursor-pointer" onClick={applySelection}>
-              {"Apply Selection"}
-              </p> 
+              <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                ADD TO CART
+              </button>
+            ) : (
+              <div className="text-red-500">Combination not available</div>
+            )}
             </div>
 
             <NavTabs />
@@ -560,10 +473,11 @@ const ProductPage = () => {
         </div>
       </div>
 
-      {/* Related Products */}
-      <RelatedProductsSlider />
+      
+        {/* Related Products */}
+        <RelatedProductsSlider />
 
-      {/* Modal for unavailable combinations */}
+         {/* Modal for unavailable combinations */}
       <CombinationNotAvailableModal />
     </div>
   );

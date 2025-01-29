@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+ /* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -129,37 +129,37 @@ const ProductPage = () => {
     ],
   };
 
-  const testimonials = [
-    {
-      id: 1,
-      name: "James Wilson",
-      role: "Fashion Blogger",
-      content:
-        "These boots are absolutely incredible. The attention to detail and craftsmanship is outstanding.",
-      rating: 5,
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-    },
-    {
-      id: 2,
-      name: "Sarah Chen",
-      role: "Professional Stylist",
-      content:
-        "The customization options are amazing. I can create exactly what my clients want.",
-      rating: 5,
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-    },
-    {
-      id: 3,
-      name: "Michael Brown",
-      role: "Business Executive",
-      content: "Perfect blend of comfort and style. Worth every penny.",
-      rating: 5,
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-    },
-  ];
+  // const testimonials = [
+  //   {
+  //     id: 1,
+  //     name: "James Wilson",
+  //     role: "Fashion Blogger",
+  //     content:
+  //       "These boots are absolutely incredible. The attention to detail and craftsmanship is outstanding.",
+  //     rating: 5,
+  //     avatar:
+  //       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Sarah Chen",
+  //     role: "Professional Stylist",
+  //     content:
+  //       "The customization options are amazing. I can create exactly what my clients want.",
+  //     rating: 5,
+  //     avatar:
+  //       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Michael Brown",
+  //     role: "Business Executive",
+  //     content: "Perfect blend of comfort and style. Worth every penny.",
+  //     rating: 5,
+  //     avatar:
+  //       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+  //   },
+  // ];
 
   const relatedProducts = [
     {
@@ -368,47 +368,47 @@ const ProductPage = () => {
     </div>
   );
 
-  const TestimonialSection = () => (
-    <div className="py-12 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-3xl font-bold text-center mb-12">
-          What Our Customers Say
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.id}
-              className="bg-white rounded-lg shadow-lg p-6"
-            >
-              <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={testimonial.avatar}
-                  alt={testimonial.name}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-                <div>
-                  <h3 className="font-semibold">{testimonial.name}</h3>
-                  <p className="text-sm text-gray-600">{testimonial.role}</p>
-                </div>
-              </div>
-              <div className="flex mb-4">
-                {Array(testimonial.rating)
-                  .fill(null)
-                  .map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 fill-yellow-400 text-yellow-400"
-                    />
-                  ))}
-              </div>
-              <Quote className="w-8 h-8 text-gray-300 mb-2" />
-              <p className="text-gray-600">{testimonial.content}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  // const TestimonialSection = () => (
+  //   <div className="py-12 bg-gray-50">
+  //     <div className="max-w-7xl mx-auto px-4">
+  //       <h2 className="text-3xl font-bold text-center mb-12">
+  //         What Our Customers Say
+  //       </h2>
+  //       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+  //         {testimonials.map((testimonial) => (
+  //           <div
+  //             key={testimonial.id}
+  //             className="bg-white rounded-lg shadow-lg p-6"
+  //           >
+  //             <div className="flex items-center gap-4 mb-4">
+  //               <img
+  //                 src={testimonial.avatar}
+  //                 alt={testimonial.name}
+  //                 className="w-12 h-12 rounded-full object-cover"
+  //               />
+  //               <div>
+  //                 <h3 className="font-semibold">{testimonial.name}</h3>
+  //                 <p className="text-sm text-gray-600">{testimonial.role}</p>
+  //               </div>
+  //             </div>
+  //             <div className="flex mb-4">
+  //               {Array(testimonial.rating)
+  //                 .fill(null)
+  //                 .map((_, i) => (
+  //                   <Star
+  //                     key={i}
+  //                     className="w-4 h-4 fill-yellow-400 text-yellow-400"
+  //                   />
+  //                 ))}
+  //             </div>
+  //             <Quote className="w-8 h-8 text-gray-300 mb-2" />
+  //             <p className="text-gray-600">{testimonial.content}</p>
+  //           </div>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 
   const slideNext = () => {
     if (sliderRef.current) {
@@ -565,7 +565,7 @@ const ProductPage = () => {
         </div>
       </div>
 
-      <TestimonialSection />
+      {/* <TestimonialSection /> */}
       <RelatedProductsSlider />
     </div>
   );

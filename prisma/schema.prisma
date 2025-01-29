@@ -141,7 +141,7 @@ model ProductVariant {
   description       String? // body_html
   vendor            String?
   productType       String?
-  handle            String?    @unique
+  handle            String?    
   status            String? // active, draft, archived
   tags              String? // Comma-separated tags
   templateSuffix    String?

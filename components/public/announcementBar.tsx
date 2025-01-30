@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const AnnouncementBar: React.FC = () => {
   return (
-    <div className="bg-gray-900 text-white py-2 relative">
+    <div className="bg-[#1c1c1c] text-white py-2 relative">
       <div className="flex items-center justify-center">
         <button className="absolute left-2">
           <ChevronLeft className="w-4 h-4" />

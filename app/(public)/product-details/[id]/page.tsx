@@ -130,6 +130,8 @@ const ProductPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedTab, setSelectedTab] = useState("Materials");
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
+  const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
 
   // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
@@ -160,12 +162,19 @@ const ProductPage = () => {
         const data = await response.json();
         setProduct(data);
         setCurrentVariant(data.variants[0]); // Default variant
+        setSelectedImage(data.variants[0].images[0]);
       } catch (error) {
         console.error("Error fetching product:", error);
       }
     };
     fetchProduct();
   }, []);
+
+  const clearSelections = () => {
+    if (!product) return;
+    setAppliedSelections(false);
+    setCurrentVariant(product.variants[0]);    
+  };
 
   // **Apply Selections and Check for Variant**
   const applySelection = () => {
@@ -181,10 +190,12 @@ const ProductPage = () => {
         variant.options.panel?.id === selectedCombination.panel?.id
       );
     });
+    setAppliedSelections(true);
 
     if (matchingVariant) {
       setCurrentVariant(matchingVariant);
     } else {
+
       setCurrentVariant(null);
       setModalOpen(true);
     }
@@ -279,8 +290,8 @@ const ProductPage = () => {
       <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
         {currentVariant ? (
           <img
-            src={currentVariant.images[0]?.url || "/api/placeholder/600/600"}
-            alt={currentVariant.images[0]?.altText || product.title}
+            src={selectedImage?.url || "/api/placeholder/600/600"}
+            alt={selectedImage?.altText || product.title}
             className="object-cover w-full h-full"
           />
         ) : (
@@ -296,7 +307,7 @@ const ProductPage = () => {
         <Swiper spaceBetween={10} slidesPerView={4} className="image-slider">
           {currentVariant.images.map((image, index) => (
             <SwiperSlide key={index}>
-              <button className="aspect-square rounded-lg overflow-hidden border-2 border-transparent">
+              <button className="aspect-square rounded-lg overflow-hidden border-2 border-transparent" onClick={() => setSelectedImage(image)}>
                 <img
                   src={image.url}
                   alt={image.altText || `View ${index + 1}`}
@@ -477,10 +488,6 @@ const ProductPage = () => {
                 <div className="text-red-500">Combination not available</div>
               )}
             </div>
-
-            {/* <p className="text-gray-600" onClick={applySelection}>
-              {"Apply Selection"}
-            </p> */}
             <div className="flex justify-between items-center">             
               {/* Size Selection Dropdown */}
               <div className="flex items-center gap-4">
@@ -509,8 +516,8 @@ const ProductPage = () => {
                 </select>
               </div>
               {/* Apply Selection Button */}
-              <p className="text-gray-600 cursor-pointer" onClick={applySelection}>
-              {"Apply Selection"}
+              <p className="text-gray-600 cursor-pointer" onClick={appliedSelections ? clearSelections : applySelection}>
+              { appliedSelections ? "clear": "Apply"}
               </p> 
             </div>
 

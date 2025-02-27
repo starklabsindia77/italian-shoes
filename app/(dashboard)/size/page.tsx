@@ -164,22 +164,23 @@ const SizeListPage = () => {
     { Header: "DATE", accessor: "createdAt" },
     {
       Header: "ACTIONS",
+      accessor: "actions",
       Cell: ({ row }: { row: any }) => (
         <div className="flex justify-center space-x-2">
           <button
-            onClick={() => handleView(row)}
+            onClick={() => handleView(row.original)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEye size={16} />
           </button>
           <button
-            onClick={() => handleEdit(row)}
+            onClick={() => handleEdit(row.original)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiEdit size={16} />
           </button>
           <button
-            onClick={() => confirmDelete(row.id)}
+            onClick={() => confirmDelete(row.original.id)}
             className="px-2 py-1 text-white text-sm rounded"
           >
             <FiTrash size={16} />

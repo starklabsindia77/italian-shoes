@@ -96,29 +96,29 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET_SINGLE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = parseInt(searchParams.get("id") || "1", 10);
+// export async function GET_SINGLE(req: NextRequest) {
+//   try {
+//     const { searchParams } = new URL(req.url);
+//     const id = parseInt(searchParams.get("id") || "1", 10);
 
-    if (!id) {
-      return NextResponse.json({ error: "Color ID is required" }, { status: 400 });
-    }
+//     if (!id) {
+//       return NextResponse.json({ error: "Color ID is required" }, { status: 400 });
+//     }
 
-    const color = await prisma.color.findUnique({
-      where: { id: id },
-    });
+//     const color = await prisma.color.findUnique({
+//       where: { id: id },
+//     });
 
-    if (!color) {
-      return NextResponse.json({ error: "Color not found" }, { status: 404 });
-    }
+//     if (!color) {
+//       return NextResponse.json({ error: "Color not found" }, { status: 404 });
+//     }
 
-    return NextResponse.json(color, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching color:", error);
-    return NextResponse.json({ error: "Error fetching color" }, { status: 500 });
-  }
-}
+//     return NextResponse.json(color, { status: 200 });
+//   } catch (error) {
+//     console.error("Error fetching color:", error);
+//     return NextResponse.json({ error: "Error fetching color" }, { status: 500 });
+//   }
+// }
 
 export async function PUT(req: NextRequest) {
   try {

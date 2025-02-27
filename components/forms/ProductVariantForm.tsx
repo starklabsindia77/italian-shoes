@@ -1,74 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import dynamic from 'next/dynamic';
 import InputField from "../fields/InputField";
-import SelectField from "../fields/SelectField"; 
+import SelectField from "../fields/SelectField";
 import { useDropzone } from "react-dropzone";
 import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
-import { Editor } from "react-draft-wysiwyg";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
+const Editor = dynamic(() => import('react-draft-wysiwyg').then((mod) => mod.Editor), { ssr: false });
+
 interface ProductVariantFormProps {
-    onSubmit?: (formData: any) => void;
-    onCancel: () => void;
-    defaultValues?: {
-      shopifyProductId?: number;
-      variantId?: number;
-      title?: string;
-      description?: string;
-      price?: number;
-      inventoryQuantity?: number;
-      seoMetadata?: {
-        title?: string;
-        description?: string;
-        keywords?: string;
-      };
-      images?: { url: string }[];
-    };
-    mode?: "add" | "edit" | "view";
+  onSubmit?: (formData: FormData) => void;
+  onCancel: () => void;
+  defaultValues?: {
+    shopifyProductId?: number;
+    variantId?: number;
+    title?: string;
+    description?: string;
+    price?: number;
+    inventoryQuantity?: number;
+    seoMetadata?: { title?: string; description?: string; keywords?: string };
+    images?: { url: string }[];
+  };
+  mode?: "add" | "edit" | "view";
 }
 
-interface DropdownOption {
-    id: number;
-    name: string;
-    [key: string]: any;
-}
+interface DropdownOption { id: number; name: string; [key: string]: any; }
 
 const ImageDropzone: React.FC<{
   images: File[];
   setImages: React.Dispatch<React.SetStateAction<File[]>>;
-}> = ({ images, setImages }) => {
-  const onDrop = (acceptedFiles: File[]) => {
-    setImages((prev) => [...prev, ...acceptedFiles]);
-  };
+  existingImages?: { url: string }[];
+}> = ({ images, setImages, existingImages = [] }) => {
+  const onDrop = (acceptedFiles: File[]) => setImages((prev) => [...prev, ...acceptedFiles]);
+  const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { "image/*": [] } });
 
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
-    accept: {
-      "image/*": [],
-    },
-  });
-
-  const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-  };
+  const handleRemoveImage = (index: number) => setImages((prev) => prev.filter((_, i) => i !== index));
 
   return (
     <div className="mt-4">
-      <div
-        {...getRootProps()}
-        className="border-2 border-dashed border-gray-300 p-4 rounded cursor-pointer text-center dark:text-white"
-      >
+      <div {...getRootProps()} className="border-2 border-dashed border-gray-300 p-4 rounded cursor-pointer text-center dark:text-white">
         <input {...getInputProps()} />
         <p>Drag and drop images here, or click to select files</p>
       </div>
+      {existingImages?.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {existingImages.map((img, index) => (
+            <div key={index} className="flex items-center border p-2 rounded dark:text-white">
+              <p className="text-sm truncate">{img.url}</p>
+            </div>
+          ))}
+        </div>
+      )}
       {images.length > 0 && (
         <div className="mt-4 space-y-2">
           {images.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between border border-gray-300 p-2 rounded dark:text-white"
-            >
+            <div key={index} className="flex items-center justify-between border p-2 rounded dark:text-white">
               <p className="text-sm truncate">{file.name}</p>
               <button
                 type="button"
@@ -92,12 +80,15 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
   mode = "add",
 }) => {
   const isViewMode = mode === "view";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
   const [formData, setFormData] = useState({
     shopifyProductId: defaultValues?.shopifyProductId || "",
     variantId: defaultValues?.variantId || "",
     title: defaultValues?.title || "",
-    description: EditorState.createEmpty(),
+    description: defaultValues?.description
+      ? EditorState.createWithContent(convertFromRaw(JSON.parse(defaultValues.description)))
+      : EditorState.createEmpty(),
     price: defaultValues?.price || "",
     inventoryQuantity: defaultValues?.inventoryQuantity || "",
     seoMetadata: {
@@ -108,20 +99,16 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
   });
 
   const [images, setImages] = useState<File[]>([]);
-  const [dropdownData, setDropdownData] = useState<{
-    shopifyProducts: DropdownOption[];
-    variants: DropdownOption[];
-  }>({
+  const [dropdownData, setDropdownData] = useState<{ shopifyProducts: DropdownOption[]; variants: DropdownOption[] }>({
     shopifyProducts: [],
     variants: [],
   });
-
   const [errors, setErrors] = useState<Partial<typeof formData>>({});
 
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const response = await fetch("/api/product-variant-form");
+        const response = await fetch(`${baseUrl}/api/product-variant-form`);
         if (!response.ok) throw new Error("Failed to fetch form data");
         const { data } = await response.json();
         setDropdownData({
@@ -132,13 +119,11 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
         console.error("Error fetching dropdown data:", error);
       }
     };
-
     fetchDropdownData();
-  }, []);
+  }, [baseUrl]);
 
   const validate = (): boolean => {
     if (isViewMode) return true;
-
     const newErrors: Partial<typeof formData> = {};
     if (!formData.shopifyProductId) newErrors.shopifyProductId = "Shopify Product is required.";
     if (!formData.variantId) newErrors.variantId = "Variant is required.";
@@ -146,41 +131,27 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
     if (!formData.price) newErrors.price = "Price is required.";
     if (!formData.inventoryQuantity) newErrors.inventoryQuantity = "Inventory Quantity is required.";
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isViewMode || !onSubmit) return;
 
-    if (isViewMode) return;
-
-    if (validate() && onSubmit) {
+    if (validate()) {
       const formDataToSubmit = new FormData();
-
       formDataToSubmit.append("shopifyProductId", String(formData.shopifyProductId));
       formDataToSubmit.append("variantId", String(formData.variantId));
       formDataToSubmit.append("title", formData.title);
-
-      // Convert description from EditorState to raw string
-      const descriptionRaw = JSON.stringify(
-        convertToRaw(formData.description.getCurrentContent())
-      );
-      formDataToSubmit.append("description", descriptionRaw);
-
+      formDataToSubmit.append("description", JSON.stringify(convertToRaw(formData.description.getCurrentContent())));
       formDataToSubmit.append("price", String(formData.price));
       formDataToSubmit.append("inventoryQuantity", String(formData.inventoryQuantity));
-
       if (formData.seoMetadata) {
         formDataToSubmit.append("seoMetadata[title]", formData.seoMetadata.title);
         formDataToSubmit.append("seoMetadata[description]", formData.seoMetadata.description);
         formDataToSubmit.append("seoMetadata[keywords]", formData.seoMetadata.keywords);
       }
-
-      images.forEach((image, index) => {
-        formDataToSubmit.append(`images[${index}]`, image, image.name);
-      });
-
+      images.forEach((image, index) => formDataToSubmit.append(`images[${index}]`, image));
       onSubmit(formDataToSubmit);
     }
   };
@@ -199,10 +170,9 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
           />
           {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
         </div>
-
         <fieldset className="border border-gray-300 p-4 rounded dark:text-white">
-         <legend className="text-sm font-semibold dark:text-white">Description</legend>
-           <Editor
+          <legend className="text-sm font-semibold dark:text-white">Description</legend>
+          <Editor
             editorState={formData.description}
             onEditorStateChange={(editorState) =>
               setFormData((prev) => ({ ...prev, description: editorState }))
@@ -214,7 +184,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
           />
         </fieldset>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <SelectField
@@ -231,7 +200,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
           />
           {errors.shopifyProductId && <p className="text-red-500 text-sm mt-1">{errors.shopifyProductId}</p>}
         </div>
-
         <div>
           <SelectField
             label="Variant"
@@ -247,7 +215,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
           />
           {errors.variantId && <p className="text-red-500 text-sm mt-1">{errors.variantId}</p>}
         </div>
-
         <div>
           <InputField
             label="Price"
@@ -260,7 +227,6 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
           />
           {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
         </div>
-
         <div>
           <InputField
             label="Inventory Quantity"
@@ -271,12 +237,9 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
             }
             disabled={isViewMode}
           />
-          {errors.inventoryQuantity && (
-            <p className="text-red-500 text-sm mt-1">{errors.inventoryQuantity}</p>
-          )}
+          {errors.inventoryQuantity && <p className="text-red-500 text-sm mt-1">{errors.inventoryQuantity}</p>}
         </div>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <fieldset className="border border-gray-300 p-4 rounded">
           <legend className="text-sm font-semibold dark:text-white">SEO Metadata</legend>
@@ -320,10 +283,8 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
             />
           </div>
         </fieldset>
-
-        <ImageDropzone images={images} setImages={setImages} />
+        <ImageDropzone images={images} setImages={setImages} existingImages={defaultValues?.images} />
       </div>
-
       <div className="flex justify-end space-x-2">
         {isViewMode ? (
           <button

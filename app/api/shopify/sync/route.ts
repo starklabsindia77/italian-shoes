@@ -7,9 +7,11 @@ import {
   fetchShopifyCustomCollections,
 } from "@/services/shopifyService";
 
+export const dynamic = 'force-dynamic'; // Ensure this is dynamic
+
 const prisma = new PrismaClient();
 
-export async function GET() {
+async function syncShopifyData() {
   try {
     console.log("Starting Shopify data sync...");
 
@@ -18,7 +20,6 @@ export async function GET() {
     for (const product of products) {
       const productId = product.id.toString();
 
-      // Upsert Product
       await prisma.shopifyProduct.upsert({
         where: { productId },
         update: {
@@ -30,9 +31,7 @@ export async function GET() {
           status: product.status,
           tags: product.tags,
           templateSuffix: product.template_suffix,
-          publishedAt: product.published_at
-            ? new Date(product.published_at)
-            : null,
+          publishedAt: product.published_at ? new Date(product.published_at) : null,
           adminGraphqlApiId: product.admin_graphql_api_id,
           imageUrl: product.image?.src || null,
           imageId: product.image?.id?.toString() || null,
@@ -49,9 +48,7 @@ export async function GET() {
           status: product.status,
           tags: product.tags,
           templateSuffix: product.template_suffix,
-          publishedAt: product.published_at
-            ? new Date(product.published_at)
-            : null,
+          publishedAt: product.published_at ? new Date(product.published_at) : null,
           adminGraphqlApiId: product.admin_graphql_api_id,
           imageUrl: product.image?.src || null,
           imageId: product.image?.id?.toString() || null,
@@ -60,7 +57,6 @@ export async function GET() {
         },
       });
 
-      // Sync Variants
       for (const variant of product.variants || []) {
         await prisma.shopifyVariant.upsert({
           where: { variantId: variant.id.toString() },
@@ -97,7 +93,7 @@ export async function GET() {
       }
     }
 
-    // Sync Collects (Product-to-Collection relationships)
+    // Sync Collects and Collections
     const collects = await fetchShopifyCollects();
     for (const collect of collects) {
       await prisma.shopifyCollect.upsert({
@@ -117,7 +113,6 @@ export async function GET() {
         },
       });
 
-      // Sync Collections
       const collection = await fetchShopifyCollections(collect.collection_id);
       const collectionId = collection.id.toString();
 
@@ -127,9 +122,7 @@ export async function GET() {
           title: collection.title,
           description: collection.body_html || null,
           handle: collection.handle,
-          publishedAt: collection.published_at
-            ? new Date(collection.published_at)
-            : null,
+          publishedAt: collection.published_at ? new Date(collection.published_at) : null,
           sortOrder: collection.sort_order || "",
           templateSuffix: collection.template_suffix || null,
           productsCount: collection.products_count || 0,
@@ -146,9 +139,7 @@ export async function GET() {
           title: collection.title,
           description: collection.body_html || null,
           handle: collection.handle,
-          publishedAt: collection.published_at
-            ? new Date(collection.published_at)
-            : null,
+          publishedAt: collection.published_at ? new Date(collection.published_at) : null,
           sortOrder: collection.sort_order || "",
           templateSuffix: collection.template_suffix || null,
           productsCount: collection.products_count || 0,
@@ -163,46 +154,49 @@ export async function GET() {
       });
     }
 
-    // Sync ShopifyCustomCollections
+    // Sync Custom Collections
     const customCollections = await fetchShopifyCustomCollections();
     for (const customCollection of customCollections) {
-        const commonFields = {
-            title: customCollection.title || "", // Ensure title is always a string
-            description: customCollection.body_html || null,
-            handle: customCollection.handle || "", // Ensure handle is always a string
-            publishedAt: customCollection.published_at
-              ? new Date(customCollection.published_at)
-              : null,
-            sortOrder: customCollection.sort_order || "",
-            templateSuffix: customCollection.template_suffix || null,
-            publishedScope: customCollection.published_scope || "",
-            adminGraphqlApiId: customCollection.admin_graphql_api_id || "",
-            imageUrl: customCollection.image?.src || null,
-            imageAlt: customCollection.image?.alt || null,
-            imageWidth: typeof customCollection.image?.width !== 'undefined' ? customCollection.image.width : null,
-            imageHeight: typeof customCollection.image?.height !== 'undefined' ? customCollection.image.height : null,
-          };
-          
-          await prisma.shopify_Custom_Collection.upsert({
-            where: { collectionId: customCollection.id.toString() },
-            update: { ...commonFields },
-            create: {
-              collectionId: customCollection.id.toString(),
-              ...commonFields,
-            },
-          });
+      const commonFields = {
+        title: customCollection.title || "",
+        description: customCollection.body_html || null,
+        handle: customCollection.handle || "",
+        publishedAt: customCollection.published_at ? new Date(customCollection.published_at) : null,
+        sortOrder: customCollection.sort_order || "",
+        templateSuffix: customCollection.template_suffix || null,
+        publishedScope: customCollection.published_scope || "",
+        adminGraphqlApiId: customCollection.admin_graphql_api_id || "",
+        imageUrl: customCollection.image?.src || null,
+        imageAlt: customCollection.image?.alt || null,
+        imageWidth: customCollection.image?.width || null,
+        imageHeight: customCollection.image?.height || null,
+      };
+
+      await prisma.shopify_Custom_Collection.upsert({
+        where: { collectionId: customCollection.id.toString() },
+        update: { ...commonFields },
+        create: {
+          collectionId: customCollection.id.toString(),
+          ...commonFields,
+        },
+      });
     }
 
-
     console.log("Shopify data sync completed successfully.");
-    return NextResponse.json({ message: "Shopify data sync completed" });
   } catch (error) {
     console.error("Error syncing Shopify data:", (error as Error).message);
-    return NextResponse.json(
-      { message: "Error syncing Shopify data" },
-      { status: 500 }
-    );
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
+}
+
+export async function GET() {
+  // Start sync in the background
+  syncShopifyData().catch((err) => {
+    console.error("Background sync failed:", err);
+  });
+
+  // Return immediately
+  return NextResponse.json({ message: "Shopify data sync started" });
 }

@@ -43,6 +43,7 @@ const StyleOptionsPage = () => {
     { Header: "DATE", accessor: "createdAt" },
     {
       Header: "ACTIONS",
+      accessor: "actions",
       Cell: ({ row }: { row: any }) => (
         <div className="flex justify-center space-x-2">
           <button

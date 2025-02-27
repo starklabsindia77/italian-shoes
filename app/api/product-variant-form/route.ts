@@ -1,42 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Initialize PrismaClient outside the handler for connection reuse
+const prisma = new PrismaClient({
+  log: ["error"], // Minimize logging in production
+});
+
+// Common error handling function inspired by panel/route.ts
+const handleError = (error: any, message: string, status = 500) => {
+  console.error(message, error);
+  return NextResponse.json({ error: message }, { status });
+};
 
 // GET: Fetch data for ProductVariant form dropdowns
 export async function GET(req: NextRequest) {
   try {
-    // Fetch Shopify Products and Variants in parallel for performance
+    // Fetch data in parallel
     const [shopifyProducts, variants] = await Promise.all([
       prisma.shopifyProduct.findMany({
-        select: {
-          id: true,
-          title: true,
-        },
-        where: {
-          status: "active",
-        },
+        where: { status: "active" },
+        select: { id: true, title: true },
+        orderBy: { title: "asc" }, // Consistent sorting like panel
       }),
       prisma.variant.findMany({
-        select: {
-          id: true,
-          name: true,
-        },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" }, // Consistent sorting like panel
       }),
     ]);
 
-    // Return the combined data
-    return NextResponse.json({
-      data: {
-        shopifyProducts,
-        variants,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching product-variant-form data:", error);
+    // Return response with metadata and caching
     return NextResponse.json(
-      { error: "Failed to fetch product-variant-form data" },
-      { status: 500 }
+      {
+        data: {
+          shopifyProducts,
+          variants,
+        },
+        meta: {
+          totalShopifyProducts: shopifyProducts.length,
+          totalVariants: variants.length,
+          timestamp: new Date().toISOString(), // Optional metadata
+        },
+      },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=300, s-maxage=300", // 5-min cache
+        },
+      }
     );
+  } catch (error) {
+    return handleError(error, "Error fetching product-variant-form data");
+  } finally {
+    // Disconnect Prisma explicitly in non-Edge environments
+    if (process.env.NEXT_RUNTIME !== "edge") {
+      await prisma.$disconnect();
+    }
   }
 }

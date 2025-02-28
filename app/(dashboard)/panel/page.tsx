@@ -9,9 +9,9 @@ import Modal from "@/components/Modal";
 import { FiEye, FiEdit, FiTrash } from "react-icons/fi";
 import PanelForm from "@/components/forms/PanelForm"; // Form for managing panel data
 
-export const metadata: Metadata = {
-  title: "Panels | Horizon UI",
-};
+// export const metadata: Metadata = {
+//   title: "Panels | Horizon UI",
+// };
 
 const PanelListPage = () => {
   const [loading, setLoading] = useState(false);

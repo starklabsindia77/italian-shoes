@@ -9,9 +9,6 @@ import Modal from "@/components/Modal";
 import { FiEye, FiEdit, FiTrash } from "react-icons/fi";
 import ColorForm from "@/components/forms/ColorForm"; // Create this component for the form
 
-export const metadata: Metadata = {
-  title: "Colors | Horizon UI",
-};
 
 const ColorListPage = () => {
   const [loading, setLoading] = useState(false);

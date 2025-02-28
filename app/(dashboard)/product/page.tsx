@@ -7,9 +7,9 @@ import { triggerProductSync, triggerProductRefresh } from "@/services/productSer
 import { toast } from "react-hot-toast";
 import Cookies from "js-cookie";
 
-export const metadata: Metadata = {
-  title: "DataTables | Horizon UI by Ories",
-};
+// export const metadata: Metadata = {
+//   title: "DataTables | Horizon UI by Ories",
+// };
 
 // Define the fetch parameters type
 type FetchParams = {

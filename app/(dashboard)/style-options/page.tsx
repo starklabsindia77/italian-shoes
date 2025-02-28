@@ -9,9 +9,9 @@ import Modal from "@/components/Modal";
 import { FiEye, FiEdit, FiTrash } from "react-icons/fi";
 import StyleForm from "@/components/forms/StyleForm";
 
-export const metadata: Metadata = {
-  title: "Style Options | Horizon UI",
-};
+// export const metadata: Metadata = {
+//   title: "Style Options | Horizon UI",
+// };
 
 const StyleOptionsPage = () => {
   const [loading, setLoading] = useState(false);

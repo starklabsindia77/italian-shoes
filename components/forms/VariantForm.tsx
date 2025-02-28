@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import InputField from "../fields/InputField";
-import SelectField from "../fields/SelectField"; // Assume SelectField is a reusable dropdown component
+import SelectField from "../fields/SelectField";
 
 interface VariantFormProps {
-  onSubmit?: (formData: any) => void; // Optional in view mode
+  onSubmit?: (formData: any) => void;
   onCancel: () => void;
   defaultValues?: {
     name?: string;
@@ -15,14 +15,14 @@ interface VariantFormProps {
     materialId?: number;
     colorId?: number;
     panelId?: number;
-  }; // For edit/view case
-  mode?: "add" | "edit" | "view"; // Determines form behavior
+  };
+  mode?: "add" | "edit" | "view";
 }
 
 interface DropdownOption {
   id: number;
   name: string;
-  [key: string]: any; // To handle additional properties like `size`, `type`, etc.
+  [key: string]: any;
 }
 
 const VariantForm: React.FC<VariantFormProps> = ({
@@ -33,15 +33,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
 }) => {
   const isViewMode = mode === "view";
 
-  const [formData, setFormData] = useState<{
-    name: string | "";  
-    sizeOptionId: number | "";
-    styleOptionId: number | "";
-    soleOptionId: number | "";
-    materialId: number | "";
-    colorId: number | "";
-    panelId: number | "";
-  }>({
+  const [formData, setFormData] = useState({
     name: defaultValues?.name || "",
     sizeOptionId: defaultValues?.sizeOptionId || "",
     styleOptionId: defaultValues?.styleOptionId || "",
@@ -67,9 +59,8 @@ const VariantForm: React.FC<VariantFormProps> = ({
     panels: [],
   });
 
-  const [errors, setErrors] = useState<Partial<typeof formData>>({});
+  const [nameError, setNameError] = useState<string | undefined>(undefined);
 
-  // Fetch dropdown data from the API
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
@@ -93,26 +84,20 @@ const VariantForm: React.FC<VariantFormProps> = ({
   }, []);
 
   const validate = (): boolean => {
-    if (isViewMode) return true; // Skip validation in view mode
-  
-    const newErrors: { [key: string]: string | undefined } = {};
-    
-    if (!formData.sizeOptionId) newErrors.sizeOptionId = "Size is required.";
-    if (!formData.styleOptionId) newErrors.styleOptionId = "Style is required.";
-    if (!formData.soleOptionId) newErrors.soleOptionId = "Sole is required.";
-    if (!formData.materialId) newErrors.materialId = "Material is required.";
-    if (!formData.colorId) newErrors.colorId = "Color is required.";
-    if (!formData.panelId) newErrors.panelId = "Panel is required.";
-  
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (isViewMode) return true;
+
+    if (!formData.name) {
+      setNameError("Name is required.");
+      return false;
+    }
+    setNameError(undefined);
+    return true;
   };
-  
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isViewMode) return;
-    if (validate() && onSubmit) {
+    if (isViewMode || !onSubmit) return;
+    if (validate()) {
       onSubmit(formData);
     }
   };
@@ -120,12 +105,17 @@ const VariantForm: React.FC<VariantFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-      <InputField
-        label="Name"
-        value={formData.name}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
-        disabled={isViewMode}
-      />
+        <InputField
+          label="Name"
+          value={formData.name}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setFormData({ ...formData, name: e.target.value })
+          }
+          disabled={isViewMode}
+        />
+        {nameError && (
+          <p className="text-red-500 text-sm mt-1">{nameError}</p>
+        )}
       </div>
       <div>
         <SelectField
@@ -143,9 +133,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.sizeOptionId && (
-          <p className="text-red-500 text-sm mt-1">{errors.sizeOptionId}</p>
-        )}
       </div>
       <div>
         <SelectField
@@ -163,9 +150,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.styleOptionId && (
-          <p className="text-red-500 text-sm mt-1">{errors.styleOptionId}</p>
-        )}
       </div>
       <div>
         <SelectField
@@ -183,9 +167,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.soleOptionId && (
-          <p className="text-red-500 text-sm mt-1">{errors.soleOptionId}</p>
-        )}
       </div>
       <div>
         <SelectField
@@ -203,9 +184,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.materialId && (
-          <p className="text-red-500 text-sm mt-1">{errors.materialId}</p>
-        )}
       </div>
       <div>
         <SelectField
@@ -223,9 +201,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.colorId && (
-          <p className="text-red-500 text-sm mt-1">{errors.colorId}</p>
-        )}
       </div>
       <div>
         <SelectField
@@ -243,9 +218,6 @@ const VariantForm: React.FC<VariantFormProps> = ({
           }
           disabled={isViewMode}
         />
-        {errors.panelId && (
-          <p className="text-red-500 text-sm mt-1">{errors.panelId}</p>
-        )}
       </div>
       <div className="flex justify-end space-x-2">
         {isViewMode ? (

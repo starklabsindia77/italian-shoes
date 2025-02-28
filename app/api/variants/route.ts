@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
       panelId,
     } = body;
 
-    if (!name || !sizeOptionId || !styleOptionId || !soleOptionId || !materialId || !colorId || !panelId) {
-      return NextResponse.json({ error: "All fields are required" }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
     const newVariant = await prisma.variant.create({
@@ -101,6 +101,10 @@ export async function PUT(req: NextRequest) {
       colorId,
       panelId,
     } = body;
+
+    if (!name) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
 
     const updatedVariant = await prisma.variant.update({
       where: { id: id },

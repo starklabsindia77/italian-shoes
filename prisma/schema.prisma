@@ -224,6 +224,7 @@ model SoleOption {
   id     Int     @id @default(autoincrement())
   type   String // Sole type (e.g., "Rubber", "Leather")
   height String? // Height (e.g., "0.79 in")
+  imageUrl String? // Optional style image
 
   createdAt DateTime  @default(now())
   Variant   Variant[]

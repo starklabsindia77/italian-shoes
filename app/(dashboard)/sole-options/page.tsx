@@ -205,7 +205,9 @@ const SoleOptionsListPage = () => {
   return (
     <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">Sole Options</h1>
+        <h1 className="text-xl font-bold">
+          {/* Sole Options */}
+        </h1>
         <button
           onClick={() => {
             setSelectedSoleOption(null);

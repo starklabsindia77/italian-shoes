@@ -18,6 +18,7 @@ interface RowData {
   price?: number;
   inventoryQuantity?: number;
   createdAt?: string;
+  imageUrl?: string | null;  // Added type definition for imageUrl
   [key: string]: any;
 }
 
@@ -180,22 +181,31 @@ const CheckTable = ({
                       return row[accessor];
                     };
 
+                    const cellValue = getValue(column.accessor, row);
+
                     return (
                       <td key={colIndex} className="border border-gray-300 px-4 py-2 text-center items-center">
                         {column.Cell ? (
                           column.Cell({ row })
                         ) : column.accessor === "createdAt" ? (
-                          moment(getValue(column.accessor, row)).format("MMM DD, YYYY")
+                          cellValue ? moment(cellValue).format("MMM DD, YYYY") : "-"
                         ) : column.accessor === "imageUrl" ? (
-                          <Image
-                            src={getValue(column.accessor, row)}
-                            alt="Row"
-                            width={80}
-                            height={80}
-                            className="object-cover mx-auto"
-                          />
+                          cellValue ? (
+                            <Image
+                              src={cellValue}
+                              alt="Row image"
+                              width={80}
+                              height={80}
+                              className="object-cover mx-auto"
+                              onError={(e) => {
+                                e.currentTarget.src = "/placeholder-image.jpg"; // Fallback image
+                              }}
+                            />
+                          ) : (
+                            <span className="text-gray-400">No image</span>
+                          )
                         ) : (
-                          getValue(column.accessor, row)
+                          cellValue ?? "-"
                         )}
                       </td>
                     );

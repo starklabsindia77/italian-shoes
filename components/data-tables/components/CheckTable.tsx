@@ -198,6 +198,7 @@ const CheckTable = ({
                               alt="Row image"
                               width={80}
                               height={80}
+                              unoptimized 
                               className="object-cover mx-auto"
                               onError={(e) => {
                                 e.currentTarget.src = "https://placehold.co/100"; // Fallback image

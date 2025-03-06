@@ -191,6 +191,8 @@ const CheckTable = ({
                           cellValue ? moment(cellValue).format("MMM DD, YYYY") : "-"
                         ) : column.accessor === "imageUrl" ? (
                           cellValue ? (
+                            <>
+                            {console.log(`Rendering image: ${rowIndex}`, cellValue)}
                             <Image
                               src={cellValue}
                               alt="Row image"
@@ -198,9 +200,10 @@ const CheckTable = ({
                               height={80}
                               className="object-cover mx-auto"
                               onError={(e) => {
-                                e.currentTarget.src = "/placeholder-image.jpg"; // Fallback image
+                                e.currentTarget.src = "https://placehold.co/100"; // Fallback image
                               }}
                             />
+                          </>
                           ) : (
                             <span className="text-gray-400">No image</span>
                           )

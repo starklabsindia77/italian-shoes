@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient({ log: ["query", "info", "warn", "error"] });
+
 const handleError = (error: unknown, message: string, status = 500) => {
   console.error(message, error);
   return NextResponse.json({ success: false, error: message }, { status });
 };
 
-export async function GET(req: NextRequest) {
-  const prisma = new PrismaClient({ log: ["query", "info", "warn", "error"] });
+export async function GET(req: NextRequest) { 
 
   try {
     console.log("Fetching data at:", new Date().toISOString());

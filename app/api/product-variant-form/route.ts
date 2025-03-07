@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     log: ["error"], // Minimize logging in production
   });
 
-  
+
   try {
     // Fetch data in parallel with minimal fields and fresh queries
     const [shopifyProducts, variants] = await Promise.all([
@@ -59,7 +59,3 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Optional: Export config for Next.js (if needed for Edge runtime)
-export const config = {
-  runtime: process.env.NEXT_RUNTIME === "edge" ? "edge" : "nodejs",
-};

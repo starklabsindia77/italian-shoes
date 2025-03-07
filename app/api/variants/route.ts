@@ -50,9 +50,57 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: Create Variant
-export async function POST(req: NextRequest) {
+// export async function POST(req: NextRequest) {
+//   try {
+//     const body = await req.json();
+//     const {
+//       name,
+//       sizeOptionId,
+//       styleOptionId,
+//       soleOptionId,
+//       materialId,
+//       colorId,
+//       panelId,
+//     } = body;
+
+//     if (!name) {
+//       return NextResponse.json({ error: "Name is required" }, { status: 400 });
+//     }
+
+//     const newVariant = await prisma.variant.create({
+//       data: {
+//         name,
+//         sizeOptionId,
+//         styleOptionId,
+//         soleOptionId,
+//         materialId,
+//         colorId,
+//         panelId,
+//       },
+//     });
+
+//     return NextResponse.json(newVariant, { status: 201 });
+//   } catch (error) {
+//     console.error("Error creating variant:", error);
+//     return NextResponse.json({ error: "Error creating variant" }, { status: 500 });
+//   }
+// }
+
+
+// Define the expected shape of the request body
+interface VariantRequestBody {
+  name: string;
+  sizeOptionId?: string | number | null;  // Allow string, number, or null from client
+  styleOptionId?: string | number | null;
+  soleOptionId?: string | number | null;
+  materialId?: string | number | null;
+  colorId?: string | number | null;
+  panelId?: string | number | null;
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = await req.json();
+    const body: VariantRequestBody = await req.json();
     const {
       name,
       sizeOptionId,
@@ -67,15 +115,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    // Helper function to convert input to Int or null
+    const toIntOrNull = (value: string | number | null | undefined): number | null => {
+      if (value === "" || value === null || value === undefined) return null;
+      const num = typeof value === "string" ? parseInt(value, 10) : value;
+      return isNaN(num) ? null : num;
+    };
+
     const newVariant = await prisma.variant.create({
       data: {
         name,
-        sizeOptionId,
-        styleOptionId,
-        soleOptionId,
-        materialId,
-        colorId,
-        panelId,
+        sizeOptionId: toIntOrNull(sizeOptionId),
+        styleOptionId: toIntOrNull(styleOptionId),
+        soleOptionId: toIntOrNull(soleOptionId),
+        materialId: toIntOrNull(materialId),
+        colorId: toIntOrNull(colorId),
+        panelId: toIntOrNull(panelId),
       },
     });
 

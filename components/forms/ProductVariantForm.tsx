@@ -80,7 +80,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
   mode = "add",
 }) => {
   const isViewMode = mode === "view";
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
 
   const [formData, setFormData] = useState({
     shopifyProductId: defaultValues?.shopifyProductId || "",
@@ -108,7 +108,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const response = await fetch(`${baseUrl}/api/product-variant-form`);
+        const response = await fetch(`/api/product-variant-form`);
         if (!response.ok) throw new Error("Failed to fetch form data");
         const { data } = await response.json();
         setDropdownData({
@@ -120,7 +120,7 @@ const ProductVariantForm: React.FC<ProductVariantFormProps> = ({
       }
     };
     fetchDropdownData();
-  }, [baseUrl]);
+  }, []);
 
   const validate = (): boolean => {
     if (isViewMode) return true;

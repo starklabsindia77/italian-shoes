@@ -12,15 +12,22 @@ export async function GET(req: NextRequest) {
   try {
     console.log("Fetching data at:", new Date().toISOString());
 
+    const colors = await prisma.color.findMany();
+    const sizes = await prisma.sizeOption.findMany();
+    const soles = await prisma.soleOption.findMany();
+    const materials = await prisma.material.findMany();
+    const styles = await prisma.styleOption.findMany();
+    const panels = await prisma.panel.findMany();
+
     // Use raw queries to bypass potential Prisma caching
-    const [sizes, styles, soles, materials, colors, panels] = await Promise.all([
-      prisma.$queryRaw<{ id: number, sizeSystem: string, size: number, width: number }[]>`SELECT "id", "sizeSystem", "size", "width" FROM "SizeOption" ORDER BY "size" ASC`,
-      prisma.$queryRaw<{ id: number, name: string, imageUrl: string }[]>`SELECT "id", "name", "imageUrl" FROM "StyleOption" ORDER BY "name" ASC`,
-      prisma.$queryRaw<{ id: number, type: string, height: number }[]>`SELECT "id", "type", "height" FROM "SoleOption" ORDER BY "type" ASC`,
-      prisma.$queryRaw<{ id: number, name: string, description: string }[]>`SELECT "id", "name", "description" FROM "Material" ORDER BY "name" ASC`,
-      prisma.$queryRaw<{ id: number, name: string, hexCode: string }[]>`SELECT "id", "name", "hexCode" FROM "Color" ORDER BY "name" ASC`,
-      prisma.$queryRaw<{ id: number, name: string, description: string }[]>`SELECT "id", "name", "description" FROM "Panel" ORDER BY "name" ASC`,
-    ]);
+    // const [sizes, styles, soles, materials, colors, panels] = await Promise.all([
+    //   prisma.$queryRaw<{ id: number, sizeSystem: string, size: number, width: number }[]>`SELECT "id", "sizeSystem", "size", "width" FROM "SizeOption" ORDER BY "size" ASC`,
+    //   prisma.$queryRaw<{ id: number, name: string, imageUrl: string }[]>`SELECT "id", "name", "imageUrl" FROM "StyleOption" ORDER BY "name" ASC`,
+    //   prisma.$queryRaw<{ id: number, type: string, height: number }[]>`SELECT "id", "type", "height" FROM "SoleOption" ORDER BY "type" ASC`,
+    //   prisma.$queryRaw<{ id: number, name: string, description: string }[]>`SELECT "id", "name", "description" FROM "Material" ORDER BY "name" ASC`,
+    //   prisma.$queryRaw<{ id: number, name: string, hexCode: string }[]>`SELECT "id", "name", "hexCode" FROM "Color" ORDER BY "name" ASC`,
+    //   prisma.$queryRaw<{ id: number, name: string, description: string }[]>`SELECT "id", "name", "description" FROM "Panel" ORDER BY "name" ASC`,
+    // ]);
 
     // Log raw results
     console.log("Raw Sizes:", sizes);

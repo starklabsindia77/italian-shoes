@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 // Initialize PrismaClient outside the handler for connection reuse
-const prisma = new PrismaClient({
-  log: ["error"], // Minimize logging in production
-});
+
 
 // Common error handling function
 const handleError = (error: any, message: string, status = 500) => {
@@ -14,7 +12,11 @@ const handleError = (error: any, message: string, status = 500) => {
 
 // GET: Fetch data for variant form dropdowns
 export async function GET(req: NextRequest) {
+  const prisma = new PrismaClient({
+    log: ["error"], // Minimize logging in production
+  });
   try {
+    
     // Fetch all data in parallel with consistent sorting
     const [sizes, styles, soles, materials, colors, panels] = await Promise.all([
       prisma.sizeOption.findMany({

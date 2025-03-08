@@ -64,7 +64,7 @@ const VariantForm: React.FC<VariantFormProps> = ({
   useEffect(() => {
     const fetchDropdownData = async () => {
       try {
-        const response = await fetch("/api/variant-form");
+        const response = await fetch("/api/variant-form", { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch form data");
         const { data } = await response.json();
         setDropdownData({

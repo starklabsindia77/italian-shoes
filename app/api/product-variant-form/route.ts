@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
-// Singleton PrismaClient instance for connection reuse (optimized for production)
+// Force dynamic behavior and disable revalidation
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
+// Create a singleton PrismaClient instance (optimized for production)
+const prisma = new PrismaClient({ log: ["query", "info", "warn", "error"] });
 
-// Common error handling function (consistent with your inspiration)
+// Common error handling function
 const handleError = (error: unknown, message: string, status = 500) => {
   console.error(message, error);
   return NextResponse.json({ error: message }, { status });
@@ -12,11 +16,6 @@ const handleError = (error: unknown, message: string, status = 500) => {
 
 // GET: Fetch data for ProductVariant form dropdowns
 export async function GET(req: NextRequest) {
-  const prisma = new PrismaClient({
-    log: ["error"], // Minimize logging in production
-  });
-
-
   try {
     // Fetch data in parallel with minimal fields and fresh queries
     const [shopifyProducts, variants] = await Promise.all([
@@ -32,7 +31,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Construct response object
-    const response = {
+    const responseData = {
       data: { shopifyProducts, variants },
       meta: {
         totalShopifyProducts: shopifyProducts.length,
@@ -42,20 +41,23 @@ export async function GET(req: NextRequest) {
     };
 
     // Return response with no caching to ensure fresh data
-    return NextResponse.json(response, {
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0",
-      },
-    });
+    const response = NextResponse.json(responseData);
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+
+    return response;
   } catch (error) {
     return handleError(error, "Error fetching product-variant-form data");
   } finally {
-    // Disconnect only in non-Edge environments (consistent with previous code)
-    if (process.env.NEXT_RUNTIME !== "edge") {
-      await prisma.$disconnect();
-    }
+    // When using a singleton, it's best to keep the connection open for reuse.
+    // In non-Edge environments, you might choose not to disconnect on every request.
+    // if (process.env.NEXT_RUNTIME !== "edge") {
+    //   await prisma.$disconnect();
+    // }
+    await prisma.$disconnect();
   }
 }
-

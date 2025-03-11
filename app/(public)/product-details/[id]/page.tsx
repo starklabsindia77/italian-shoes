@@ -204,6 +204,12 @@ const ProductPage = () => {
     fetchProduct();
   }, []);
 
+  const CloseEditor = () => {
+    setIsDesignEditorOpen(false);
+    setCurrentVariant(null);
+    setSelectedImage(product?.imageUrl);
+  }
+
   const clearSelections = () => {
     if (!product) return;
     setAppliedSelections(false);
@@ -227,7 +233,9 @@ const ProductPage = () => {
     setAppliedSelections(true);
 
     if (matchingVariant) {
+      console.log("Matching Variant:", matchingVariant);
       setCurrentVariant(matchingVariant);
+      setSelectedImage(matchingVariant.images[0]);
     } else {
       setCurrentVariant(null);
       setModalOpen(true);
@@ -552,27 +560,12 @@ const ProductPage = () => {
 
   // Design Editor component that will be shown/hidden
   const DesignEditor = () => (
-    <div className={`fixed inset-0 bg-white z-40 overflow-auto transition-transform duration-300 transform ${
-      isDesignEditorOpen ? 'translate-x-0' : 'translate-x-full'
-    }`}>
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="flex items-center justify-between mb-6">
-          <button 
-            onClick={() => setIsDesignEditorOpen(false)}
-            className="flex items-center text-gray-700 hover:text-red-500"
-          >
-            <ChevronLeft className="w-5 h-5 mr-1" />
-            Back to Product
-          </button>
-          <h2 className="text-xl font-bold">Customize Your {product.title}</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <ImageGallery />
-
+    // <div className={``}>
+      <div className="max-w-7xl mx-auto">       
+        <div className="grid grid-cols-1 gap-8">
           <div className="space-y-6">
-            <div className="flex justify-between items-center">             
-              {/* Size Selection Dropdown */}
+            {/* <div className="flex justify-between items-center">             
+              
               <div className="flex items-center gap-4">
                 <label className="text-sm font-medium">Select Size:</label>
                 <select
@@ -598,14 +591,14 @@ const ProductPage = () => {
                   ))}
                 </select>
               </div>
-              {/* Apply Selection Button */}
+              
               <button 
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 onClick={appliedSelections ? clearSelections : applySelection}
               >
                 {appliedSelections ? "Reset Design" : "Apply Selection"}
               </button>
-            </div>
+            </div> */}
 
             <NavTabs />
 
@@ -620,7 +613,7 @@ const ProductPage = () => {
               )}
             </div>
             
-            {currentVariant ? (
+            {/* {currentVariant ? (
               <div className="flex justify-between items-center border-t border-b py-4">
                 <div>
                   <h3 className="font-medium">Selected Design</h3>
@@ -634,11 +627,11 @@ const ProductPage = () => {
               <div className="text-center py-4 text-red-500">
                 Please select and apply a valid combination
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </div>
-    </div>
+    // </div>
   );
 
   return (
@@ -650,8 +643,8 @@ const ProductPage = () => {
 
           <div className="space-y-6">
             <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-2xl font-bold">{product.title}</h1>
+              <div className="max-w-sm">
+                <h1 className="text-2xl font-bold line-clamp-2 hover:line-clamp-none transition-all duration-300" title={product.title}>{product.title}</h1>
                 <p className="text-sm text-gray-500">By {product?.vendor || "Italian Shoes Company"}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-2xl text-red-500 font-bold">
@@ -662,7 +655,7 @@ const ProductPage = () => {
                   </span> )}
                 </div>
               </div>
-              <button 
+              {!isDesignEditorOpen ? <button 
                 className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 onClick={() => {
                   // Pre-select the first size for convenience if none selected
@@ -676,36 +669,51 @@ const ProductPage = () => {
                 }}
               >
                 <Edit2 className="w-4 h-4 inline-block mr-2" />
-                CUSTOMIZE DESIGN
-              </button>
+                Edit Design
+              </button> : <button 
+                  className="text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
+                  onClick={CloseEditor}
+                >
+                  <X className="w-5 h-5 inline-block mr-1" />
+                  Close Editor
+                </button> }
             </div>
-            
-            {/* Size Selection Dropdown (simplified version) */}
-            <div className="flex items-center gap-4 border-b pb-4">
-              <label className="text-sm font-medium">Select Size:</label>
-              <select
-                value={selectedCombination.size?.id || ""}
-                onChange={(e) => {
-                  const size = product.variantsOptions.sizes.find(
-                    (s) => s.id === Number(e.target.value)
-                  );
-                  setSelectedCombination({
-                    ...selectedCombination,
-                    size: size || null,
-                  });
-                }}
-                className="border rounded-lg px-3 py-2 w-48"
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4 border-b pb-4">
+                <label className="text-sm font-medium">Select Size:</label>
+                <select
+                  value={selectedCombination.size?.id || ""}
+                  onChange={(e) => {
+                    const size = product.variantsOptions.sizes.find(
+                      (s) => s.id === Number(e.target.value)
+                    );
+                    setSelectedCombination({
+                      ...selectedCombination,
+                      size: size || null,
+                    });
+                  }}
+                  className="border rounded-lg px-3 py-2 w-48"
+                >
+                  <option value="">Choose a Size</option>
+                  {product.variantsOptions.sizes.map((size) => (
+                    <option key={size.id} value={size.id}>
+                      {`${size.size} (${size.sizeSystem}${
+                        size.width ? ` - ${size.width}` : ""
+                      })`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {isDesignEditorOpen && ( <button 
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                onClick={appliedSelections ? clearSelections : applySelection}
               >
-                <option value="">Choose a Size</option>
-                {product.variantsOptions.sizes.map((size) => (
-                  <option key={size.id} value={size.id}>
-                    {`${size.size} (${size.sizeSystem}${
-                      size.width ? ` - ${size.width}` : ""
-                    })`}
-                  </option>
-                ))}
-              </select>
+                {appliedSelections ? "Reset Design" : "Apply Selection"}
+              </button>)}
             </div>
+            {/* Size Selection Dropdown (simplified version) */}
+            
+            {isDesignEditorOpen && <DesignEditor />}
 
             {/* Product Features */}
             <div className="grid grid-cols-4 gap-4 py-4 border-b">
@@ -750,10 +758,10 @@ const ProductPage = () => {
       </div>
 
       {/* Design Editor (Customization Interface) */}
-      <DesignEditor />
+      {/* <DesignEditor /> */}
 
       {/* Related Products */}
-      <RelatedProductsSlider />
+      {/* <RelatedProductsSlider /> */}
 
       {/* Modal for unavailable combinations */}
       <CombinationNotAvailableModal />

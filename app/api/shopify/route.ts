@@ -36,7 +36,11 @@ export async function GET(request: Request) {
     });
 
     // Get total count for pagination
-    const total = await prisma.shopifyProduct.count();
+    const total = await prisma.shopifyProduct.count({
+      where: {
+        status: "active",
+      },
+    });
     return NextResponse.json({
       data: collections,
       meta: {

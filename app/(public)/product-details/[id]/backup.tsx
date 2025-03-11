@@ -1,61 +1,62 @@
- /* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-img-element */
 "use client";
+import React, { useState, useEffect } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import { Heart, Share2, X } from "lucide-react";
 
-import React, { useState, useRef } from "react";
-import {
-  Heart,
-  Share2,
-  Star,
-  Quote,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-
+// Interfaces for Product Data
 interface Size {
+  id: number;
   sizeSystem: string;
   size: string;
   width: string;
 }
 
 interface Style {
+  id: number;
   name: string;
+  imageUrl: string;
 }
 
 interface Sole {
+  id: number;
   type: string;
   height: string;
+  imageUrl: string;
 }
 
 interface Material {
+  id: number;
   name: string;
   description: string;
 }
 
 interface Color {
+  id: number;
   name: string;
   hexCode: string;
+  imageUrl: string;
 }
 
 interface Panel {
+  id: number;
   name: string;
   description: string;
 }
 
 interface ProductImage {
   url: string;
-  altText: string;
-}
-
-interface SEOMetadata {
-  title: string;
-  description: string;
+  altText: string | null;
 }
 
 interface ProductVariant {
   id: number;
+  title: string;
   price: number;
   inventoryQuantity: number;
-  variant: {
+  images: ProductImage[];
+  options: {
     size: Size;
     style: Style;
     sole: Sole;
@@ -63,148 +64,148 @@ interface ProductVariant {
     color: Color;
     panel: Panel;
   };
-  images: ProductImage[];
-  seoMetadata: SEOMetadata;
 }
 
 interface Product {
   id: number;
-  productId: string;
   title: string;
   description: string;
-  vendor: string;
-  productType: string;
-  status: string;
-  tags: string;
-  imageUrl: string;
-  ProductVariant: ProductVariant[];
+  price: number[];
+  variants: ProductVariant[];
+  variantsOptions: {
+    sizes: Size[];
+    styles: Style[];
+    soles: Sole[];
+    materials: Material[];
+    colors: Color[];
+    panels: Panel[];
+  };
 }
 
-const ProductPage = () => {
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedSize, setSelectedSize] = useState(null);
-  const [selectedTab, setSelectedTab] = useState("Materials");
-  const [selectedSoleHeight, setSelectedSoleHeight] = useState("1.97");
-  const [selectedPanel, setSelectedPanel] = useState("Toe cap");
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
-
-  const product = {
+const relatedProducts = [
+  {
     id: 1,
-    title: "Classic Leather Boot",
-    currentPrice: 249.0,
-    originalPrice: 339.0,
-    mainImage:
-      "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=600&h=600&fit=crop",
-    additionalImages: [
-      "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&h=600&fit=crop",
-      "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=600&h=600&fit=crop",
-    ],
-    description:
-      "This classic silhouette of the sneaker is perfect for the casual gentleman. Everyday shoe with versatile look by your design is a great way to acquire impeccable style! Perfect for warm days in suede and classically sleek in soft leather these shoes could be everything you need them to be! Choose your match now!",
-    manufacturer: {
-      location: "India",
-      deliveryTime: "5-10 days",
-      shippingCost: 62.9,
-    },
-    soleHeights: [
-      { height: "1.06", measurement: "7/7-12" },
-      { height: "1.10", measurement: "6-12" },
-      { height: "1.26", measurement: "6-12" },
-      { height: "1.77", measurement: "7/7-12" },
-      { height: "1.97", measurement: "7/7-12" },
-    ],
-    shoelaceColors: [
-      {
-        name: "Red",
-        imageUrl:
-          "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=50&h=50&fit=crop",
-      },
-      {
-        name: "White",
-        imageUrl:
-          "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=50&h=50&fit=crop",
-      },
-    ],
+    title: "Premium Oxford Shoes",
+    price: 299.0,
+    image:
+      "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=400&fit=crop",
+  },
+  {
+    id: 2,
+    title: "Elegant Derby Shoes",
+    price: 279.0,
+    image:
+      "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    title: "Classic Loafers",
+    price: 229.0,
+    image:
+      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
+  },
+  {
+    id: 4,
+    title: "Luxury Monk Straps",
+    price: 319.0,
+    image:
+      "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400&h=400&fit=crop",
+  },
+  {
+    id: 5,
+    title: "Classic Loafers",
+    price: 229.0,
+    image:
+      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
+  },
+  {
+    id: 6,
+    title: "Classic Loafers",
+    price: 229.0,
+    image:
+      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
+  },
+];
+
+const ProductPage = () => {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [selectedTab, setSelectedTab] = useState("Materials");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
+  const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
+
+  // **User Selections**
+  const [selectedCombination, setSelectedCombination] = useState<{
+    size: Size | null;
+    style: Style | null;
+    sole: Sole | null;
+    material: Material | null;
+    color: Color | null;
+    panel: Panel | null;
+  }>({
+    size: null,
+    style: null,
+    sole: null,
+    material: null,
+    color: null,
+    panel: null,
+  });
+
+  // **Variant After Applying Selection**
+  const [currentVariant, setCurrentVariant] = useState<ProductVariant | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await fetch("/api/product/9935528395044");
+        const data = await response.json();
+        console.log('data ========================>', data);
+        setProduct(data);
+        setCurrentVariant(data.variants[0]); // Default variant
+        setSelectedImage(data.variants[0].images[0]);
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      }
+    };
+    fetchProduct();
+  }, []);
+
+  const clearSelections = () => {
+    if (!product) return;
+    setAppliedSelections(false);
+    setCurrentVariant(product.variants[0]);    
   };
 
-  // const testimonials = [
-  //   {
-  //     id: 1,
-  //     name: "James Wilson",
-  //     role: "Fashion Blogger",
-  //     content:
-  //       "These boots are absolutely incredible. The attention to detail and craftsmanship is outstanding.",
-  //     rating: 5,
-  //     avatar:
-  //       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Sarah Chen",
-  //     role: "Professional Stylist",
-  //     content:
-  //       "The customization options are amazing. I can create exactly what my clients want.",
-  //     rating: 5,
-  //     avatar:
-  //       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Michael Brown",
-  //     role: "Business Executive",
-  //     content: "Perfect blend of comfort and style. Worth every penny.",
-  //     rating: 5,
-  //     avatar:
-  //       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-  //   },
-  // ];
+  // **Apply Selections and Check for Variant**
+  const applySelection = () => {
+    if (!product) return;
 
-  const relatedProducts = [
-    {
-      id: 1,
-      title: "Premium Oxford Shoes",
-      price: 299.0,
-      image:
-        "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=400&fit=crop",
-    },
-    {
-      id: 2,
-      title: "Elegant Derby Shoes",
-      price: 279.0,
-      image:
-        "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=400&h=400&fit=crop",
-    },
-    {
-      id: 3,
-      title: "Classic Loafers",
-      price: 229.0,
-      image:
-        "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-    },
-    {
-      id: 4,
-      title: "Luxury Monk Straps",
-      price: 319.0,
-      image:
-        "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400&h=400&fit=crop",
-    },
-    {
-      id: 5,
-      title: "Classic Loafers",
-      price: 229.0,
-      image:
-        "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-    },
-    {
-      id: 6,
-      title: "Classic Loafers",
-      price: 229.0,
-      image:
-        "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-    },
-  ];
+    const matchingVariant = product.variants.find((variant) => {
+      return (
+        variant.options.size?.id === selectedCombination.size?.id &&
+        variant.options.style?.id === selectedCombination.style?.id &&
+        variant.options.sole?.id === selectedCombination.sole?.id &&
+        variant.options.material?.id === selectedCombination.material?.id &&
+        variant.options.color?.id === selectedCombination.color?.id &&
+        variant.options.panel?.id === selectedCombination.panel?.id
+      );
+    });
+    setAppliedSelections(true);
+
+    if (matchingVariant) {
+      setCurrentVariant(matchingVariant);
+    } else {
+
+      setCurrentVariant(null);
+      setModalOpen(true);
+    }
+  };
+
+  if (!product) {
+    return <div className="text-center py-10">Loading product...</div>;
+  }
 
   const NavTabs = () => (
     <div className="flex space-x-2 bg-gray-100 rounded-lg p-1">
@@ -224,270 +225,246 @@ const ProductPage = () => {
     </div>
   );
 
-  const ImageGallery = () => (
-    <div className="space-y-4">
-      <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
-        <img
-          src={
-            selectedImageIndex === 0
-              ? product.mainImage
-              : product.additionalImages[selectedImageIndex - 1]
-          }
-          alt={product.title}
-          className="object-cover w-full h-full"
-        />
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {[product.mainImage, ...product.additionalImages].map(
-          (image, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedImageIndex(index)}
-              className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                selectedImageIndex === index
-                  ? "border-red-500"
-                  : "border-transparent"
-              }`}
-            >
-              <img
-                src={image}
-                alt={`View ${index + 1}`}
-                className="object-cover w-full h-full"
-              />
-            </button>
-          )
-        )}
-      </div>
-    </div>
-  );
-
-  const MaterialSelector = () => {
-    const colorPalette = [
-      "bg-blue-200",
-      "bg-red-200",
-      "bg-green-200",
-      "bg-yellow-200",
-      "bg-purple-200",
-      "bg-pink-200",
-      "bg-indigo-200",
-      "bg-teal-200",
-      "bg-orange-200",
-      "bg-cyan-200",
-      "bg-rose-200",
-      "bg-violet-200",
-      "bg-emerald-200",
-      "bg-sky-200",
-      "bg-amber-200",
-      "bg-lime-200",
-      "bg-fuchsia-200",
-      "bg-slate-200",
-      "bg-gray-200",
-      "bg-neutral-200",
-    ];
-
-    // Function to get a random color from the palette
-    const getRandomColor = () => {
-      const randomIndex = Math.floor(Math.random() * colorPalette.length);
-      return colorPalette[randomIndex];
-    };
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Select a panel:</span>
-          <select
-            value={selectedPanel}
-            onChange={(e) => setSelectedPanel(e.target.value)}
-            className="border rounded-md px-2 py-1"
-          >
-            <option>Toe cap</option>
-            <option>Side panel</option>
-            <option>Heel</option>
-          </select>
-        </div>
-        <div className="grid grid-cols-10 gap-2">
-          {Array(20)
-            .fill(null)
-            .map((_, i) => {
-              const randomColor = getRandomColor();
-              return (
-                <button
-                  key={i}
-                  className={`w-12 h-12 rounded-md ${randomColor} hover:ring-2 ring-offset-2 ring-blue-500 transition-all duration-200`}
-                />
-              );
-            })}
-        </div>
-      </div>
-    );
-  };
-
-  const SoleSelector = () => (
-    <div className="grid grid-cols-5 gap-4">
-      {product.soleHeights.map((sole) => (
-        <button
-          key={sole.height}
-          onClick={() => setSelectedSoleHeight(sole.height)}
-          className={`relative p-2 border rounded-lg ${
-            selectedSoleHeight === sole.height
-              ? "border-red-500"
-              : "border-gray-200"
-          }`}
-        >
-          <img
-            src="https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=100&h=100&fit=crop"
-            alt={`${sole.height}in sole`}
-            className="w-full"
-          />
-          <div className="text-xs text-center mt-1">
-            {sole.height}in / {sole.measurement}
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-
-  const ShoelaceSelector = () => (
-    <div>
-      <h3 className="text-sm font-medium mb-2">
-        Choose a decoration for your shoes
-      </h3>
-      <div className="flex gap-2">
-        {product.shoelaceColors.map((lace, index) => (
-          <button
-            key={index}
-            className="border rounded-lg p-1 hover:border-red-500"
-          >
-            <img
-              src={lace.imageUrl}
-              alt={`${lace.name} shoelaces`}
-              className="w-16 h-16 object-cover"
-            />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  // const TestimonialSection = () => (
-  //   <div className="py-12 bg-gray-50">
-  //     <div className="max-w-7xl mx-auto px-4">
-  //       <h2 className="text-3xl font-bold text-center mb-12">
-  //         What Our Customers Say
-  //       </h2>
-  //       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-  //         {testimonials.map((testimonial) => (
-  //           <div
-  //             key={testimonial.id}
-  //             className="bg-white rounded-lg shadow-lg p-6"
-  //           >
-  //             <div className="flex items-center gap-4 mb-4">
-  //               <img
-  //                 src={testimonial.avatar}
-  //                 alt={testimonial.name}
-  //                 className="w-12 h-12 rounded-full object-cover"
-  //               />
-  //               <div>
-  //                 <h3 className="font-semibold">{testimonial.name}</h3>
-  //                 <p className="text-sm text-gray-600">{testimonial.role}</p>
-  //               </div>
-  //             </div>
-  //             <div className="flex mb-4">
-  //               {Array(testimonial.rating)
-  //                 .fill(null)
-  //                 .map((_, i) => (
-  //                   <Star
-  //                     key={i}
-  //                     className="w-4 h-4 fill-yellow-400 text-yellow-400"
-  //                   />
-  //                 ))}
-  //             </div>
-  //             <Quote className="w-8 h-8 text-gray-300 mb-2" />
-  //             <p className="text-gray-600">{testimonial.content}</p>
-  //           </div>
-  //         ))}
-  //       </div>
-  //     </div>
-  //   </div>
-  // );
-
-  const slideNext = () => {
-    if (sliderRef.current) {
-      const slideWidth =
-        sliderRef.current.children[0].getBoundingClientRect().width;
-      const maxSlide = Math.max(0, relatedProducts.length - 4); // 4 items visible at a time
-      const newSlide = Math.min(currentSlide + 1, maxSlide);
-
-      setCurrentSlide(newSlide);
-      sliderRef.current.style.transform = `translateX(-${
-        newSlide * slideWidth
-      }px)`;
-    }
-  };
-
-  const slidePrev = () => {
-    if (sliderRef.current) {
-      const slideWidth =
-        sliderRef.current.children[0].getBoundingClientRect().width;
-      const newSlide = Math.max(currentSlide - 1, 0);
-
-      setCurrentSlide(newSlide);
-      sliderRef.current.style.transform = `translateX(-${
-        newSlide * slideWidth
-      }px)`;
-    }
-  };
-
   const RelatedProductsSlider = () => (
     <div className="py-12">
       <div className="max-w-7xl mx-auto px-4">
         <h2 className="text-3xl font-bold mb-8">You May Also Like</h2>
         <div className="relative">
           <div className="overflow-hidden">
-            <div
-              ref={sliderRef}
-              className="flex transition-transform duration-300 ease-in-out"
+            <Swiper
+              spaceBetween={10}
+              slidesPerView={4}
+              className="related-products-slider"
             >
-              {relatedProducts.map((product) => (
-                <div key={product.id} className="min-w-[25%] px-2">
-                  {" "}
-                  {/* 25% for 4 items */}
+              {relatedProducts.map((related) => (
+                <SwiperSlide key={related.id}>
                   <div className="bg-white rounded-lg overflow-hidden">
-                    <div className="aspect-square relative overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="object-cover w-full h-full hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
+                    <img
+                      src={related.image}
+                      alt={related.title}
+                      className="object-cover w-full h-32"
+                    />
                     <div className="p-4">
-                      <h3 className="font-medium mb-2">{product.title}</h3>
+                      <h3 className="font-medium mb-2">{related.title}</h3>
                       <p className="text-lg font-semibold text-red-500">
-                        ${product.price}
+                        ${related.price}
                       </p>
                     </div>
                   </div>
-                </div>
+                </SwiperSlide>
               ))}
-            </div>
+            </Swiper>
           </div>
-          <button
-            onClick={slidePrev}
-            disabled={currentSlide === 0}
-            className="absolute left-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg disabled:opacity-50"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <button
-            onClick={slideNext}
-            disabled={currentSlide === relatedProducts.length - 4}
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-2 shadow-lg disabled:opacity-50"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
         </div>
       </div>
     </div>
   );
+
+  const CombinationNotAvailableModal = () =>
+    modalOpen && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold">Combination Not Available</h2>
+            <button
+              onClick={() => setModalOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <p className="text-gray-600 mt-2">
+            The selected combination is currently unavailable. Please try a
+            different combination.
+          </p>
+          <button
+            onClick={() => setModalOpen(false)}
+            className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+
+  const ImageGallery = () => (
+    <div className="space-y-4">
+      <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
+        {currentVariant ? (
+          <img
+            src={selectedImage?.url || "/api/placeholder/600/600"}
+            alt={selectedImage?.altText || product.title}
+            className="object-cover w-full h-full"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <span className="text-gray-500">
+              Current combination not available
+            </span>
+          </div>
+        )}
+      </div>
+
+      {currentVariant && (
+        <Swiper spaceBetween={10} slidesPerView={4} className="image-slider">
+          {currentVariant.images.map((image, index) => (
+            <SwiperSlide key={index}>
+              <button className="aspect-square rounded-lg overflow-hidden border-2 border-transparent" onClick={() => setSelectedImage(image)}>
+                <img
+                  src={image.url}
+                  alt={image.altText || `View ${index + 1}`}
+                  className="object-cover w-full h-full"
+                />
+              </button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      )}
+    </div>
+  );
+
+  const MaterialSelector = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium mb-2">
+          Select Materials and Colors
+        </h3>
+        {/* Panel Selection Dropdown */}
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium">Select Panel:</label>
+          <select
+            value={selectedCombination.panel?.id || ""}
+            onChange={(e) => {
+              const panelInfo = product.variantsOptions.panels.find(
+                (p) => p.id === Number(e.target.value)
+              );
+              setSelectedCombination({
+                ...selectedCombination,
+                panel: panelInfo || null,
+              });
+            }}
+            className="border rounded-lg px-2 py-1 w-48"
+          >
+            <option value="">Choose a Panel</option>
+            {product.variantsOptions.panels.map((panel) => (
+              <option key={panel.id} value={panel.id}>
+                {panel.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {product.variantsOptions.materials.map((material) => (
+          <div key={material.id} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">{material.name}</span>
+              {material.description && (
+                <span className="text-xs text-gray-500">
+                  {material.description}
+                </span>
+              )}
+            </div>
+
+            {/* Color Swatches */}
+            <div className="grid grid-cols-8 gap-2">
+              {product.variantsOptions.colors.map((color) => (
+                <button
+                  key={color.id}
+                  onClick={() => {
+                    setSelectedCombination({
+                      ...selectedCombination,
+                      material,
+                      color,
+                    });
+                  }}
+                  className={`relative w-10 h-10 rounded-full border overflow-hidden ${
+                    selectedCombination.material?.id === material.id &&
+                    selectedCombination.color?.id === color.id
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                  title={color.name}
+                >
+                  <img
+                    src={color.imageUrl}
+                    alt={color.name}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const SoleSelector = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium mb-2">Select Sole</h3>
+      <div className="grid grid-cols-4 gap-4">
+        {product.variantsOptions.soles.map((sole) => (
+          <button
+            key={sole.id}
+            onClick={() =>
+              setSelectedCombination({ ...selectedCombination, sole })
+            }
+            className={`relative p-2 border rounded-lg overflow-hidden ${
+              selectedCombination.sole?.id === sole.id
+                ? "border-red-500"
+                : "hover:border-red-500"
+            }`}
+            title={sole.type}
+          >
+            <img
+              src={sole?.imageUrl || "https://placehold.co/100"} // Temporary placeholder image
+              alt={`${sole.type}`}
+              className="w-full h-20 object-cover"
+            />
+            <div className="text-center mt-1 text-xs text-gray-700">
+              {sole.height}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const StyleSelector = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium mb-2">Select Style</h3>
+      <div className="grid grid-cols-4 gap-4">
+        {product.variantsOptions.styles.map((style) => (
+          <button
+            key={style.id}
+            onClick={() =>
+              setSelectedCombination({ ...selectedCombination, style })
+            }
+            className={`p-2 border rounded-lg ${
+              selectedCombination.style?.id === style.id
+                ? "border-red-500"
+                : "hover:border-red-500"
+            }`}
+          >
+            <img
+              src={style.imageUrl}
+              alt={style.name}
+              className="w-full h-32 object-contain"
+            />
+            <div className="text-sm text-center mt-2">{style.name}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const stripHtml = (html: any) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -498,33 +475,60 @@ const ProductPage = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold">{product.title}</h1>
+                <h1 className="text-xl font-bold">{product.title}</h1>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-2xl text-red-500">
-                    ${product.currentPrice}
-                  </span>
-                  <span className="text-gray-500 line-through">
-                    ${product.originalPrice}
+                    ${product.variants[0].price}
                   </span>
                 </div>
               </div>
-              <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                ADD TO CART
-              </button>
+              {currentVariant ? (
+                <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                  ADD TO CART
+                </button>
+              ) : (
+                <div className="text-red-500">Combination not available</div>
+              )}
             </div>
-
-            <div className="text-sm text-gray-600">
-              Manufacturing and delivery to {product.manufacturer.location} in{" "}
-              {product.manufacturer.deliveryTime} only: $
-              {product.manufacturer.shippingCost}
+            <div className="flex justify-between items-center">             
+              {/* Size Selection Dropdown */}
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium">Select Size:</label>
+                <select
+                  value={selectedCombination.size?.id || ""}
+                  onChange={(e) => {
+                    const size = product.variantsOptions.sizes.find(
+                      (s) => s.id === Number(e.target.value)
+                    );
+                    setSelectedCombination({
+                      ...selectedCombination,
+                      size: size || null,
+                    });
+                  }}
+                  className="border rounded-lg px-2 py-1 w-48"
+                >
+                  <option value="">Choose a Size</option>
+                  {product.variantsOptions.sizes.map((size) => (
+                    <option key={size.id} value={size.id}>
+                      {`${size.size} (${size.sizeSystem}${
+                        size.width ? ` - ${size.width}` : ""
+                      })`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Apply Selection Button */}
+              <p className="text-gray-600 cursor-pointer" onClick={appliedSelections ? clearSelections : applySelection}>
+              { appliedSelections ? "clear": "Apply"}
+              </p> 
             </div>
 
             <NavTabs />
 
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               {selectedTab === "Materials" && <MaterialSelector />}
+              {selectedTab === "Style" && <StyleSelector />}
               {selectedTab === "Soles" && <SoleSelector />}
-              {selectedTab === "Extras" && <ShoelaceSelector />}
             </div>
 
             <div className="flex gap-4">
@@ -559,14 +563,17 @@ const ProductPage = () => {
 
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-medium mb-2">Product Description</h3>
-              <p className="text-gray-600">{product.description}</p>
+              <p className="text-gray-600">{stripHtml(product.description)}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* <TestimonialSection /> */}
+      {/* Related Products */}
       <RelatedProductsSlider />
+
+      {/* Modal for unavailable combinations */}
+      <CombinationNotAvailableModal />
     </div>
   );
 };

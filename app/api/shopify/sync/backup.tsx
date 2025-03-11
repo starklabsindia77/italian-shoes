@@ -5,7 +5,6 @@ import {
   fetchShopifyCollections,
   fetchShopifyCollects,
   fetchShopifyCustomCollections,
-  fetchShopifyProductsImages,
 } from "@/services/shopifyService";
 
 export const dynamic = 'force-dynamic'; // Ensure this is dynamic
@@ -58,61 +57,6 @@ async function syncShopifyData() {
         },
       });
 
-      // Fetch and sync all product images
-      const productImages = await fetchShopifyProductsImages(productId);
-      console.log(`Syncing ${productImages.length} images for product ${productId}`);
-
-      // First, we'll create a set of existing image IDs to track which ones to keep
-      const existingImageIds = new Set();
-
-      // Process each image
-      for (const image of productImages) {
-        const imageId = image.id.toString();
-        existingImageIds.add(imageId);
-
-        await prisma.shopifyImage.upsert({
-          where: { imageId },
-          update: {
-            productId,
-            src: image.src,
-            alt: image.alt || null,
-            position: image.position || null,
-            width: image.width || null,
-            height: image.height || null,
-          },
-          create: {
-            imageId,
-            productId,
-            src: image.src,
-            alt: image.alt || null,
-            position: image.position || null,
-            width: image.width || null,
-            height: image.height || null,
-          },
-        });
-      }
-
-      // Optionally: Clean up removed images
-      // This will delete any images in our database that no longer exist in Shopify
-      // Uncomment if you want this functionality
-
-      const existingImages = await prisma.shopifyImage.findMany({
-        where: { productId },
-        select: { imageId: true },
-      });
-      
-      const imagesToDelete = existingImages
-        .filter(img => !existingImageIds.has(img.imageId))
-        .map(img => img.imageId);
-      
-      if (imagesToDelete.length > 0) {
-        console.log(`Removing ${imagesToDelete.length} deleted images for product ${productId}`);
-        await prisma.shopifyImage.deleteMany({
-          where: { imageId: { in: imagesToDelete } },
-        });
-      }
-
-      // Sync variants
       for (const variant of product.variants || []) {
         await prisma.shopifyVariant.upsert({
           where: { variantId: variant.id.toString() },

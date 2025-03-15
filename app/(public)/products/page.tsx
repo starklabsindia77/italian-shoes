@@ -310,7 +310,7 @@ const ProductsPage = () => {
       {/* Filter & Sort Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <Filter size={18} className="text-gray-600" />
             <span className="font-medium">Filters:</span>
           </div>
@@ -328,7 +328,7 @@ const ProductsPage = () => {
             }}
           >
             Reset Filters
-          </button>
+          </button> */}
         </div>
         
         <div className="flex items-center gap-2">
@@ -361,7 +361,7 @@ const ProductsPage = () => {
       </div>
 
       {/* Filter section */}
-      <FilterSection />
+      {/* <FilterSection /> */}
 
       {/* Product count */}
       <div className="mb-4 text-gray-600">

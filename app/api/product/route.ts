@@ -1,14 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
-
-type ResponseData = {
-  success: boolean;
-  data?: any;
-  message?: string;
-  total?: number;
-};
 
 export async function GET(request: Request) {
   try {
@@ -27,7 +20,7 @@ export async function GET(request: Request) {
     const skip = (page - 1) * pageSize;
 
     // Build the where clause for filtering
-    const where: any = {
+    const where: Prisma.ShopifyProductWhereInput = {
       status: "active",
     };
 
@@ -40,14 +33,47 @@ export async function GET(request: Request) {
       where.productType = productType;
     }
 
-    // Fetch products with pagination, sorting, and filtering
-    const products = await prisma.shopifyProduct.findMany({
-      skip,
-      take: pageSize,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+    // Define the type for variants filtering
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      const priceFilter: Prisma.FloatFilter = {};
+      
+      if (minPrice !== undefined) {
+        priceFilter.gte = minPrice;
+      }
+      
+      if (maxPrice !== undefined) {
+        priceFilter.lte = maxPrice;
+      }
+      
+      where.variants = {
+        some: {
+          price: priceFilter
+        }
+      };
+    }
+
+    // For sorting, we'll use a standard query first
+    // For price sorting, we'll apply it after fetching the results
+    const orderByClause: Prisma.ShopifyProductOrderByWithRelationInput = 
+      sortBy !== 'price' 
+        ? { [sortBy]: sortOrder as Prisma.SortOrder }
+        : { createdAt: 'desc' as Prisma.SortOrder }; // Default ordering when we'll sort by price manually
+
+    // First, fetch the total count for pagination
+    const total = await prisma.shopifyProduct.count({
       where,
+    });
+
+    // Fetch all the products for the current page
+    // For price sorting, we need to fetch more and then apply manual sorting
+    const fetchLimit = sortBy === 'price' ? total : pageSize;
+    const fetchSkip = sortBy === 'price' ? 0 : skip;
+
+    const allProducts = await prisma.shopifyProduct.findMany({
+      orderBy: orderByClause,
+      where,
+      skip: fetchSkip,
+      take: fetchLimit,
       include: {
         variants: true,
         images: true,
@@ -69,24 +95,27 @@ export async function GET(request: Request) {
       },
     });
 
-    // Get total count for pagination
-    const total = await prisma.shopifyProduct.count({
-      where,
-    });
-
     // Transform the data to match the Product type from product.ts
-    const formattedProducts = products.map((product) => {
+    let formattedProducts = allProducts.map((product) => {
       // Get price range from variants
-      const prices = product.variants.map((variant) => variant.price);
+      const prices = product.variants.map((variant: Prisma.ShopifyVariantGetPayload<{}>) => variant.price);
+      
+      // Calculate min, max and average price for sorting
+      // Handle empty price arrays gracefully
+      const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+      const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+      const avgPrice = prices.length > 0 
+        ? prices.reduce((sum: number, price: number) => sum + price, 0) / prices.length 
+        : 0;
       
       // Format product variants
-      const productVariants = product.ProductVariant.map((pv) => {
+      const productVariants = product.ProductVariant.map((pv: any) => {
         return {
           id: pv.id,
           title: pv.title || "",
           price: pv.price || 0,
           inventoryQuantity: pv.inventoryQuantity || 0,
-          images: pv.images.map((img) => ({
+          images: pv.images.map((img: any) => ({
             url: img.url,
             altText: img.altText,
           })),
@@ -102,7 +131,7 @@ export async function GET(request: Request) {
       });
 
       // Format shopify variants
-      const shopifyVariants = product.variants.map((variant) => ({
+      const shopifyVariants = product.variants.map((variant: any) => ({
         id: variant.variantId,
         title: variant.title,
         price: variant.price,
@@ -116,7 +145,7 @@ export async function GET(request: Request) {
       }));
 
       // Format shopify images
-      const shopifyImages = product.images.map((image) => ({
+      const shopifyImages = product.images.map((image: any) => ({
         id: image.imageId,
         src: image.src,
         alt: image.alt,
@@ -129,48 +158,48 @@ export async function GET(request: Request) {
       const sizes = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.size)
-            .map(pv => pv.variant.size)
+            .filter((pv: any) => pv.variant.size)
+            .map((pv: any) => pv.variant.size)
         )
       );
       
       const styles = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.style)
-            .map(pv => pv.variant.style)
+            .filter((pv: any) => pv.variant.style)
+            .map((pv: any) => pv.variant.style)
         )
       );
       
       const soles = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.sole)
-            .map(pv => pv.variant.sole)
+            .filter((pv: any) => pv.variant.sole)
+            .map((pv: any) => pv.variant.sole)
         )
       );
       
       const materials = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.material)
-            .map(pv => pv.variant.material)
+            .filter((pv: any) => pv.variant.material)
+            .map((pv: any) => pv.variant.material)
         )
       );
       
       const colors = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.color)
-            .map(pv => pv.variant.color)
+            .filter((pv: any) => pv.variant.color)
+            .map((pv: any) => pv.variant.color)
         )
       );
       
       const panels = Array.from(
         new Set(
           product.ProductVariant
-            .filter(pv => pv.variant.panel)
-            .map(pv => pv.variant.panel)
+            .filter((pv: any) => pv.variant.panel)
+            .map((pv: any) => pv.variant.panel)
         )
       );
 
@@ -180,6 +209,9 @@ export async function GET(request: Request) {
         title: product.title,
         description: product.description || "",
         price: prices,
+        minPrice,
+        maxPrice,
+        avgPrice,
         variants: productVariants,
         vendor: product.vendor,
         productType: product.productType,
@@ -199,6 +231,34 @@ export async function GET(request: Request) {
         },
       };
     });
+
+    // If we're sorting by price, do it manually after formatting
+    if (sortBy === 'price') {
+      if (sortOrder === 'asc') {
+        // Sort by minPrice (for products with identical minPrice/maxPrice, this still works)
+        formattedProducts.sort((a, b) => {
+          // First compare by minPrice
+          if (a.minPrice !== b.minPrice) {
+            return a.minPrice - b.minPrice;
+          }
+          // If minPrice is the same, sort by product ID for consistent ordering
+          return a.id - b.id;
+        });
+      } else {
+        // Sort by maxPrice for high to low
+        formattedProducts.sort((a, b) => {
+          // First compare by maxPrice
+          if (a.maxPrice !== b.maxPrice) {
+            return b.maxPrice - a.maxPrice;
+          }
+          // If maxPrice is the same, sort by product ID for consistent ordering
+          return a.id - b.id;
+        });
+      }
+      
+      // Apply pagination after sorting
+      formattedProducts = formattedProducts.slice(skip, skip + pageSize);
+    }
 
     return NextResponse.json({
       success: true,

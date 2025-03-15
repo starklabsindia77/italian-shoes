@@ -136,6 +136,9 @@ const ProductsPage = () => {
       setSortBy("createdAt");
       setSortOrder("desc");
     }
+    
+    // Reset products when sort changes to avoid mixing differently sorted items
+    setProducts([]);
   };
 
   // Function to handle filter changes
@@ -147,6 +150,9 @@ const ProductsPage = () => {
     
     // Reset page to 1 when filters change
     setPage(1);
+    
+    // Reset products when filters change to avoid mixing filtered items
+    setProducts([]);
   };
 
   // Function to format price

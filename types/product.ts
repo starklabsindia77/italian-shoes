@@ -80,6 +80,7 @@ export interface ShopifyVariant {
 }
 export interface Product {
   id: number;
+  productId: string;
   title: string;
   description: string;
   price: number[];

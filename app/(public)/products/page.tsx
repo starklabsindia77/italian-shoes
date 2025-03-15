@@ -1,47 +1,80 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ShoppingBag, Heart, Eye } from "lucide-react";
+import { ShoppingBag, Heart, Eye, Filter, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
-import { Product, Size, Style, Sole, Material, Color, Panel, ProductVariant, ShopifyImage, ShopifyVariant } from "../../../types/product";
-
-// Types based on the Prisma schema
-
-// Dummy data for products
-
+import { Product } from "../../../types/product";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [pageSize, setPageSize] = useState(12);
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [filters, setFilters] = useState({
+    vendor: "",
+    productType: "",
+    minPrice: "",
+    maxPrice: "",
+  });
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
   const observer = useRef<IntersectionObserver | null>(null);
-  const lastProductRef = useRef<HTMLDivElement>(null);
+  const lastProductRef = useRef<HTMLDivElement | null>(null);
 
-  // Function to simulate API fetch
-  const fetchProducts = (pageNum: number) => {
+  // Function to fetch products from the API
+  const fetchProducts = async (pageNum: number, reset: boolean = false) => {
     setLoading(true);
     
-    // Simulate API delay
-    setTimeout(() => {
-      // In a real app, this would be an API call
+    try {
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: pageNum.toString(),
+        pageSize: pageSize.toString(),
+        sortBy,
+        sortOrder,
+      });
       
-    //   setProducts(prev => [...prev, ...newProducts]);
-      setLoading(false);
+      // Add filters if they exist
+      if (filters.vendor) params.append('vendor', filters.vendor);
+      if (filters.productType) params.append('productType', filters.productType);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
       
-      // Simulate end of products after 5 pages
-      if (pageNum >= 5) {
-        setHasMore(false);
+      const response = await fetch(`/api/product?${params}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        if (reset) {
+          setProducts(data.data);
+        } else {
+          setProducts(prev => [...prev, ...data.data]);
+        }
+        
+        setTotalItems(data.meta.totalItems);
+        setTotalPages(data.meta.totalPages);
+        setCurrentPage(data.meta.currentPage);
+        
+        // Check if there are more pages to load
+        setHasMore(data.meta.currentPage < data.meta.totalPages);
       } else {
-        setHasMore(true);
+        console.error("Error fetching products:", data.message);
       }
-    }, 800);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Initial load
   useEffect(() => {
-    fetchProducts(1);
-  }, []);
+    fetchProducts(1, true);
+  }, [sortBy, sortOrder, pageSize, filters]);
 
   // Setup intersection observer for infinite scroll
   useEffect(() => {
@@ -79,11 +112,48 @@ const ProductsPage = () => {
     }
   }, [page]);
 
+  // Function to handle sort change
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    
+    // Reset page to 1 when sorting changes
+    setPage(1);
+    
+    if (value === "price_asc") {
+      setSortBy("price");
+      setSortOrder("asc");
+    } else if (value === "price_desc") {
+      setSortBy("price");
+      setSortOrder("desc");
+    } else if (value === "newest") {
+      setSortBy("createdAt");
+      setSortOrder("desc");
+    } else if (value === "title_asc") {
+      setSortBy("title");
+      setSortOrder("asc");
+    } else {
+      // Default to featured (createdAt desc)
+      setSortBy("createdAt");
+      setSortOrder("desc");
+    }
+  };
+
+  // Function to handle filter changes
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+    
+    // Reset page to 1 when filters change
+    setPage(1);
+  };
+
   // Function to format price
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'INR',
       minimumFractionDigits: 2
     }).format(price);
   };
@@ -122,7 +192,7 @@ const ProductsPage = () => {
             <button className="p-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
               <Heart size={18} />
             </button>
-            <Link href={`/product-details/${product.id}`}>
+            <Link href={`/product-details/${product.productId}`}>
               <button className="p-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
                 <Eye size={18} />
               </button>
@@ -138,23 +208,84 @@ const ProductsPage = () => {
           {/* Price */}
           <div className="flex justify-between items-center mt-2">
             <div>
-              <span className="font-bold text-red-500">
-                {formatPrice(product.variants[0].price)}
-              </span>
-              {product.variants.length > 1 && (
-                <span className="text-xs text-gray-500 ml-1">+</span>
+              {product.price && product.price.length > 0 ? (
+                <>
+                  <span className="font-bold text-red-500">
+                    {formatPrice(Math.min(...product.price))}
+                  </span>
+                  {product.price.length > 1 && product.price[0] !== Math.max(...product.price) && (
+                    <span className="text-xs text-gray-500 ml-1">
+                      - {formatPrice(Math.max(...product.price))}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span className="font-bold text-red-500">Price not available</span>
               )}
             </div>
             
             {/* Stock indicator */}
-            <div className="text-xs">
-              {product.variants[0].inventoryQuantity > 10 ? (
-                <span className="text-green-600">In Stock</span>
-              ) : product.variants[0].inventoryQuantity > 0 ? (
-                <span className="text-orange-500">Low Stock</span>
+            {/* <div className="text-xs">
+              {product.variants && product.variants.length > 0 ? (
+                product.variants[0].inventoryQuantity > 10 ? (
+                  <span className="text-green-600">In Stock</span>
+                ) : product.variants[0].inventoryQuantity > 0 ? (
+                  <span className="text-orange-500">Low Stock</span>
+                ) : (
+                  <span className="text-red-500">Out of Stock</span>
+                )
               ) : (
-                <span className="text-red-500">Out of Stock</span>
+                <span className="text-gray-500">Stock unknown</span>
               )}
+            </div> */}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Simple Filter Component
+  const FilterSection = () => {
+    return (
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+            <input
+              type="text"
+              value={filters.vendor}
+              onChange={(e) => handleFilterChange('vendor', e.target.value)}
+              placeholder="Filter by vendor"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+            <input
+              type="text"
+              value={filters.productType}
+              onChange={(e) => handleFilterChange('productType', e.target.value)}
+              placeholder="Filter by type"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={filters.minPrice}
+                onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                placeholder="Min"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+              <input
+                type="number"
+                value={filters.maxPrice}
+                onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                placeholder="Max"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
             </div>
           </div>
         </div>
@@ -170,23 +301,65 @@ const ProductsPage = () => {
         <p className="text-gray-600 mt-2">Discover our premium handcrafted Italian shoes</p>
       </div>
 
-      {/* Filter & Sort (Simplified) */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex space-x-2">
-          <button className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors">
-            All Categories
-          </button>
-          <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-            Filters
+      {/* Filter & Sort Toolbar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-gray-600" />
+            <span className="font-medium">Filters:</span>
+          </div>
+          <button 
+            className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700 hover:bg-gray-200 transition-colors"
+            onClick={() => {
+              // Toggle filter section visibility (you would need to add state for this)
+              // For now, we'll just reset filters
+              setFilters({
+                vendor: "",
+                productType: "",
+                minPrice: "",
+                maxPrice: "",
+              });
+            }}
+          >
+            Reset Filters
           </button>
         </div>
         
-        <select className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700">
-          <option>Sort by Featured</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-          <option>Newest First</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <ArrowUpDown size={18} className="text-gray-600" />
+            <span className="font-medium">Sort:</span>
+          </div>
+          <select 
+            className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700"
+            onChange={handleSortChange}
+            value={
+              sortBy === "price" && sortOrder === "asc" 
+                ? "price_asc" 
+                : sortBy === "price" && sortOrder === "desc"
+                ? "price_desc"
+                : sortBy === "createdAt" && sortOrder === "desc"
+                ? "newest"
+                : sortBy === "title" && sortOrder === "asc"
+                ? "title_asc"
+                : "default"
+            }
+          >
+            <option value="default">Featured</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="newest">Newest First</option>
+            <option value="title_asc">Name: A to Z</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Filter section */}
+      <FilterSection />
+
+      {/* Product count */}
+      <div className="mb-4 text-gray-600">
+        Showing {products.length} of {totalItems} products
       </div>
 
       {/* Products Grid */}
@@ -211,6 +384,13 @@ const ProductsPage = () => {
       {!hasMore && !loading && products.length > 0 && (
         <div className="text-center py-8 text-gray-500">
           {`You've reached the end of our collection`}
+        </div>
+      )}
+
+      {/* No results message */}
+      {!loading && products.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          No products found matching your criteria
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Heart, Share2, X, Edit2, ChevronLeft } from "lucide-react";
 import { Product, Size, Style, Sole, Material, Color, Panel, ProductVariant } from "../../../../types/product";
+import { useParams } from "next/navigation";
 
 // Interfaces for Product Data
 
@@ -41,6 +42,9 @@ const relatedProducts = [
 ];
 
 const ProductPage = () => {
+
+  const params = useParams();
+  const productId = params.id;
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedTab, setSelectedTab] = useState("Materials");
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,7 +77,7 @@ const ProductPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch("/api/product/9935528395044");
+        const response = await fetch(`/api/product/${productId}`);
         const data = await response.json();
         console.log("Product Data:", data);
         setProduct(data);
@@ -537,7 +541,7 @@ const ProductPage = () => {
                   </span> )}
                 </div>
               </div>
-              {!isDesignEditorOpen ? <button 
+              {product.variants.length > 0 && (!isDesignEditorOpen ? <button 
                 className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 onClick={() => {
                   // Pre-select the first size for convenience if none selected
@@ -558,7 +562,7 @@ const ProductPage = () => {
                 >
                   <X className="w-5 h-5 inline-block mr-1" />
                   Close Editor
-                </button> }
+                </button> )}
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4 border-b pb-4">

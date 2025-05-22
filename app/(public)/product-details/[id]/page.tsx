@@ -4,11 +4,19 @@ import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import { Heart, Share2, X, Edit2, ChevronLeft } from "lucide-react";
-import { Product, Size, Style, Sole, Material, Color, Panel, ProductVariant } from "../../../../types/product";
+import {
+  Product,
+  Size,
+  Style,
+  Sole,
+  Material,
+  Color,
+  Panel,
+  ProductVariant,
+} from "../../../../types/product";
 import { useParams } from "next/navigation";
 
 // Interfaces for Product Data
-
 
 const relatedProducts = [
   {
@@ -42,7 +50,6 @@ const relatedProducts = [
 ];
 
 const ProductPage = () => {
-
   const params = useParams();
   const productId = params.id;
   const [product, setProduct] = useState<Product | null>(null);
@@ -50,7 +57,7 @@ const ProductPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
-  const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(false);
+  const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(true);
 
   // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
@@ -94,7 +101,7 @@ const ProductPage = () => {
     setIsDesignEditorOpen(false);
     setCurrentVariant(null);
     setSelectedImage(product?.imageUrl);
-  }
+  };
 
   const clearSelections = () => {
     if (!product) return;
@@ -227,7 +234,6 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         ) : (
-
           <img
             src={selectedImage || "/api/placeholder/600/600"}
             alt={product.title}
@@ -242,9 +248,9 @@ const ProductPage = () => {
       </div>
 
       {currentVariant ? (
-        <Swiper 
-          spaceBetween={10} 
-          slidesPerView={4} 
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
           className="image-slider"
           breakpoints={{
             320: { slidesPerView: 3 },
@@ -253,12 +259,12 @@ const ProductPage = () => {
         >
           {currentVariant.images.map((image, index) => (
             <SwiperSlide key={index}>
-              <button 
+              <button
                 className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                  selectedImage?.url === image.url 
-                    ? "border-red-500" 
+                  selectedImage?.url === image.url
+                    ? "border-red-500"
                     : "border-transparent hover:border-red-300"
-                }`} 
+                }`}
                 onClick={() => setSelectedImage(image)}
               >
                 <img
@@ -270,34 +276,36 @@ const ProductPage = () => {
             </SwiperSlide>
           ))}
         </Swiper>
-      ) : product.shopifyImages.length > 0 ? <Swiper 
-      spaceBetween={10} 
-      slidesPerView={4} 
-      className="image-slider"
-      breakpoints={{
-        320: { slidesPerView: 3 },
-        640: { slidesPerView: 4 },
-      }}
-    >
-      {product.shopifyImages.map((image, index) => (
-        <SwiperSlide key={index}>
-          <button 
-            className={`aspect-square rounded-lg overflow-hidden border-2 ${
-              selectedImage === image?.src 
-                ? "border-red-500" 
-                : "border-transparent hover:border-red-300"
-            }`} 
-            onClick={() => setSelectedImage(image.src)}
-          >
-            <img
-              src={image.src}
-              alt={`View ${index + 1}`}
-              className="object-cover w-full h-full"
-            />
-          </button>
-        </SwiperSlide>
-      ))}
-    </Swiper> : null}
+      ) : product.shopifyImages.length > 0 ? (
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
+          className="image-slider"
+          breakpoints={{
+            320: { slidesPerView: 3 },
+            640: { slidesPerView: 4 },
+          }}
+        >
+          {product.shopifyImages.map((image, index) => (
+            <SwiperSlide key={index}>
+              <button
+                className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                  selectedImage === image?.src
+                    ? "border-red-500"
+                    : "border-transparent hover:border-red-300"
+                }`}
+                onClick={() => setSelectedImage(image.src)}
+              >
+                <img
+                  src={image.src}
+                  alt={`View ${index + 1}`}
+                  className="object-cover w-full h-full"
+                />
+              </button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      ) : null}
     </div>
   );
 
@@ -308,8 +316,8 @@ const ProductPage = () => {
           Select Materials and Colors
         </h3>
         {/* Panel Selection Dropdown */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium">Select Panel:</label>
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Panel:</label>
           <select
             value={selectedCombination.panel?.id || ""}
             onChange={(e) => {
@@ -321,12 +329,63 @@ const ProductPage = () => {
                 panel: panelInfo || null,
               });
             }}
-            className="border rounded-lg px-2 py-1 w-48"
+            className=" text-xs border rounded-lg px-2 py-1 w-48"
           >
             <option value="">Choose a Panel</option>
             {product.variantsOptions.panels.map((panel) => (
               <option key={panel.id} value={panel.id}>
                 {panel.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center">
+        {/* Panel Selection Dropdown */}
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Material:</label>
+          <select
+            value={selectedCombination.material?.id || ""}
+            onChange={(e) => {
+              const matInfo = product.variantsOptions.materials.find(
+                (p) => p.id === Number(e.target.value)
+              );
+              setSelectedCombination({
+                ...selectedCombination,
+                material: matInfo || null,
+              });
+            }}
+            className="text-sm border rounded-lg px-2 py-1 w-48"
+          >
+            <option value="">Choose a Material</option>
+            {product.variantsOptions.materials.map((mat) => (
+              <option key={mat.id} value={mat.id}>
+                {mat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Color:</label>
+          <select
+            value={selectedCombination.color?.id || ""}
+            onChange={(e) => {
+              const matInfo = product.variantsOptions.colors.find(
+                (p) => p.id === Number(e.target.value)
+              );
+              setSelectedCombination({
+                ...selectedCombination,
+                color: matInfo || null,
+              });
+            }}
+            className="border text-sm rounded-lg px-2 py-1 w-48"
+          >
+            <option value="">Choose a Color</option>
+            {product.variantsOptions.colors.map((mat) => (
+              <option key={mat.id} value={mat.id}>
+                {mat.name}
               </option>
             ))}
           </select>
@@ -397,7 +456,7 @@ const ProductPage = () => {
             title={sole.type}
           >
             <img
-              src={sole?.imageUrl || "/api/placeholder/100/100"} 
+              src={sole?.imageUrl || "/api/placeholder/100/100"}
               alt={`${sole.type}`}
               className="w-full h-20 object-cover"
             />
@@ -446,78 +505,23 @@ const ProductPage = () => {
 
   // Design Editor component that will be shown/hidden
   const DesignEditor = () => (
-    // <div className={``}>
-      <div className="max-w-7xl mx-auto">       
-        <div className="grid grid-cols-1 gap-8">
-          <div className="space-y-6">
-            {/* <div className="flex justify-between items-center">             
-              
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium">Select Size:</label>
-                <select
-                  value={selectedCombination.size?.id || ""}
-                  onChange={(e) => {
-                    const size = product.variantsOptions.sizes.find(
-                      (s) => s.id === Number(e.target.value)
-                    );
-                    setSelectedCombination({
-                      ...selectedCombination,
-                      size: size || null,
-                    });
-                  }}
-                  className="border rounded-lg px-3 py-2 w-48 focus:border-red-300 focus:ring focus:ring-red-200"
-                >
-                  <option value="">Choose a Size</option>
-                  {product.variantsOptions.sizes.map((size) => (
-                    <option key={size.id} value={size.id}>
-                      {`${size.size} (${size.sizeSystem}${
-                        size.width ? ` - ${size.width}` : ""
-                      })`}
-                    </option>
-                  ))}
-                </select>
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 gap-8">
+        <div className="space-y-6">
+          <NavTabs />
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {selectedTab === "Materials" && <MaterialSelector />}
+            {selectedTab === "Style" && <StyleSelector />}
+            {selectedTab === "Soles" && <SoleSelector />}
+            {selectedTab === "Extras" && (
+              <div className="text-center py-4 text-gray-500">
+                Additional customization options coming soon
               </div>
-              
-              <button 
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                onClick={appliedSelections ? clearSelections : applySelection}
-              >
-                {appliedSelections ? "Reset Design" : "Apply Selection"}
-              </button>
-            </div> */}
-
-            <NavTabs />
-
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              {selectedTab === "Materials" && <MaterialSelector />}
-              {selectedTab === "Style" && <StyleSelector />}
-              {selectedTab === "Soles" && <SoleSelector />}
-              {selectedTab === "Extras" && (
-                <div className="text-center py-4 text-gray-500">
-                  Additional customization options coming soon
-                </div>
-              )}
-            </div>
-            
-            {/* {currentVariant ? (
-              <div className="flex justify-between items-center border-t border-b py-4">
-                <div>
-                  <h3 className="font-medium">Selected Design</h3>
-                  <p className="text-sm text-gray-600">{currentVariant.title}</p>
-                </div>
-                <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                  ADD TO CART - ${currentVariant.price}
-                </button>
-              </div>
-            ) : (
-              <div className="text-center py-4 text-red-500">
-                Please select and apply a valid combination
-              </div>
-            )} */}
+            )}
           </div>
         </div>
       </div>
-    // </div>
+    </div>
   );
 
   return (
@@ -530,39 +534,58 @@ const ProductPage = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-start">
               <div className="max-w-sm">
-                <h1 className="text-2xl font-bold line-clamp-2 hover:line-clamp-none transition-all duration-300" title={product.title}>{product.title}</h1>
-                <p className="text-sm text-gray-500">By {product?.vendor || "Italian Shoes Company"}</p>
+                <h1
+                  className="text-2xl font-bold line-clamp-2 hover:line-clamp-none transition-all duration-300"
+                  title={product.title}
+                >
+                  {product.title}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  By {product?.vendor || "Italian Shoes Company"}
+                </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-2xl text-red-500 font-bold">
                     ${currentVariant?.price || product.price[0]}
                   </span>
-                  {currentVariant && (<span className="text-sm text-gray-500">
-                    {currentVariant?.inventoryQuantity || product.variants[0].inventoryQuantity} in stock
-                  </span> )}
+                  {currentVariant && (
+                    <span className="text-sm text-gray-500">
+                      {currentVariant?.inventoryQuantity ||
+                        product.variants[0].inventoryQuantity}{" "}
+                      in stock
+                    </span>
+                  )}
                 </div>
               </div>
-              {product.variants.length > 0 && (!isDesignEditorOpen ? <button 
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                onClick={() => {
-                  // Pre-select the first size for convenience if none selected
-                  if (!selectedCombination.size && product.variantsOptions.sizes.length > 0) {
-                    setSelectedCombination({
-                      ...selectedCombination,
-                      size: product.variantsOptions.sizes[0]
-                    });
-                  }
-                  setIsDesignEditorOpen(true);
-                }}
-              >
-                <Edit2 className="w-4 h-4 inline-block mr-2" />
-                Edit Design
-              </button> : <button 
-                  className="text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
-                  onClick={CloseEditor}
-                >
-                  <X className="w-5 h-5 inline-block mr-1" />
-                  Close Editor
-                </button> )}
+              {product.variants.length > 0 &&
+                (!isDesignEditorOpen ? (
+                  <button
+                    className="px-6 py-2 text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
+                    onClick={() => {
+                      // Pre-select the first size for convenience if none selected
+                      if (
+                        !selectedCombination.size &&
+                        product.variantsOptions.sizes.length > 0
+                      ) {
+                        setSelectedCombination({
+                          ...selectedCombination,
+                          size: product.variantsOptions.sizes[0],
+                        });
+                      }
+                      setIsDesignEditorOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4 inline-block mr-2" />
+                    Edit Design
+                  </button>
+                ) : (
+                  <button
+                    className="text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
+                    onClick={CloseEditor}
+                  >
+                    <X className="w-5 h-5 inline-block mr-1" />
+                    Close Editor
+                  </button>
+                ))}
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4 border-b pb-4">
@@ -590,15 +613,17 @@ const ProductPage = () => {
                   ))}
                 </select>
               </div>
-              {isDesignEditorOpen && ( <button 
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                onClick={appliedSelections ? clearSelections : applySelection}
-              >
-                {appliedSelections ? "Reset Design" : "Apply Selection"}
-              </button>)}
+              {isDesignEditorOpen && (
+                <button
+                  className="px-4 py-2 text-black transition-colors"
+                  onClick={appliedSelections ? clearSelections : applySelection}
+                >
+                  {appliedSelections ? "Reset Design" : "Apply Selection"}
+                </button>
+              )}
             </div>
             {/* Size Selection Dropdown (simplified version) */}
-            
+
             {isDesignEditorOpen && <DesignEditor />}
 
             {/* Product Features */}

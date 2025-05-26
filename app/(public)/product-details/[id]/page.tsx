@@ -309,7 +309,47 @@ const ProductPage = () => {
     </div>
   );
 
-  const MaterialSelector = () => (
+  const MaterialSelector = () => { 
+    const colorId = selectedCombination.color?.id;
+    const materialId = selectedCombination.material?.id;
+
+    const filteredColors = materialId && !colorId
+      ? product?.variants.filter(v => v.options.material?.id === materialId && v.options.color)
+          .map(v => v.options.color)
+          .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index)
+      : selectedCombination.color ? [selectedCombination.color] : product?.variantsOptions.colors;
+
+    const filteredMaterials = colorId && !materialId
+      ? product?.variantsOptions.materials.filter(material =>
+          product.variants.some(v =>
+            v.options.color?.id === colorId && v.options.material?.id === material.id
+          )
+        )
+      : selectedCombination.material ? [selectedCombination.material]  : product?.variantsOptions.materials;
+
+      const allMatchingMaterials = product?.variantsOptions.materials.filter(material => {
+        const matchesColor = !colorId || product.variants.some(v => v.options.material?.id === material.id && v.options.color?.id === colorId);
+        return matchesColor;
+      });
+    
+
+    // const filteredColors = selectedCombination.material && !selectedCombination.color
+    //   ? product?.variants.filter(v => v.options.material?.id === selectedCombination.material?.id)
+    //       .map(v => v.options.color)
+    //       .filter((value, index, self) =>
+    //         value && index === self.findIndex((t) => t?.id === value.id))
+    //   : selectedCombination.color ? [selectedCombination.color] : product?.variantsOptions.colors;
+
+
+    // const filteredMaterials = selectedCombination.color && !selectedCombination.material
+    //   ? product?.variants
+    //       .filter(v => v.options.color?.id === selectedCombination.color?.id && v.options.material)
+    //       .map(v => v.options.material)
+    //       .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index)
+    //   : selectedCombination.material ? [selectedCombination.material]  : product?.variantsOptions.materials;
+
+
+    return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium mb-2">
@@ -359,7 +399,7 @@ const ProductPage = () => {
             className="text-sm border rounded-lg px-2 py-1 w-48"
           >
             <option value="">Choose a Material</option>
-            {product.variantsOptions.materials.map((mat) => (
+            {filteredMaterials?.map((mat) => (
               <option key={mat.id} value={mat.id}>
                 {mat.name}
               </option>
@@ -383,7 +423,7 @@ const ProductPage = () => {
             className="border text-sm rounded-lg px-2 py-1 w-48"
           >
             <option value="">Choose a Color</option>
-            {product.variantsOptions.colors.map((mat) => (
+            {filteredColors?.map((mat) => (
               <option key={mat.id} value={mat.id}>
                 {mat.name}
               </option>
@@ -393,7 +433,11 @@ const ProductPage = () => {
       </div>
 
       <div className="space-y-4">
-        {product.variantsOptions.materials.map((material) => (
+        {(colorId && !materialId ? allMatchingMaterials : filteredMaterials)?.map((material) => {
+          const materialColors = product?.variants.filter(v => v.options.material?.id === material.id)
+              .map(v => v.options.color)
+              .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index);
+          return (
           <div key={material.id} className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{material.name}</span>
@@ -406,7 +450,7 @@ const ProductPage = () => {
 
             {/* Color Swatches */}
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {product.variantsOptions.colors.map((color) => (
+              {(colorId && !materialId ? filteredColors : materialColors)?.map((color) => (
                 <button
                   key={color.id}
                   onClick={() => {
@@ -433,10 +477,10 @@ const ProductPage = () => {
               ))}
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
-  );
+  )};
 
   const SoleSelector = () => (
     <div className="space-y-4">

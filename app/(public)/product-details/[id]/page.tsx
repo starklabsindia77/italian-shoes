@@ -333,21 +333,7 @@ const ProductPage = () => {
       });
     
 
-    // const filteredColors = selectedCombination.material && !selectedCombination.color
-    //   ? product?.variants.filter(v => v.options.material?.id === selectedCombination.material?.id)
-    //       .map(v => v.options.color)
-    //       .filter((value, index, self) =>
-    //         value && index === self.findIndex((t) => t?.id === value.id))
-    //   : selectedCombination.color ? [selectedCombination.color] : product?.variantsOptions.colors;
-
-
-    // const filteredMaterials = selectedCombination.color && !selectedCombination.material
-    //   ? product?.variants
-    //       .filter(v => v.options.color?.id === selectedCombination.color?.id && v.options.material)
-    //       .map(v => v.options.material)
-    //       .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index)
-    //   : selectedCombination.material ? [selectedCombination.material]  : product?.variantsOptions.materials;
-
+    
 
     return (
     <div className="space-y-6">

@@ -7,6 +7,7 @@
     "dev2": "ts-node lib/run.ts",
     "build": "next build",
     "start": "next start",
+    "build:debug": "cross-env NEXT_TS_DEBUG=true next build",
     "lint": "next lint"
   },
   "dependencies": {
@@ -58,6 +59,7 @@
     "@types/react-draft-wysiwyg": "^1.13.8",
     "@types/react-table": "^7.7.14",
     "@types/three": "^0.172.0",
+    "cross-env": "^7.0.3",
     "prisma": "^6.1.0"
   }
 }

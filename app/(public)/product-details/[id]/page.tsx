@@ -543,11 +543,7 @@ const ProductPage = () => {
             {selectedTab === "Materials" && <MaterialSelector />}
             {selectedTab === "Style" && <StyleSelector />}
             {selectedTab === "Soles" && <SoleSelector />}
-            {selectedTab === "Extras" && (
-              <div className="text-center py-4 text-gray-500">
-                Additional customization options coming soon
-              </div>
-            )}
+
           </div>
         </div>
       </div>
@@ -575,7 +571,7 @@ const ProductPage = () => {
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-2xl text-red-500 font-bold">
-                    ${currentVariant?.price || product.price[0]}
+                    ₹{currentVariant?.price || product.price[0]}
                   </span>
                   {currentVariant && (
                     <span className="text-sm text-gray-500">
@@ -586,7 +582,7 @@ const ProductPage = () => {
                   )}
                 </div>
               </div>
-              {product.variants.length > 0 &&
+              {/* {product.variants.length > 0 &&
                 (!isDesignEditorOpen ? (
                   <button
                     className="px-6 py-2 text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
@@ -615,7 +611,7 @@ const ProductPage = () => {
                     <X className="w-5 h-5 inline-block mr-1" />
                     Close Editor
                   </button>
-                ))}
+                ))} */}
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4 border-b pb-4">

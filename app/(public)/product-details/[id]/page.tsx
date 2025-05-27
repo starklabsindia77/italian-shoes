@@ -141,7 +141,7 @@ const ProductPage = () => {
 
   const NavTabs = () => (
     <div className="flex space-x-2 bg-gray-100 rounded-lg p-1">
-      {["Materials", "Style", "Soles", "Extras"].map((tab) => (
+      {["Materials", "Style", "Soles"].map((tab) => (
         <button
           key={tab}
           onClick={() => setSelectedTab(tab)}

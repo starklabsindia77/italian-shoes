@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Type is required" }, { status: 400 });
     }
 
-    let imageUrl = null;
+    let imageUrl: string | null = null;
+
     if (imageFile) {
       const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
       const uploadResult = await new Promise((resolve, reject) => {
@@ -92,7 +93,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "SoleOption ID is required" }, { status: 400 });
     }
 
-    let imageUrl = null;
+    let imageUrl: string | null = null;
     if (imageFile) {
       const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
       const uploadResult = await new Promise((resolve, reject) => {
@@ -104,9 +105,11 @@ export async function PUT(req: NextRequest) {
       imageUrl = (uploadResult as any).secure_url;
     }
 
-    const updatedData: any = { type };
-    if (height !== undefined) updatedData.height = height; // Allow partial updates
+    const updatedData: any = {};
+    if (type) updatedData.type = type;
+    if (height) updatedData.height = height;
     if (imageUrl) updatedData.imageUrl = imageUrl;
+
 
     const updatedSoleOption = await prisma.soleOption.update({
       where: { id },

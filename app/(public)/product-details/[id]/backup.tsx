@@ -3,84 +3,20 @@
 import React, { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import { Heart, Share2, X } from "lucide-react";
+import { Heart, Share2, X, Edit2, ChevronLeft } from "lucide-react";
+import {
+  Product,
+  Size,
+  Style,
+  Sole,
+  Material,
+  Color,
+  Panel,
+  ProductVariant,
+} from "../../../../types/product";
+import { useParams } from "next/navigation";
 
 // Interfaces for Product Data
-interface Size {
-  id: number;
-  sizeSystem: string;
-  size: string;
-  width: string;
-}
-
-interface Style {
-  id: number;
-  name: string;
-  imageUrl: string;
-}
-
-interface Sole {
-  id: number;
-  type: string;
-  height: string;
-  imageUrl: string;
-}
-
-interface Material {
-  id: number;
-  name: string;
-  description: string;
-}
-
-interface Color {
-  id: number;
-  name: string;
-  hexCode: string;
-  imageUrl: string;
-}
-
-interface Panel {
-  id: number;
-  name: string;
-  description: string;
-}
-
-interface ProductImage {
-  url: string;
-  altText: string | null;
-}
-
-interface ProductVariant {
-  id: number;
-  title: string;
-  price: number;
-  inventoryQuantity: number;
-  images: ProductImage[];
-  options: {
-    size: Size;
-    style: Style;
-    sole: Sole;
-    material: Material;
-    color: Color;
-    panel: Panel;
-  };
-}
-
-interface Product {
-  id: number;
-  title: string;
-  description: string;
-  price: number[];
-  variants: ProductVariant[];
-  variantsOptions: {
-    sizes: Size[];
-    styles: Style[];
-    soles: Sole[];
-    materials: Material[];
-    colors: Color[];
-    panels: Panel[];
-  };
-}
 
 const relatedProducts = [
   {
@@ -111,28 +47,17 @@ const relatedProducts = [
     image:
       "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400&h=400&fit=crop",
   },
-  {
-    id: 5,
-    title: "Classic Loafers",
-    price: 229.0,
-    image:
-      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-  },
-  {
-    id: 6,
-    title: "Classic Loafers",
-    price: 229.0,
-    image:
-      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-  },
 ];
 
 const ProductPage = () => {
+  const params = useParams();
+  const productId = params.id;
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedTab, setSelectedTab] = useState("Materials");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
+  const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(true);
 
   // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
@@ -159,12 +84,12 @@ const ProductPage = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await fetch("/api/product/9935528395044");
+        const response = await fetch(`/api/product/${productId}`);
         const data = await response.json();
-        console.log('data ========================>', data);
+        console.log("Product Data:", data);
         setProduct(data);
-        setCurrentVariant(data.variants[0]); // Default variant
-        setSelectedImage(data.variants[0].images[0]);
+        // setCurrentVariant(data.variants[0]); // Default variant
+        setSelectedImage(data.imageUrl);
       } catch (error) {
         console.error("Error fetching product:", error);
       }
@@ -172,10 +97,16 @@ const ProductPage = () => {
     fetchProduct();
   }, []);
 
+  const CloseEditor = () => {
+    setIsDesignEditorOpen(false);
+    setCurrentVariant(null);
+    setSelectedImage(product?.imageUrl);
+  };
+
   const clearSelections = () => {
     if (!product) return;
     setAppliedSelections(false);
-    setCurrentVariant(product.variants[0]);    
+    // setCurrentVariant(product.variants[0]);
   };
 
   // **Apply Selections and Check for Variant**
@@ -195,9 +126,10 @@ const ProductPage = () => {
     setAppliedSelections(true);
 
     if (matchingVariant) {
+      console.log("Matching Variant:", matchingVariant);
       setCurrentVariant(matchingVariant);
+      setSelectedImage(matchingVariant.images[0]);
     } else {
-
       setCurrentVariant(null);
       setModalOpen(true);
     }
@@ -209,7 +141,7 @@ const ProductPage = () => {
 
   const NavTabs = () => (
     <div className="flex space-x-2 bg-gray-100 rounded-lg p-1">
-      {["Materials", "Style", "Soles", "Extras"].map((tab) => (
+      {["Materials", "Style", "Soles"].map((tab) => (
         <button
           key={tab}
           onClick={() => setSelectedTab(tab)}
@@ -235,14 +167,19 @@ const ProductPage = () => {
               spaceBetween={10}
               slidesPerView={4}
               className="related-products-slider"
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                768: { slidesPerView: 3 },
+                1024: { slidesPerView: 4 },
+              }}
             >
               {relatedProducts.map((related) => (
                 <SwiperSlide key={related.id}>
-                  <div className="bg-white rounded-lg overflow-hidden">
+                  <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <img
                       src={related.image}
                       alt={related.title}
-                      className="object-cover w-full h-32"
+                      className="object-cover w-full h-48"
                     />
                     <div className="p-4">
                       <h3 className="font-medium mb-2">{related.title}</h3>
@@ -262,8 +199,8 @@ const ProductPage = () => {
 
   const CombinationNotAvailableModal = () =>
     modalOpen && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold">Combination Not Available</h2>
             <button
@@ -279,7 +216,7 @@ const ProductPage = () => {
           </p>
           <button
             onClick={() => setModalOpen(false)}
-            className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+            className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all"
           >
             Close
           </button>
@@ -297,19 +234,39 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <span className="text-gray-500">
-              Current combination not available
-            </span>
-          </div>
+          <img
+            src={selectedImage || "/api/placeholder/600/600"}
+            alt={product.title}
+            className="object-cover w-full h-full"
+          />
+          // <div className="flex items-center justify-center h-full">
+          //   <span className="text-gray-500">
+          //     Current combination not available
+          //   </span>
+          // </div>
         )}
       </div>
 
-      {currentVariant && (
-        <Swiper spaceBetween={10} slidesPerView={4} className="image-slider">
+      {currentVariant ? (
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
+          className="image-slider"
+          breakpoints={{
+            320: { slidesPerView: 3 },
+            640: { slidesPerView: 4 },
+          }}
+        >
           {currentVariant.images.map((image, index) => (
             <SwiperSlide key={index}>
-              <button className="aspect-square rounded-lg overflow-hidden border-2 border-transparent" onClick={() => setSelectedImage(image)}>
+              <button
+                className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                  selectedImage?.url === image.url
+                    ? "border-red-500"
+                    : "border-transparent hover:border-red-300"
+                }`}
+                onClick={() => setSelectedImage(image)}
+              >
                 <img
                   src={image.url}
                   alt={image.altText || `View ${index + 1}`}
@@ -319,19 +276,74 @@ const ProductPage = () => {
             </SwiperSlide>
           ))}
         </Swiper>
-      )}
+      ) : product.shopifyImages.length > 0 ? (
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
+          className="image-slider"
+          breakpoints={{
+            320: { slidesPerView: 3 },
+            640: { slidesPerView: 4 },
+          }}
+        >
+          {product.shopifyImages.map((image, index) => (
+            <SwiperSlide key={index}>
+              <button
+                className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                  selectedImage === image?.src
+                    ? "border-red-500"
+                    : "border-transparent hover:border-red-300"
+                }`}
+                onClick={() => setSelectedImage(image.src)}
+              >
+                <img
+                  src={image.src}
+                  alt={`View ${index + 1}`}
+                  className="object-cover w-full h-full"
+                />
+              </button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      ) : null}
     </div>
   );
 
-  const MaterialSelector = () => (
+  const MaterialSelector = () => { 
+    const colorId = selectedCombination.color?.id;
+    const materialId = selectedCombination.material?.id;
+
+    const filteredColors = materialId && !colorId
+      ? product?.variants.filter(v => v.options.material?.id === materialId && v.options.color)
+          .map(v => v.options.color)
+          .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index)
+      : selectedCombination.color ? [selectedCombination.color] : product?.variantsOptions.colors;
+
+    const filteredMaterials = colorId && !materialId
+      ? product?.variantsOptions.materials.filter(material =>
+          product.variants.some(v =>
+            v.options.color?.id === colorId && v.options.material?.id === material.id
+          )
+        )
+      : selectedCombination.material ? [selectedCombination.material]  : product?.variantsOptions.materials;
+
+      const allMatchingMaterials = product?.variantsOptions.materials.filter(material => {
+        const matchesColor = !colorId || product.variants.some(v => v.options.material?.id === material.id && v.options.color?.id === colorId);
+        return matchesColor;
+      });
+    
+
+    
+
+    return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium mb-2">
           Select Materials and Colors
         </h3>
         {/* Panel Selection Dropdown */}
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium">Select Panel:</label>
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Panel:</label>
           <select
             value={selectedCombination.panel?.id || ""}
             onChange={(e) => {
@@ -343,7 +355,7 @@ const ProductPage = () => {
                 panel: panelInfo || null,
               });
             }}
-            className="border rounded-lg px-2 py-1 w-48"
+            className=" text-xs border rounded-lg px-2 py-1 w-48"
           >
             <option value="">Choose a Panel</option>
             {product.variantsOptions.panels.map((panel) => (
@@ -355,8 +367,63 @@ const ProductPage = () => {
         </div>
       </div>
 
+      <div className="flex justify-between items-center">
+        {/* Panel Selection Dropdown */}
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Material:</label>
+          <select
+            value={selectedCombination.material?.id || ""}
+            onChange={(e) => {
+              const matInfo = product.variantsOptions.materials.find(
+                (p) => p.id === Number(e.target.value)
+              );
+              setSelectedCombination({
+                ...selectedCombination,
+                material: matInfo || null,
+              });
+            }}
+            className="text-sm border rounded-lg px-2 py-1 w-48"
+          >
+            <option value="">Choose a Material</option>
+            {filteredMaterials?.map((mat) => (
+              <option key={mat.id} value={mat.id}>
+                {mat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col items-start gap-2">
+          <label className="text-xs font-medium">Select Color:</label>
+          <select
+            value={selectedCombination.color?.id || ""}
+            onChange={(e) => {
+              const matInfo = product.variantsOptions.colors.find(
+                (p) => p.id === Number(e.target.value)
+              );
+              setSelectedCombination({
+                ...selectedCombination,
+                color: matInfo || null,
+              });
+            }}
+            className="border text-sm rounded-lg px-2 py-1 w-48"
+          >
+            <option value="">Choose a Color</option>
+            {filteredColors?.map((mat) => (
+              <option key={mat.id} value={mat.id}>
+                {mat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="space-y-4">
-        {product.variantsOptions.materials.map((material) => (
+        {(colorId && !materialId ? allMatchingMaterials : filteredMaterials)?.map((material) => {
+          const materialColors = product?.variants.filter(v => v.options.material?.id === material.id)
+              .map(v => v.options.color)
+              .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index);
+          return (
           <div key={material.id} className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{material.name}</span>
@@ -368,8 +435,8 @@ const ProductPage = () => {
             </div>
 
             {/* Color Swatches */}
-            <div className="grid grid-cols-8 gap-2">
-              {product.variantsOptions.colors.map((color) => (
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+              {(colorId && !materialId ? filteredColors : materialColors)?.map((color) => (
                 <button
                   key={color.id}
                   onClick={() => {
@@ -379,10 +446,10 @@ const ProductPage = () => {
                       color,
                     });
                   }}
-                  className={`relative w-10 h-10 rounded-full border overflow-hidden ${
+                  className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transform transition-all hover:scale-110 ${
                     selectedCombination.material?.id === material.id &&
                     selectedCombination.color?.id === color.id
-                      ? "border-red-500"
+                      ? "border-red-500 scale-110"
                       : "border-gray-300"
                   }`}
                   title={color.name}
@@ -396,30 +463,30 @@ const ProductPage = () => {
               ))}
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
-  );
+  )};
 
   const SoleSelector = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-medium mb-2">Select Sole</h3>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {product.variantsOptions.soles.map((sole) => (
           <button
             key={sole.id}
             onClick={() =>
               setSelectedCombination({ ...selectedCombination, sole })
             }
-            className={`relative p-2 border rounded-lg overflow-hidden ${
+            className={`relative p-2 border-2 rounded-lg overflow-hidden transform transition-all hover:shadow-md ${
               selectedCombination.sole?.id === sole.id
                 ? "border-red-500"
-                : "hover:border-red-500"
+                : "border-gray-200 hover:border-red-300"
             }`}
             title={sole.type}
           >
             <img
-              src={sole?.imageUrl || "https://placehold.co/100"} // Temporary placeholder image
+              src={sole?.imageUrl || "/api/placeholder/100/100"}
               alt={`${sole.type}`}
               className="w-full h-20 object-cover"
             />
@@ -435,17 +502,17 @@ const ProductPage = () => {
   const StyleSelector = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-medium mb-2">Select Style</h3>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {product.variantsOptions.styles.map((style) => (
           <button
             key={style.id}
             onClick={() =>
               setSelectedCombination({ ...selectedCombination, style })
             }
-            className={`p-2 border rounded-lg ${
+            className={`p-2 border-2 rounded-lg transition-all hover:shadow-md ${
               selectedCombination.style?.id === style.id
                 ? "border-red-500"
-                : "hover:border-red-500"
+                : "border-gray-200 hover:border-red-300"
             }`}
           >
             <img
@@ -466,33 +533,88 @@ const ProductPage = () => {
     return tmp.textContent || tmp.innerText || "";
   };
 
+  // Design Editor component that will be shown/hidden
+  const DesignEditor = () => (
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 gap-8">
+        <div className="space-y-6">
+          <NavTabs />
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {selectedTab === "Materials" && <MaterialSelector />}
+            {selectedTab === "Style" && <StyleSelector />}
+            {selectedTab === "Soles" && <SoleSelector />}
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white">
+      {/* Main Product Information */}
       <div className="max-w-7xl mx-auto p-4 md:p-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <ImageGallery />
 
           <div className="space-y-6">
             <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-xl font-bold">{product.title}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl text-red-500">
-                    ${product.variants[0].price}
+              <div className="max-w-sm">
+                <h1
+                  className="text-2xl font-bold line-clamp-2 hover:line-clamp-none transition-all duration-300"
+                  title={product.title}
+                >
+                  {product.title}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  By {product?.vendor || "Italian Shoes Company"}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-2xl text-red-500 font-bold">
+                    ₹{currentVariant?.price || product.price[0]}
                   </span>
+                  {currentVariant && (
+                    <span className="text-sm text-gray-500">
+                      {currentVariant?.inventoryQuantity ||
+                        product.variants[0].inventoryQuantity}{" "}
+                      in stock
+                    </span>
+                  )}
                 </div>
               </div>
-              {currentVariant ? (
-                <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                  ADD TO CART
-                </button>
-              ) : (
-                <div className="text-red-500">Combination not available</div>
-              )}
+              {/* {product.variants.length > 0 &&
+                (!isDesignEditorOpen ? (
+                  <button
+                    className="px-6 py-2 text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
+                    onClick={() => {
+                      // Pre-select the first size for convenience if none selected
+                      if (
+                        !selectedCombination.size &&
+                        product.variantsOptions.sizes.length > 0
+                      ) {
+                        setSelectedCombination({
+                          ...selectedCombination,
+                          size: product.variantsOptions.sizes[0],
+                        });
+                      }
+                      setIsDesignEditorOpen(true);
+                    }}
+                  >
+                    <Edit2 className="w-4 h-4 inline-block mr-2" />
+                    Edit Design
+                  </button>
+                ) : (
+                  <button
+                    className="text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
+                    onClick={CloseEditor}
+                  >
+                    <X className="w-5 h-5 inline-block mr-1" />
+                    Close Editor
+                  </button>
+                ))} */}
             </div>
-            <div className="flex justify-between items-center">             
-              {/* Size Selection Dropdown */}
-              <div className="flex items-center gap-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-4 border-b pb-4">
                 <label className="text-sm font-medium">Select Size:</label>
                 <select
                   value={selectedCombination.size?.id || ""}
@@ -505,7 +627,7 @@ const ProductPage = () => {
                       size: size || null,
                     });
                   }}
-                  className="border rounded-lg px-2 py-1 w-48"
+                  className="border rounded-lg px-3 py-2 w-48"
                 >
                   <option value="">Choose a Size</option>
                   {product.variantsOptions.sizes.map((size) => (
@@ -517,32 +639,21 @@ const ProductPage = () => {
                   ))}
                 </select>
               </div>
-              {/* Apply Selection Button */}
-              <p className="text-gray-600 cursor-pointer" onClick={appliedSelections ? clearSelections : applySelection}>
-              { appliedSelections ? "clear": "Apply"}
-              </p> 
+              {isDesignEditorOpen && (
+                <button
+                  className="px-4 py-2 text-black transition-colors"
+                  onClick={appliedSelections ? clearSelections : applySelection}
+                >
+                  {appliedSelections ? "Reset Design" : "Apply Selection"}
+                </button>
+              )}
             </div>
+            {/* Size Selection Dropdown (simplified version) */}
 
-            <NavTabs />
+            {isDesignEditorOpen && <DesignEditor />}
 
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              {selectedTab === "Materials" && <MaterialSelector />}
-              {selectedTab === "Style" && <StyleSelector />}
-              {selectedTab === "Soles" && <SoleSelector />}
-            </div>
-
-            <div className="flex gap-4">
-              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                <Heart className="w-5 h-5" />
-                Save to wishlist
-              </button>
-              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                <Share2 className="w-5 h-5" />
-                Send inquiry
-              </button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 py-4 border-t border-b">
+            {/* Product Features */}
+            <div className="grid grid-cols-4 gap-4 py-4 border-b">
               <div className="text-center">
                 <div className="font-medium">FREE</div>
                 <div className="text-sm text-gray-600">Delivery & Returns</div>
@@ -561,16 +672,33 @@ const ProductPage = () => {
               </div>
             </div>
 
+            {/* Product Description */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-medium mb-2">Product Description</h3>
               <p className="text-gray-600">{stripHtml(product.description)}</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex-grow">
+                ADD TO CART
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                <Heart className="w-5 h-5" />
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+                <Share2 className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Design Editor (Customization Interface) */}
+      {/* <DesignEditor /> */}
+
       {/* Related Products */}
-      <RelatedProductsSlider />
+      {/* <RelatedProductsSlider /> */}
 
       {/* Modal for unavailable combinations */}
       <CombinationNotAvailableModal />

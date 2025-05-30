@@ -15,6 +15,13 @@ import {
   ProductVariant,
 } from "../../../../types/product";
 import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
+
+
+const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar"), {
+  ssr: false,
+  loading: () => <p>Loading 3D model...</p>,
+});
 
 // Interfaces for Product Data
 
@@ -227,7 +234,7 @@ const ProductPage = () => {
   const ImageGallery = () => (
     <div className="space-y-4">
       <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
-        {currentVariant ? (
+        {/* {currentVariant ? (
           <img
             src={selectedImage?.url || "/api/placeholder/600/600"}
             alt={selectedImage?.altText || product.title}
@@ -236,15 +243,12 @@ const ProductPage = () => {
         ) : (
           <img
             src={selectedImage || "/api/placeholder/600/600"}
-            alt={product.title}
+            alt={product.title} 
             className="object-cover w-full h-full"
           />
-          // <div className="flex items-center justify-center h-full">
-          //   <span className="text-gray-500">
-          //     Current combination not available
-          //   </span>
-          // </div>
-        )}
+        )} */}
+        <ShoeAvatar avatarData="/glb/shoe.glb"  />
+        {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
       </div>
 
       {currentVariant ? (

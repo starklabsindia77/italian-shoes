@@ -247,7 +247,7 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         )} */}
-        <ShoeAvatar avatarData="/glb/shoe.glb"  />
+        <ShoeAvatar avatarData="/shoe.glb"  />
         {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
       </div>
 

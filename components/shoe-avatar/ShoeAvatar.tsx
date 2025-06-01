@@ -15,15 +15,15 @@ const Avatar: React.FC<AvatarProps> = ({ avatarData }) => {
   return (
     <primitive
       object={scene}
-      scale={[3.2, 3.0, 2.5]}
-      position={[0, -2.5, -2]}
-      rotation={[0.5, 0, 0]}
+      scale={[1, 1, 1]}
+      position={[0, 0, 0]}
+      rotation={[0, 0, 0]}
     />
   );
 };
 
 // Preload the model once (optional but improves performance)
-useGLTF.preload("/glb/shoe.glb");
+useGLTF.preload("/shoe.glb");
 
 const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData }) => {
   const [canvasSize, setCanvasSize] = useState({ width: 400, height: 400 });
@@ -34,8 +34,8 @@ const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData }) => {
 
     const resize = () => {
       setCanvasSize({
-        width: window.innerWidth * 0.4,
-        height: window.innerHeight * 0.5,
+        width: window.innerWidth * 0.2,
+        height: window.innerHeight * 1,
       });
     };
 

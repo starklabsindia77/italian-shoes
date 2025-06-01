@@ -643,14 +643,14 @@ const ProductPage = () => {
                   ))}
                 </select>
               </div>
-              {isDesignEditorOpen && (
+              {/* {isDesignEditorOpen && (
                 <button
                   className="px-4 py-2 text-black transition-colors"
                   onClick={appliedSelections ? clearSelections : applySelection}
                 >
                   {appliedSelections ? "Reset Design" : "Apply Selection"}
                 </button>
-              )}
+              )} */}
             </div>
             {/* Size Selection Dropdown (simplified version) */}
 

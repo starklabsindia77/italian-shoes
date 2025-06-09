@@ -65,6 +65,7 @@ const ProductPage = () => {
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
   const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(true);
+  
 
   // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
@@ -233,7 +234,7 @@ const ProductPage = () => {
 
   const ImageGallery = () => (
     <div className="space-y-4">
-      <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
+      <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
         {/* {currentVariant ? (
           <img
             src={selectedImage?.url || "/api/placeholder/600/600"}

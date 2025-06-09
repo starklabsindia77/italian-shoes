@@ -9,15 +9,18 @@ import { GLTF } from "three-stdlib";
 
 interface AvatarProps {
   avatarData: string;
+  objectList: any;
+  setObjectList: any;
+
 }
 
-const Avatar: React.FC<AvatarProps> = ({ avatarData }) => {
+const Avatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectList }) => {
   const { scene } = useGLTF(avatarData);
   const shoes = useGLTF(avatarData);
   // const meshRef = useRef();
   const meshRef = useRef<THREE.Group>(null);
   const [scale, setScale] = useState(1);
-  const [objectList, setObjectList] = useState<any>();
+  // const [objectList, setObjectList] = useState<any>();
 
   useEffect(() => {
     if (scene && meshRef.current) {
@@ -76,7 +79,7 @@ const Avatar: React.FC<AvatarProps> = ({ avatarData }) => {
 };
 
 
-const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData }) => {
+const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectList }) => {
   const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [hasMounted, setHasMounted] = useState(false);
   useGLTF.preload(avatarData);
@@ -112,7 +115,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData }) => {
         <directionalLight position={[5, 5, 5]} intensity={1} />
         <directionalLight position={[-5, 5, -5]} intensity={0.5} />
         <Suspense fallback={<LoadingSpinner />}>
-          <Avatar avatarData={avatarData} />
+          <Avatar avatarData={avatarData} objectList={objectList} setObjectList={setObjectList}/>
         </Suspense>
         <OrbitControls
           enablePan={false}

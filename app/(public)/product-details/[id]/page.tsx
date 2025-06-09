@@ -65,6 +65,8 @@ const ProductPage = () => {
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
   const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(true);
+  const [objectList, setObjectList] = useState<any>();
+  console.log('object list', objectList);
   
 
   // **User Selections**
@@ -248,7 +250,7 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         )} */}
-        <ShoeAvatar avatarData="/shoe.glb"  />
+        <ShoeAvatar avatarData="/shoe.glb" objectList={objectList} setObjectList={setObjectList}/>
         {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
       </div>
 
@@ -363,8 +365,13 @@ const ProductPage = () => {
             className=" text-xs border rounded-lg px-2 py-1 w-48"
           >
             <option value="">Choose a Panel</option>
-            {product.variantsOptions.panels.map((panel) => (
+            {/* {product.variantsOptions.panels.map((panel) => (
               <option key={panel.id} value={panel.id}>
+                {panel.name}
+              </option>
+            ))} */}
+            {objectList.map((panel: any) => (
+              <option key={panel.uuid} value={panel.uuid}>
                 {panel.name}
               </option>
             ))}

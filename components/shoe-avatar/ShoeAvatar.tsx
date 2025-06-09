@@ -9,22 +9,20 @@ interface AvatarProps {
   avatarData: string;
   objectList: any;
   setObjectList: any;
-  selectedPanelName?: string;
-  selectedColorHex?: string;
+  selectedColorHexMap?: Record<string, string>; // Map of panel name to color hex
 }
 
 const Avatar: React.FC<AvatarProps> = ({
   avatarData,
   objectList,
   setObjectList,
-  selectedPanelName,
-  selectedColorHex,
+  selectedColorHexMap = {},
 }) => {
   const { scene } = useGLTF(avatarData);
   const meshRef = useRef<THREE.Group>(null);
   const [scale, setScale] = useState(1);
   const prevPanelRef = useRef<string | null>(null);
-  const prevColorRef = useRef<string | null>(null);
+  const prevColorMapRef = useRef<string>("");
 
   useEffect(() => {
     if (scene && meshRef.current) {
@@ -53,36 +51,21 @@ const Avatar: React.FC<AvatarProps> = ({
     }
   }, [scene]);
 
-  useEffect(() => {
-    if (!scene || !selectedPanelName || prevPanelRef.current === selectedPanelName) return;
-
-    scene.traverse((child: any) => {
-      if (child.isMesh && child.morphTargetDictionary && child.morphTargetInfluences) {
-        const idx = child.morphTargetDictionary[selectedPanelName];
-        if (typeof idx === "number") {
-          for (let i = 0; i < child.morphTargetInfluences.length; i++) {
-            child.morphTargetInfluences[i] = i === idx ? 1 : 0;
-          }
-        }
-      }
-    });
-
-    prevPanelRef.current = selectedPanelName;
-  }, [selectedPanelName]);
 
   useEffect(() => {
-    if (!scene || !selectedColorHex || prevColorRef.current === selectedColorHex) return;
+    const currentMapStr = JSON.stringify(selectedColorHexMap);
+    if (!scene || currentMapStr === prevColorMapRef.current) return;
 
     scene.traverse((child: any) => {
-      if (child.isMesh && child.material) {
+      if (child.isMesh && selectedColorHexMap[child.name]) {
         child.material = child.material.clone();
-        child.material.color = new THREE.Color(selectedColorHex);
+        child.material.color = new THREE.Color(selectedColorHexMap[child.name]);
         child.material.needsUpdate = true;
       }
     });
 
-    prevColorRef.current = selectedColorHex;
-  }, [selectedColorHex]);
+    prevColorMapRef.current = currentMapStr;
+  }, [selectedColorHexMap]);
 
   return (
     <group ref={meshRef} scale={[scale, scale, scale]}>
@@ -95,8 +78,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   avatarData,
   objectList,
   setObjectList,
-  selectedPanelName,
-  selectedColorHex,
+  selectedColorHexMap,
 }) => {
   const [canvasSize, setCanvasSize] = useState({
     width: window.innerWidth,
@@ -143,8 +125,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
             avatarData={avatarData}
             objectList={objectList}
             setObjectList={setObjectList}
-            selectedPanelName={selectedPanelName}
-            selectedColorHex={selectedColorHex}
+            selectedColorHexMap={selectedColorHexMap}
           />
         </Suspense>
         <OrbitControls

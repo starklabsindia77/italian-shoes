@@ -2,98 +2,117 @@
 
 import React, { useEffect, useState, Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, useGLTF, PerspectiveCamera } from "@react-three/drei";
-import { Box3, Vector3, Group } from "three";
-import * as THREE from 'three';
-import { GLTF } from "three-stdlib";
+import { OrbitControls, useGLTF } from "@react-three/drei";
+import * as THREE from "three";
 
 interface AvatarProps {
   avatarData: string;
   objectList: any;
   setObjectList: any;
-
+  selectedPanelName?: string;
+  selectedColorHex?: string;
 }
 
-const Avatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectList }) => {
+const Avatar: React.FC<AvatarProps> = ({
+  avatarData,
+  objectList,
+  setObjectList,
+  selectedPanelName,
+  selectedColorHex,
+}) => {
   const { scene } = useGLTF(avatarData);
-  const shoes = useGLTF(avatarData);
-  // const meshRef = useRef();
   const meshRef = useRef<THREE.Group>(null);
   const [scale, setScale] = useState(1);
-  // const [objectList, setObjectList] = useState<any>();
+  const prevPanelRef = useRef<string | null>(null);
+  const prevColorRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (scene && meshRef.current) {
-      const box = new Box3().setFromObject(scene);
-      const size = new Vector3();
-      const center = new Vector3();
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
       box.getSize(size);
       box.getCenter(center);
 
       const maxDim = Math.max(size.x, size.y, size.z);
-      const desiredSize = 2.5;
-      const newScale = desiredSize / maxDim;
+      const newScale = 2.5 / maxDim;
 
       setScale(newScale);
-
-      // Apply centering only to position
       meshRef.current.position.set(-center.x, -center.y, -center.z);
-      setObjectList(shoes.scene.children)
 
+      const children: any[] = [];
+      scene.traverse((child: any) => {
+        if (child.isMesh) children.push(child);
+      });
+
+      setObjectList((prev: any[]) => {
+        const names = prev?.map(obj => obj.name).sort().join(",");
+        const newNames = children.map(obj => obj.name).sort().join(",");
+        return names === newNames ? prev : children;
+      });
     }
   }, [scene]);
 
-  
+  useEffect(() => {
+    if (!scene || !selectedPanelName || prevPanelRef.current === selectedPanelName) return;
 
-  // useEffect(() => {
-  //   if (scene) {
-  //     // Calculate bounding box to determine model size
-  //     const box = new Box3().setFromObject(scene);
-  //     const size = new Vector3();
-  //     box.getSize(size);
-  //     const maxDim = Math.max(size.x, size.y, size.z);
-  //     const desiredSize = 2; // Target size in Three.js units
-  //     const newScale = desiredSize / maxDim;
-  //     setScale(newScale);
+    scene.traverse((child: any) => {
+      if (child.isMesh && child.morphTargetDictionary && child.morphTargetInfluences) {
+        const idx = child.morphTargetDictionary[selectedPanelName];
+        if (typeof idx === "number") {
+          for (let i = 0; i < child.morphTargetInfluences.length; i++) {
+            child.morphTargetInfluences[i] = i === idx ? 1 : 0;
+          }
+        }
+      }
+    });
 
-  //     // Center the model
-  //     const center = new Vector3();
-  //     box.getCenter(center);
-  //     scene.position.sub(center.multiplyScalar(newScale));
-  //   }
-  // }, [scene]);
-   return (
+    prevPanelRef.current = selectedPanelName;
+  }, [selectedPanelName]);
+
+  useEffect(() => {
+    if (!scene || !selectedColorHex || prevColorRef.current === selectedColorHex) return;
+
+    scene.traverse((child: any) => {
+      if (child.isMesh && child.material) {
+        child.material = child.material.clone();
+        child.material.color = new THREE.Color(selectedColorHex);
+        child.material.needsUpdate = true;
+      }
+    });
+
+    prevColorRef.current = selectedColorHex;
+  }, [selectedColorHex]);
+
+  return (
     <group ref={meshRef} scale={[scale, scale, scale]}>
       <primitive object={scene} />
     </group>
   );
-
-  // return (
-  //   <primitive
-  //     ref={meshRef}
-  //     object={scene}
-  //     scale={[scale, scale, scale]}
-  //     position={[0, 0, 0]}
-  //   />
-  // );
 };
 
-
-const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectList }) => {
-  const [canvasSize, setCanvasSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+const ShoeAvatar: React.FC<AvatarProps> = ({
+  avatarData,
+  objectList,
+  setObjectList,
+  selectedPanelName,
+  selectedColorHex,
+}) => {
+  const [canvasSize, setCanvasSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
   const [hasMounted, setHasMounted] = useState(false);
   useGLTF.preload(avatarData);
 
   useEffect(() => {
     setHasMounted(true);
-
     const resize = () => {
       setCanvasSize({
-        width: Math.min(window.innerWidth, 800), // Cap max width
-        height: Math.min(window.innerHeight * 0.8, 600), // 80% of height, capped
+        width: Math.min(window.innerWidth, 800),
+        height: Math.min(window.innerHeight * 0.8, 600),
       });
     };
-
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
@@ -102,20 +121,31 @@ const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectLi
   if (!hasMounted) return null;
 
   return (
-    <div className="">
+    <div>
       <Canvas
         style={{
           width: `${canvasSize.width}px`,
           height: `${canvasSize.height}px`,
-          maxWidth: '100%',
+          maxWidth: "100%",
         }}
-        camera={{ position: [0, 1, 3], fov: 50 }}
+        camera={{ position: [-9, 1, 3], fov: 35 }}
+        onCreated={({ gl }) => {
+          gl.getContext().canvas.addEventListener("webglcontextlost", (e) => {
+            e.preventDefault();
+            console.warn("WebGL context lost. Consider refreshing or simplifying content.");
+          });
+        }}
       >
-        <ambientLight intensity={1.5} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
-        <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+        <ambientLight intensity={1.0} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} />
         <Suspense fallback={<LoadingSpinner />}>
-          <Avatar avatarData={avatarData} objectList={objectList} setObjectList={setObjectList}/>
+          <Avatar
+            avatarData={avatarData}
+            objectList={objectList}
+            setObjectList={setObjectList}
+            selectedPanelName={selectedPanelName}
+            selectedColorHex={selectedColorHex}
+          />
         </Suspense>
         <OrbitControls
           enablePan={false}
@@ -125,14 +155,13 @@ const ShoeAvatar: React.FC<AvatarProps> = ({ avatarData, objectList, setObjectLi
           target={[0, 0, 0]}
           maxPolarAngle={Math.PI}
         />
-        <PerspectiveCamera makeDefault position={[-9, 1, 3]} fov={35} />
       </Canvas>
     </div>
   );
 };
 
 const LoadingSpinner = () => {
-  const meshRef = useRef<THREE.Mesh>(null); // Explicitly type the ref as THREE.Mesh
+  const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame(() => {
     if (meshRef.current) {

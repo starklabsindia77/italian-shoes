@@ -66,7 +66,7 @@ const ProductPage = () => {
   const [appliedSelections, setAppliedSelections] = useState<boolean>(false);
   const [isDesignEditorOpen, setIsDesignEditorOpen] = useState(true);
   const [objectList, setObjectList] = useState<any>();
-  console.log('object list', objectList);
+
   
 
   // **User Selections**
@@ -76,7 +76,8 @@ const ProductPage = () => {
     sole: Sole | null;
     material: Material | null;
     color: Color | null;
-    panel: Panel | null;
+    // panel: Panel | null;
+    panel: { name: string } | null;
   }>({
     size: null,
     style: null,
@@ -130,7 +131,7 @@ const ProductPage = () => {
         variant.options.sole?.id === selectedCombination.sole?.id &&
         variant.options.material?.id === selectedCombination.material?.id &&
         variant.options.color?.id === selectedCombination.color?.id &&
-        variant.options.panel?.id === selectedCombination.panel?.id
+        variant.options.panel?.name === selectedCombination.panel?.name
       );
     });
     setAppliedSelections(true);
@@ -250,7 +251,13 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         )} */}
-        <ShoeAvatar avatarData="/shoe.glb" objectList={objectList} setObjectList={setObjectList}/>
+        <ShoeAvatar
+          avatarData="/shoe.glb"
+          objectList={objectList}
+          setObjectList={setObjectList}
+          selectedPanelName={selectedCombination.panel?.name}
+          selectedColorHex={selectedCombination.color?.hexCode}
+        />
         {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
       </div>
 
@@ -352,14 +359,22 @@ const ProductPage = () => {
         <div className="flex flex-col items-start gap-2">
           <label className="text-xs font-medium">Select Panel:</label>
           <select
-            value={selectedCombination.panel?.id || ""}
+            // value={selectedCombination.panel?.id || ""}
+            // onChange={(e) => {
+            //   const panelInfo = product.variantsOptions.panels.find(
+            //     (p) => p.id === Number(e.target.value)
+            //   );
+            //   setSelectedCombination({
+            //     ...selectedCombination,
+            //     panel: panelInfo || null,
+            //   });
+            // }}
+            value={selectedCombination.panel?.name || ""}
             onChange={(e) => {
-              const panelInfo = product.variantsOptions.panels.find(
-                (p) => p.id === Number(e.target.value)
-              );
+              const selected = objectList.find((obj: { name: string; }) => obj.name === e.target.value);
               setSelectedCombination({
                 ...selectedCombination,
-                panel: panelInfo || null,
+                panel: selected ? { name: selected.name } : null,
               });
             }}
             className=" text-xs border rounded-lg px-2 py-1 w-48"
@@ -370,8 +385,8 @@ const ProductPage = () => {
                 {panel.name}
               </option>
             ))} */}
-            {objectList.map((panel: any) => (
-              <option key={panel.uuid} value={panel.uuid}>
+            {objectList && objectList?.map((panel: any) => (
+              <option key={panel.uuid} value={panel.name}>
                 {panel.name}
               </option>
             ))}

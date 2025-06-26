@@ -23,6 +23,29 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar"), 
   loading: () => <p>Loading 3D model...</p>,
 });
 
+const predefinedColors = [
+  { name: "Dark Red", value: "#8F3135" },
+  { name: "Dark Brown", value: "#41201b" },
+  { name: "Warm Brown", value: "#663C37" },
+  { name: "Almost Black", value: "#0E0E0F" },
+  { name: "Deep Maroon", value: "#371F22" },
+  { name: "Light Gray", value: "#DFDFDE" },
+  { name: "Beige Gray", value: "#D0CAC1" },
+  { name: "Light Beige", value: "#CABBAA" },
+  { name: "Warm Tan", value: "#C49262" },
+  { name: "Burnt Orange 1", value: "#9D5726" },
+  { name: "Burnt Orange 2", value: "#bf300d" },
+  { name: "Chestnut Brown", value: "#743c26" },
+  { name: "Golden Yellow", value: "#e69b02" },
+  { name: "Crimson Red", value: "#b4021c" },
+  { name: "Bright Red", value: "#b72260" },
+  { name: "Deep Pink", value: "#a4608d" },
+  { name: "Orchid", value: "#4e2256" },
+  { name: "Dark Purple", value: "#5b182c" },
+  { name: "Maroon", value: "#52333b" }
+];
+
+
 // Interfaces for Product Data
 
 const relatedProducts = [
@@ -73,8 +96,8 @@ const ProductPage = () => {
     setSelectedPanelName(e.target.value);
   };
 
-  const handleColorChange = (panelName: string, colorHex: string) => {
-    setSelectedColorHexMap((prev) => ({ ...prev, [panelName]: colorHex }));
+  const handleColorChange = (panelId: string, colorHex: string) => {
+    setSelectedColorHexMap((prev) => ({ ...prev, [panelId]: colorHex }));
   };
 
   
@@ -262,7 +285,7 @@ const ProductPage = () => {
           />
         )} */}
         <ShoeAvatar
-          avatarData="/shoe.glb"
+          avatarData="/OxfordShoe2K.glb"
           objectList={objectList}
           setObjectList={setObjectList}
           // selectedPanelName={selectedPanelName}
@@ -459,8 +482,8 @@ const ProductPage = () => {
               onChange={(e) => handleColorChange(selectedPanelName, e.target.value)}
               className="ml-2 border px-2 py-1 rounded-md text-sm"
             >
-              {filteredColors?.map((color) => (
-                <option key={color.id} value={color.hexCode}>
+              {predefinedColors?.map((color) => (
+                <option key={color.name} value={color.value}>
                   {color.name}
                 </option>
               ))}

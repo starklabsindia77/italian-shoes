@@ -25,10 +25,11 @@ export interface Material {
 }
 
 export interface Color {
-  id: number;
+  id?: number;
   name: string;
-  hexCode: string;
-  imageUrl: string;
+  hexCode?: string;
+  imageUrl?: string;
+  value?:string;
 }
 
 export interface Panel {

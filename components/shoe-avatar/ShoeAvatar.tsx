@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls, useGLTF, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
 interface AvatarProps {
   avatarData: string;
-  objectList: any;
-  setObjectList: any;
-  selectedColorHexMap?: Record<string, string>; // Map of panel name to color hex
+  objectList: any[];
+  setObjectList: React.Dispatch<React.SetStateAction<any[]>>;
+  selectedColorHexMap?: Record<string, string>;
 }
 
 const Avatar: React.FC<AvatarProps> = ({
@@ -21,7 +21,6 @@ const Avatar: React.FC<AvatarProps> = ({
   const { scene } = useGLTF(avatarData);
   const meshRef = useRef<THREE.Group>(null);
   const [scale, setScale] = useState(1);
-  const prevPanelRef = useRef<string | null>(null);
   const prevColorMapRef = useRef<string>("");
 
   useEffect(() => {
@@ -38,34 +37,40 @@ const Avatar: React.FC<AvatarProps> = ({
       setScale(newScale);
       meshRef.current.position.set(-center.x, -center.y, -center.z);
 
-      const children: any[] = [];
+      const children: THREE.Mesh[] = [];
       scene.traverse((child: any) => {
         if (child.isMesh) children.push(child);
       });
 
       setObjectList((prev: any[]) => {
-        const names = prev?.map(obj => obj.name).sort().join(",");
-        const newNames = children.map(obj => obj.name).sort().join(",");
-        return names === newNames ? prev : children;
+        const prevNames = prev?.map((obj) => obj.name).sort().join(",");
+        const newNames = children.map((obj) => obj.name).sort().join(",");
+        return prevNames === newNames ? prev : children;
       });
     }
-  }, [scene]);
-
+  }, [scene, setObjectList]);
 
   useEffect(() => {
     const currentMapStr = JSON.stringify(selectedColorHexMap);
     if (!scene || currentMapStr === prevColorMapRef.current) return;
 
     scene.traverse((child: any) => {
-      if (child.isMesh && selectedColorHexMap[child.name]) {
+      if (child.isMesh) {
         child.material = child.material.clone();
-        child.material.color = new THREE.Color(selectedColorHexMap[child.name]);
+
+        const hexColor = selectedColorHexMap[child.name];
+        if (hexColor) {
+          child.material.color = new THREE.Color(hexColor);
+        } else if (!child.material.map) {
+          child.material.color = new THREE.Color("#888888");
+        }
+
         child.material.needsUpdate = true;
       }
     });
 
     prevColorMapRef.current = currentMapStr;
-  }, [selectedColorHexMap]);
+  }, [selectedColorHexMap, scene]);
 
   return (
     <group ref={meshRef} scale={[scale, scale, scale]}>
@@ -80,11 +85,14 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   setObjectList,
   selectedColorHexMap,
 }) => {
+
+  console.log('selected Color Hex', selectedColorHexMap);
   const [canvasSize, setCanvasSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: typeof window !== "undefined" ? window.innerWidth : 800,
+    height: typeof window !== "undefined" ? window.innerHeight : 600,
   });
   const [hasMounted, setHasMounted] = useState(false);
+
   useGLTF.preload(avatarData);
 
   useEffect(() => {
@@ -102,6 +110,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
 
   if (!hasMounted) return null;
 
+
   return (
     <div>
       <Canvas
@@ -112,15 +121,22 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         }}
         camera={{ position: [-9, 1, 3], fov: 35 }}
         onCreated={({ gl }) => {
-          gl.getContext().canvas.addEventListener("webglcontextlost", (e) => {
+          const renderer = gl as THREE.WebGLRenderer;
+          // renderer.outputEncoding = THREE.sRGBEncoding;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.0;
+
+          renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
-            console.warn("WebGL context lost. Consider refreshing or simplifying content.");
+            console.warn("WebGL context lost.");
           });
         }}
+
       >
-        <ambientLight intensity={1.0} />
-        <directionalLight position={[5, 5, 5]} intensity={0.8} />
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[5, 5, 5]} intensity={1} />
         <Suspense fallback={<LoadingSpinner />}>
+          <Environment preset="studio" />
           <Avatar
             avatarData={avatarData}
             objectList={objectList}

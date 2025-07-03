@@ -7,7 +7,7 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar"), 
   loading: () => <p>Loading 3D model...</p>,
 });
 
-const avatarData = "/OxfordShoe2K.glb"; // Replace with your actual GLB path
+const avatarData = "/exportedShoe2k.glb"; // Replace with your actual GLB path
 
 const predefinedColors = [
   { name: "White", value: "#ffffff" },

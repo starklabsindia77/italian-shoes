@@ -285,7 +285,7 @@ const ProductPage = () => {
           />
         )} */}
         <ShoeAvatar
-          avatarData="/OxfordShoe2K.glb"
+          avatarData="/exportedShoe2k.glb"
           objectList={objectList}
           setObjectList={setObjectList}
           // selectedPanelName={selectedPanelName}

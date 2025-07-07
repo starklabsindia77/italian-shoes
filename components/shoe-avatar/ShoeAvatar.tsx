@@ -119,7 +119,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
           height: `${canvasSize.height}px`,
           maxWidth: "100%",
         }}
-        camera={{ position: [2, 2, 9], fov: 35 }}
+        camera={{ position: [2, 0, 0], fov: 65 }}
         onCreated={({ gl }) => {
           const renderer = gl as THREE.WebGLRenderer;
           // renderer.outputEncoding = THREE.sRGBEncoding;
@@ -133,8 +133,8 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         }}
 
       >
-        <ambientLight intensity={0.9} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
+        <ambientLight intensity={1} />
+        <directionalLight position={[-5, 2, -2]} intensity={1} />
         <Suspense fallback={<LoadingSpinner />}>
           <Environment preset="studio" />
           <Avatar
@@ -144,6 +144,10 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
             selectedColorHexMap={selectedColorHexMap}
           />
         </Suspense>
+
+        
+
+
         <OrbitControls
           enablePan={false}
           enableZoom={true}
@@ -170,6 +174,7 @@ const LoadingSpinner = () => {
     <mesh ref={meshRef}>
       <torusGeometry args={[0.5, 0.2, 16, 32]} />
       <meshStandardMaterial color="white" />
+      
     </mesh>
   );
 };

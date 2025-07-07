@@ -92,7 +92,7 @@ const ProductPage = () => {
   const [selectedPanelName, setSelectedPanelName] = useState<string | undefined>(undefined);
   const [selectedColorHexMap, setSelectedColorHexMap] = useState<Record<string, string>>({});
 
-   const handlePanelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handlePanelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPanelName(e.target.value);
   };
 
@@ -101,24 +101,24 @@ const ProductPage = () => {
   };
 
   const handleColorSelect = (color: any) => {
-  if (!selectedPanelName) {
-    console.warn("No panel selected. Please select a panel before choosing a color.");
-    return;
-  }
+    if (!selectedPanelName) {
+      console.warn("No panel selected. Please select a panel before choosing a color.");
+      return;
+    }
 
-  const textureOrColor = color.image || color.value;
+    const textureOrColor = color.image || color.value;
 
-  if (!textureOrColor) {
-    console.warn("Selected color has neither image nor value:", color);
-    return;
-  }
+    if (!textureOrColor) {
+      console.warn("Selected color has neither image nor value:", color);
+      return;
+    }
 
-  setSelectedColorHexMap((prev) => ({
-    ...prev,
-    [selectedPanelName]: textureOrColor,
-  }));
-};
-  
+    setSelectedColorHexMap((prev) => ({
+      ...prev,
+      [selectedPanelName]: textureOrColor,
+    }));
+  };
+
 
   // **User Selections**
   const [selectedCombination, setSelectedCombination] = useState<{
@@ -207,11 +207,10 @@ const ProductPage = () => {
         <button
           key={tab}
           onClick={() => setSelectedTab(tab)}
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            selectedTab === tab
+          className={`px-4 py-2 rounded-lg transition-colors ${selectedTab === tab
               ? "bg-white text-gray-900 shadow-sm"
               : "text-gray-600 hover:text-gray-900"
-          }`}
+            }`}
         >
           {tab}
         </button>
@@ -287,9 +286,9 @@ const ProductPage = () => {
     );
 
   const ImageGallery = () => (
-      <div className="space-y-4">
-        <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
-          {/* {currentVariant ? (
+    <div className="space-y-4">
+      <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
+        {/* {currentVariant ? (
             <img
               src={selectedImage?.url || "/api/placeholder/600/600"}
               alt={selectedImage?.altText || product.title}
@@ -302,79 +301,77 @@ const ProductPage = () => {
               className="object-cover w-full h-full"
             />
           )} */}
-          <ShoeAvatar
-            avatarData="/ShoewthTex.glb"
-            objectList={objectList}
-            setObjectList={setObjectList}
-            // selectedPanelName={selectedPanelName}
-            selectedColorHexMap={selectedColorHexMap}
-          />
-          {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
-        </div>
-  
-        {currentVariant ? (
-          <Swiper
-            spaceBetween={10}
-            slidesPerView={4}
-            className="image-slider"
-            breakpoints={{
-              320: { slidesPerView: 3 },
-              640: { slidesPerView: 4 },
-            }}
-          >
-            {currentVariant.images.map((image, index) => (
-              <SwiperSlide key={index}>
-                <button
-                  className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                    selectedImage?.url === image.url
-                      ? "border-red-500"
-                      : "border-transparent hover:border-red-300"
-                  }`}
-                  onClick={() => setSelectedImage(image)}
-                >
-                  <img
-                    src={image.url}
-                    alt={image.altText || `View ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                </button>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        ) : product.shopifyImages.length > 0 ? (
-          <Swiper
-            spaceBetween={10}
-            slidesPerView={4}
-            className="image-slider"
-            breakpoints={{
-              320: { slidesPerView: 3 },
-              640: { slidesPerView: 4 },
-            }}
-          >
-            {product.shopifyImages.map((image, index) => (
-              <SwiperSlide key={index}>
-                <button
-                  className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                    selectedImage === image?.src
-                      ? "border-red-500"
-                      : "border-transparent hover:border-red-300"
-                  }`}
-                  onClick={() => setSelectedImage(image.src)}
-                >
-                  <img
-                    src={image.src}
-                    alt={`View ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                </button>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        ) : null}
+        <ShoeAvatar
+          avatarData="/ShoewthTex.glb"
+          objectList={objectList}
+          setObjectList={setObjectList}
+          // selectedPanelName={selectedPanelName}
+          selectedColorHexMap={selectedColorHexMap}
+        />
+        {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
       </div>
-    );
 
-  const MaterialSelector = () => { 
+      {currentVariant ? (
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
+          className="image-slider"
+          breakpoints={{
+            320: { slidesPerView: 3 },
+            640: { slidesPerView: 4 },
+          }}
+        >
+          {currentVariant.images.map((image, index) => (
+            <SwiperSlide key={index}>
+              <button
+                className={`aspect-square rounded-lg overflow-hidden border-2 ${selectedImage?.url === image.url
+                    ? "border-red-500"
+                    : "border-transparent hover:border-red-300"
+                  }`}
+                onClick={() => setSelectedImage(image)}
+              >
+                <img
+                  src={image.url}
+                  alt={image.altText || `View ${index + 1}`}
+                  className="object-cover w-full h-full"
+                />
+              </button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      ) : product.shopifyImages.length > 0 ? (
+        <Swiper
+          spaceBetween={10}
+          slidesPerView={4}
+          className="image-slider"
+          breakpoints={{
+            320: { slidesPerView: 3 },
+            640: { slidesPerView: 4 },
+          }}
+        >
+          {product.shopifyImages.map((image, index) => (
+            <SwiperSlide key={index}>
+              <button
+                className={`aspect-square rounded-lg overflow-hidden border-2 ${selectedImage === image?.src
+                    ? "border-red-500"
+                    : "border-transparent hover:border-red-300"
+                  }`}
+                onClick={() => setSelectedImage(image.src)}
+              >
+                <img
+                  src={image.src}
+                  alt={`View ${index + 1}`}
+                  className="object-cover w-full h-full"
+                />
+              </button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      ) : null}
+    </div>
+  );
+
+  const MaterialSelector = () => {
     // const colorId = selectedCombination.color?.id;
     // const materialId = selectedCombination.material?.id;
 
@@ -396,19 +393,19 @@ const ProductPage = () => {
     //     const matchesColor = !colorId || product.variants.some(v => v.options.material?.id === material.id && v.options.color?.id === colorId);
     //     return matchesColor;
     //   });
-    
 
-    
+
+
 
     return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium mb-2">
-          Select Materials and Colors
-        </h3>
-        {/* Panel Selection Dropdown */}
-        <div className="flex flex-col items-start gap-2">
-          {/* <label className="text-xs font-medium">Select Panel:</label>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium mb-2">
+            Select Materials and Colors
+          </h3>
+          {/* Panel Selection Dropdown */}
+          <div className="flex flex-col items-start gap-2">
+            {/* <label className="text-xs font-medium">Select Panel:</label>
           <select
             value={selectedCombination.panel?.name || ""}
             onChange={(e) => {
@@ -427,51 +424,51 @@ const ProductPage = () => {
               </option>
             ))}
           </select> */}
-          <label className="font-medium">Select Panel:</label>
-        <select
-          value={selectedPanelName || ""}
-          onChange={handlePanelChange}
-          className="border px-3 py-2 rounded-md text-sm"
-        >
-          <option value="">-- Choose Panel --</option>
-          {objectList?.map((obj: any) => (
-            <option key={obj.name} value={obj.name}>
-              {obj.name}
-            </option>
-          ))}
-        </select>
+            <label className="font-medium">Select Panel:</label>
+            <select
+              value={selectedPanelName || ""}
+              onChange={handlePanelChange}
+              className="border px-3 py-2 rounded-md text-sm"
+            >
+              <option value="">-- Choose Panel --</option>
+              {objectList?.map((obj: any) => (
+                <option key={obj.name} value={obj.name}>
+                  {obj.name}
+                </option>
+              ))}
+            </select>
 
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        {/* Panel Selection Dropdown */}
-        <div className="flex flex-col items-start gap-2">
-          <label className="text-xs font-medium">Select Material:</label>
-          <select
-            value={selectedCombination.material?.id || ""}
-            onChange={(e) => {
-              const matInfo = product.variantsOptions.materials.find(
-                (p) => p.id === Number(e.target.value)
-              );
-              setSelectedCombination({
-                ...selectedCombination,
-                material: matInfo || null,
-              });
-            }}
-            className="text-sm border rounded-lg px-2 py-1 w-48"
-          >
-            <option value="">Choose a Material</option>
-            {product.variantsOptions.materials?.map((mat) => (
-              <option key={mat.id} value={mat.id}>
-                {mat.name}
-              </option>
-            ))}
-          </select>
+          </div>
         </div>
 
-        <div className="flex flex-col items-start gap-2">
-          {/* <label className="text-xs font-medium">Select Color:</label>
+        <div className="flex justify-between items-center">
+          {/* Panel Selection Dropdown */}
+          <div className="flex flex-col items-start gap-2">
+            <label className="text-xs font-medium">Select Material:</label>
+            <select
+              value={selectedCombination.material?.id || ""}
+              onChange={(e) => {
+                const matInfo = product.variantsOptions.materials.find(
+                  (p) => p.id === Number(e.target.value)
+                );
+                setSelectedCombination({
+                  ...selectedCombination,
+                  material: matInfo || null,
+                });
+              }}
+              className="text-sm border rounded-lg px-2 py-1 w-48"
+            >
+              <option value="">Choose a Material</option>
+              {product.variantsOptions.materials?.map((mat) => (
+                <option key={mat.id} value={mat.id}>
+                  {mat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col items-start gap-2">
+            {/* <label className="text-xs font-medium">Select Color:</label>
           <select
             value={selectedCombination.color?.id || ""}
             onChange={(e) => {
@@ -492,90 +489,89 @@ const ProductPage = () => {
               </option>
             ))}
           </select> */}
-          {selectedPanelName && (
-          <div className="mt-2">
-            <label className="font-medium">Color for {selectedPanelName}:</label>
-            <select
-              value={selectedColorHexMap[selectedPanelName] || "#000000"}
-              onChange={(e) => handleColorChange(selectedPanelName, e.target.value)}
-              className="ml-2 border px-2 py-1 rounded-md text-sm"
-            >
-              {/* {predefinedColors?.map((color) => (
-                <option key={color.name} value={color.value}>
-                  {color.name}
-                </option>
-              ))} */}
-              {predefinedColors.map((color) => (
-    <div key={color.name} className="w-16 text-center">
-      <button
-        onClick={() => handleColorSelect(color)}
-        className="border rounded overflow-hidden w-16 h-16"
-      >
-        <img
-          src={'/leather/2(1).jpg'}
-          alt={color.name}
-          className="w-full h-full object-cover"
-        />
-      </button>
-      <div className="text-xs mt-1">{color.name}</div>
-    </div>
-  ))}
-            </select>
+            {selectedPanelName && (
+              <div className="mt-2">
+                <label className="font-medium">Color for {selectedPanelName}:</label>
+                <select
+                  value={selectedColorHexMap[selectedPanelName] || "#000000"}
+                  onChange={(e) => handleColorChange(selectedPanelName, e.target.value)}
+                  className="ml-2 border px-2 py-1 rounded-md text-sm"
+                >
+                  {predefinedColors?.map((color) => (
+                    <option key={color.name} value={color.value}>
+                      {color.name}
+                    </option>
+                  ))}
+                  {/* {predefinedColors.map((color) => (
+                    <div key={color.name} className="w-16 text-center">
+                      <button
+                        onClick={() => handleColorSelect(color)}
+                        className="border rounded overflow-hidden w-16 h-16"
+                      >
+                        
+                        <div className="text-xs mt-1">{color.name}</div>
+                      </button>
+                      
+                    </div>
+                  ))} */}
+                </select>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        <div className="space-y-4">
+          {(product.variantsOptions.materials)?.map((material) => {
+            return (
+              <div key={material.id} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{material.name}</span>
+                  {material.description && (
+                    <span className="text-xs text-gray-500">
+                      {material.description}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                  {(predefinedColors)?.map((color) => (
+                    <button
+                      key={color.name}
+                      onClick={() => {
+                        setSelectedCombination({
+                          ...selectedCombination,
+                          material,
+                          color,
+                        });
+                        if (selectedPanelName) {
+                          const selectedTexture = color.image || color.value;
+                          if (selectedTexture) {
+                            handleColorChange(selectedPanelName, selectedTexture);
+                          } else {
+                            console.warn("No image or value for selected color:", color);
+                          }
+                        }
+
+                      }}
+                      className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transform transition-all hover:scale-110 ${selectedCombination.material?.id === material.id &&
+                          selectedCombination.color?.name === color.name
+                          ? "border-red-500 scale-110"
+                          : "border-gray-300"
+                        }`}
+                      title={color.name}
+                    >
+                      <img src={'/leather/2-3.png'} alt={'test-image'} className={`w-full h-full object-contain`}/>
+                      {/* <div className={`w-full h-full object-contain`} style={{'backgroundImage': 'url(/leather/2(1).jpg)'}}></div> */}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
-
-      <div className="space-y-4">
-        {(product.variantsOptions.materials)?.map((material) => {
-          return (
-          <div key={material.id} className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">{material.name}</span>
-              {material.description && (
-                <span className="text-xs text-gray-500">
-                  {material.description}
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
-              {(predefinedColors)?.map((color) => (
-                <button
-                  key={color.name}
-                  onClick={() => {
-                    setSelectedCombination({
-                      ...selectedCombination,
-                      material,
-                      color,
-                    });
-                    if (selectedPanelName) {
-  const selectedTexture = color.image || color.value;
-  if (selectedTexture) {
-    handleColorChange(selectedPanelName, selectedTexture);
-  } else {
-    console.warn("No image or value for selected color:", color);
-  }
-}
-                    
-                  }}
-                  className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transform transition-all hover:scale-110 ${
-  selectedCombination.material?.id === material.id &&
-  selectedCombination.color?.name === color.name
-    ? "border-red-500 scale-110"
-    : "border-gray-300"
-}`}
-                  title={color.name}
-                >
-                  <div className={`w-full h-full object-contain} style={{backgroundColor: ${color.value}}`}></div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )})}
-      </div>
-    </div>
-  )};
+    )
+  };
 
   const SoleSelector = () => (
     <div className="space-y-4">
@@ -587,11 +583,10 @@ const ProductPage = () => {
             onClick={() =>
               setSelectedCombination({ ...selectedCombination, sole })
             }
-            className={`relative p-2 border-2 rounded-lg overflow-hidden transform transition-all hover:shadow-md ${
-              selectedCombination.sole?.id === sole.id
+            className={`relative p-2 border-2 rounded-lg overflow-hidden transform transition-all hover:shadow-md ${selectedCombination.sole?.id === sole.id
                 ? "border-red-500"
                 : "border-gray-200 hover:border-red-300"
-            }`}
+              }`}
             title={sole.type}
           >
             <img
@@ -618,11 +613,10 @@ const ProductPage = () => {
             onClick={() =>
               setSelectedCombination({ ...selectedCombination, style })
             }
-            className={`p-2 border-2 rounded-lg transition-all hover:shadow-md ${
-              selectedCombination.style?.id === style.id
+            className={`p-2 border-2 rounded-lg transition-all hover:shadow-md ${selectedCombination.style?.id === style.id
                 ? "border-red-500"
                 : "border-gray-200 hover:border-red-300"
-            }`}
+              }`}
           >
             <img
               src={style.imageUrl}

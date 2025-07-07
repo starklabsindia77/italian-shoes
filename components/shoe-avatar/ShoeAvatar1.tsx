@@ -120,7 +120,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
           height: `${canvasSize.height}px`,
           maxWidth: "100%",
         }}
-        camera={{ position: [2, 0, 0], fov: 70 }}
+        camera={{ position: [2, 2, 9], fov: 35 }}
         onCreated={({ gl }) => {
           const renderer = gl as THREE.WebGLRenderer;
           // renderer.outputEncoding = THREE.sRGBEncoding;

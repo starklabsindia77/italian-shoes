@@ -100,7 +100,7 @@ const ProductPage = () => {
     setSelectedColorHexMap((prev) => ({ ...prev, [panelId]: colorHex }));
   };
 
-  const handleColorSelect = (color:"image") => {
+  const handleColorSelect = (color: any) => {
   if (!selectedPanelName) {
     console.warn("No panel selected. Please select a panel before choosing a color.");
     return;

@@ -18,13 +18,13 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
 
-const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar"), {
+const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar1"), {
   ssr: false,
   loading: () => <p>Loading 3D model...</p>,
 });
 
 const predefinedColors = [
-  { name: "Dark Red", value: "#8F3135" },
+  { name: "Dark Red", image: "/leather/2(1).jpg" },
   { name: "Dark Brown", value: "#41201b" },
   { name: "Warm Brown", value: "#663C37" },
   { name: "Almost Black", value: "#0E0E0F" },
@@ -100,6 +100,24 @@ const ProductPage = () => {
     setSelectedColorHexMap((prev) => ({ ...prev, [panelId]: colorHex }));
   };
 
+  const handleColorSelect = (color: any) => {
+  if (!selectedPanelName) {
+    console.warn("No panel selected. Please select a panel before choosing a color.");
+    return;
+  }
+
+  const textureOrColor = color.image || color.value;
+
+  if (!textureOrColor) {
+    console.warn("Selected color has neither image nor value:", color);
+    return;
+  }
+
+  setSelectedColorHexMap((prev) => ({
+    ...prev,
+    [selectedPanelName]: textureOrColor,
+  }));
+};
   
 
   // **User Selections**
@@ -159,7 +177,7 @@ const ProductPage = () => {
 
     const matchingVariant = product.variants.find((variant) => {
       return (
-        variant.options.size?.id === selectedCombination.size?.id &&
+        (variant.options.size?.id) === (selectedCombination.size?.id) &&
         variant.options.style?.id === selectedCombination.style?.id &&
         variant.options.sole?.id === selectedCombination.sole?.id &&
         variant.options.material?.id === selectedCombination.material?.id &&
@@ -269,92 +287,92 @@ const ProductPage = () => {
     );
 
   const ImageGallery = () => (
-    <div className="space-y-4">
-      <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
-        {/* {currentVariant ? (
-          <img
-            src={selectedImage?.url || "/api/placeholder/600/600"}
-            alt={selectedImage?.altText || product.title}
-            className="object-cover w-full h-full"
+      <div className="space-y-4">
+        <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
+          {/* {currentVariant ? (
+            <img
+              src={selectedImage?.url || "/api/placeholder/600/600"}
+              alt={selectedImage?.altText || product.title}
+              className="object-cover w-full h-full"
+            />
+          ) : (
+            <img
+              src={selectedImage || "/api/placeholder/600/600"}
+              alt={product.title} 
+              className="object-cover w-full h-full"
+            />
+          )} */}
+          <ShoeAvatar
+            avatarData="/ShoewthTex.glb"
+            objectList={objectList}
+            setObjectList={setObjectList}
+            // selectedPanelName={selectedPanelName}
+            selectedColorHexMap={selectedColorHexMap}
           />
-        ) : (
-          <img
-            src={selectedImage || "/api/placeholder/600/600"}
-            alt={product.title} 
-            className="object-cover w-full h-full"
-          />
-        )} */}
-        <ShoeAvatar
-          avatarData="/ShoewthTex.glb"
-          objectList={objectList}
-          setObjectList={setObjectList}
-          // selectedPanelName={selectedPanelName}
-          selectedColorHexMap={selectedColorHexMap}
-        />
-        {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
+          {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
+        </div>
+  
+        {currentVariant ? (
+          <Swiper
+            spaceBetween={10}
+            slidesPerView={4}
+            className="image-slider"
+            breakpoints={{
+              320: { slidesPerView: 3 },
+              640: { slidesPerView: 4 },
+            }}
+          >
+            {currentVariant.images.map((image, index) => (
+              <SwiperSlide key={index}>
+                <button
+                  className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                    selectedImage?.url === image.url
+                      ? "border-red-500"
+                      : "border-transparent hover:border-red-300"
+                  }`}
+                  onClick={() => setSelectedImage(image)}
+                >
+                  <img
+                    src={image.url}
+                    alt={image.altText || `View ${index + 1}`}
+                    className="object-cover w-full h-full"
+                  />
+                </button>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ) : product.shopifyImages.length > 0 ? (
+          <Swiper
+            spaceBetween={10}
+            slidesPerView={4}
+            className="image-slider"
+            breakpoints={{
+              320: { slidesPerView: 3 },
+              640: { slidesPerView: 4 },
+            }}
+          >
+            {product.shopifyImages.map((image, index) => (
+              <SwiperSlide key={index}>
+                <button
+                  className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                    selectedImage === image?.src
+                      ? "border-red-500"
+                      : "border-transparent hover:border-red-300"
+                  }`}
+                  onClick={() => setSelectedImage(image.src)}
+                >
+                  <img
+                    src={image.src}
+                    alt={`View ${index + 1}`}
+                    className="object-cover w-full h-full"
+                  />
+                </button>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ) : null}
       </div>
-
-      {currentVariant ? (
-        <Swiper
-          spaceBetween={10}
-          slidesPerView={4}
-          className="image-slider"
-          breakpoints={{
-            320: { slidesPerView: 3 },
-            640: { slidesPerView: 4 },
-          }}
-        >
-          {currentVariant.images.map((image, index) => (
-            <SwiperSlide key={index}>
-              <button
-                className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                  selectedImage?.url === image.url
-                    ? "border-red-500"
-                    : "border-transparent hover:border-red-300"
-                }`}
-                onClick={() => setSelectedImage(image)}
-              >
-                <img
-                  src={image.url}
-                  alt={image.altText || `View ${index + 1}`}
-                  className="object-cover w-full h-full"
-                />
-              </button>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : product.shopifyImages.length > 0 ? (
-        <Swiper
-          spaceBetween={10}
-          slidesPerView={4}
-          className="image-slider"
-          breakpoints={{
-            320: { slidesPerView: 3 },
-            640: { slidesPerView: 4 },
-          }}
-        >
-          {product.shopifyImages.map((image, index) => (
-            <SwiperSlide key={index}>
-              <button
-                className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                  selectedImage === image?.src
-                    ? "border-red-500"
-                    : "border-transparent hover:border-red-300"
-                }`}
-                onClick={() => setSelectedImage(image.src)}
-              >
-                <img
-                  src={image.src}
-                  alt={`View ${index + 1}`}
-                  className="object-cover w-full h-full"
-                />
-              </button>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : null}
-    </div>
-  );
+    );
 
   const MaterialSelector = () => { 
     // const colorId = selectedCombination.color?.id;
@@ -478,15 +496,30 @@ const ProductPage = () => {
           <div className="mt-2">
             <label className="font-medium">Color for {selectedPanelName}:</label>
             <select
-              value={selectedColorHexMap[selectedPanelName] || "#ffffff"}
+              value={selectedColorHexMap[selectedPanelName] || "#000000"}
               onChange={(e) => handleColorChange(selectedPanelName, e.target.value)}
               className="ml-2 border px-2 py-1 rounded-md text-sm"
             >
-              {predefinedColors?.map((color) => (
+              {/* {predefinedColors?.map((color) => (
                 <option key={color.name} value={color.value}>
                   {color.name}
                 </option>
-              ))}
+              ))} */}
+              {predefinedColors.map((color) => (
+    <div key={color.name} className="w-16 text-center">
+      <button
+        onClick={() => handleColorSelect(color)}
+        className="border rounded overflow-hidden w-16 h-16"
+      >
+        <img
+          src={'/leather/2(1).jpg'}
+          alt={color.name}
+          className="w-full h-full object-cover"
+        />
+      </button>
+      <div className="text-xs mt-1">{color.name}</div>
+    </div>
+  ))}
             </select>
           </div>
         )}
@@ -516,21 +549,25 @@ const ProductPage = () => {
                       material,
                       color,
                     });
-                    if(selectedPanelName){
-                      handleColorChange(selectedPanelName, color.value)
-                    }
+                    if (selectedPanelName) {
+  const selectedTexture = color.image || color.value;
+  if (selectedTexture) {
+    handleColorChange(selectedPanelName, selectedTexture);
+  } else {
+    console.warn("No image or value for selected color:", color);
+  }
+}
                     
                   }}
-                  className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transform transition-all hover:scale-110 
-                    ${
-                    selectedCombination.material?.id === material.id &&
-                    selectedCombination.color?.name === color.name
-                      ? "border-red-500 scale-110"
-                      : "border-gray-300"
-                  }`}
+                  className={`relative w-10 h-10 rounded-full border-2 overflow-hidden transform transition-all hover:scale-110 ${
+  selectedCombination.material?.id === material.id &&
+  selectedCombination.color?.name === color.name
+    ? "border-red-500 scale-110"
+    : "border-gray-300"
+}`}
                   title={color.name}
                 >
-                  <div className={`w-full h-full object-contain`} style={{backgroundColor: `${color.value}`}}></div>
+                  <div className={`w-full h-full object-contain} style={{backgroundColor: ${color.value}}`}></div>
                 </button>
               ))}
             </div>
@@ -704,9 +741,8 @@ const ProductPage = () => {
                   <option value="">Choose a Size</option>
                   {product.variantsOptions.sizes.map((size) => (
                     <option key={size.id} value={size.id}>
-                      {`${size.size} (${size.sizeSystem}${
-                        size.width ? ` - ${size.width}` : ""
-                      })`}
+                      {`${size.size} (${size.sizeSystem}${size.width ? ` - ${size.width}` : ""})`}
+
                     </option>
                   ))}
                 </select>

@@ -24,7 +24,7 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar"), 
 });
 
 const predefinedColors = [
-  { name: "Dark Red", value: "#8F3135" },
+  { name: "Dark Red", image: "/leather/2(1).jpg" },
   { name: "Dark Brown", value: "#41201b" },
   { name: "Warm Brown", value: "#663C37" },
   { name: "Almost Black", value: "#0E0E0F" },
@@ -165,7 +165,8 @@ const ProductPage = () => {
         variant.options.material?.id === selectedCombination.material?.id &&
         variant.options.color?.id === selectedCombination.color?.id &&
         variant.options.panel?.name === selectedCombination.panel?.name
-      );
+      ) ;
+      
     });
     setAppliedSelections(true);
 

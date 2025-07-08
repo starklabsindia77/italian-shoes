@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -9,8 +9,10 @@ interface AvatarProps {
   avatarData: string;
   objectList: any[];
   setObjectList: React.Dispatch<React.SetStateAction<any[]>>;
-  selectedTextureMap?: Record<string, string>; // key = mesh name, value = texture image path
+  selectedTextureMap?: Record<string, string>;
 }
+
+const textureLoader = new THREE.TextureLoader();
 
 const Avatar: React.FC<AvatarProps> = ({
   avatarData,
@@ -21,6 +23,7 @@ const Avatar: React.FC<AvatarProps> = ({
   const { scene } = useGLTF(avatarData);
   const meshRef = useRef<THREE.Group>(null);
   const [scale, setScale] = useState(1);
+  const prevTextureMapRef = useRef<string>("");
 
   useEffect(() => {
     if (scene && meshRef.current) {
@@ -32,42 +35,51 @@ const Avatar: React.FC<AvatarProps> = ({
 
       const maxDim = Math.max(size.x, size.y, size.z);
       const newScale = 2.5 / maxDim;
-      setScale(newScale);
 
+      setScale(newScale);
       meshRef.current.position.set(-center.x, -center.y, -center.z);
 
       const children: THREE.Mesh[] = [];
       scene.traverse((child: any) => {
         if (child.isMesh) children.push(child);
       });
-      setObjectList(children);
+
+      setObjectList((prev: any[]) => {
+        const prevNames = prev?.map((obj) => obj.name).sort().join(",");
+        const newNames = children.map((obj) => obj.name).sort().join(",");
+        return prevNames === newNames ? prev : children;
+      });
     }
   }, [scene, setObjectList]);
 
-  // ✅ Apply texture maps
   useEffect(() => {
-    const loader = new THREE.TextureLoader();
+    const currentMapStr = JSON.stringify(selectedTextureMap);
+    if (!scene || currentMapStr === prevTextureMapRef.current) return;
 
     scene.traverse((child: any) => {
       if (child.isMesh) {
+        child.material = child.material.clone();
+
         const textureUrl = selectedTextureMap[child.name];
         if (textureUrl) {
-          loader.load(textureUrl, (texture) => {
-            texture.flipY = false;
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
+          const texture = textureLoader.load(textureUrl);
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(2, 2); // adjust as needed
+          // texture.encoding = THREE.sRGBEncoding;
 
-            child.material = new THREE.MeshStandardMaterial({
-              map: texture,
-              roughness: 0.6,
-              metalness: 0.1,
-            });
-
-            child.material.needsUpdate = true;
-          });
+          child.material.map = texture;
+          child.material.color = new THREE.Color(0xffffff);
+        } else {
+          child.material.map = null;
+          child.material.color = new THREE.Color("#888888");
         }
+
+        child.material.needsUpdate = true;
       }
     });
+
+    prevTextureMapRef.current = currentMapStr;
   }, [selectedTextureMap, scene]);
 
   return (
@@ -83,30 +95,53 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   setObjectList,
   selectedTextureMap,
 }) => {
+  const [canvasSize, setCanvasSize] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 800,
+    height: typeof window !== "undefined" ? window.innerHeight : 600,
+  });
   const [hasMounted, setHasMounted] = useState(false);
+
+  useGLTF.preload(avatarData);
 
   useEffect(() => {
     setHasMounted(true);
+    const resize = () => {
+      setCanvasSize({
+        width: Math.min(window.innerWidth, 800),
+        height: Math.min(window.innerHeight * 0.8, 600),
+      });
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
   }, []);
 
   if (!hasMounted) return null;
 
   return (
     <div>
-      <Canvas camera={{ position: [2, 2, 9], fov: 35 }} shadows>
-        {/* ✅ Balanced light setup */}
-        <ambientLight intensity={0.6} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <directionalLight position={[-5, 5, -5]} intensity={0.6} />
+      <Canvas
+        style={{
+          width: `${canvasSize.width}px`,
+          height: `${canvasSize.height}px`,
+          maxWidth: "100%",
+        }}
+        camera={{ position: [2, 2, 9], fov: 35 }}
+        onCreated={({ gl }) => {
+          const renderer = gl as THREE.WebGLRenderer;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.0;
 
+          renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
+            e.preventDefault();
+            console.warn("WebGL context lost.");
+          });
+        }}
+      >
+        <ambientLight intensity={1} />
+        <directionalLight position={[-5, 2, -2]} intensity={1} />
         <Suspense fallback={<LoadingSpinner />}>
-          <Environment preset="studio" background={false} />
+          <Environment preset="studio" />
           <Avatar
             avatarData={avatarData}
             objectList={objectList}
@@ -130,8 +165,11 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
 
 const LoadingSpinner = () => {
   const meshRef = useRef<THREE.Mesh>(null);
+
   useFrame(() => {
-    if (meshRef.current) meshRef.current.rotation.y += 0.05;
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.05;
+    }
   });
 
   return (

@@ -62,20 +62,23 @@ const Avatar: React.FC<AvatarProps> = ({
 
         const textureUrl = selectedTextureMap[child.name];
         if (textureUrl) {
-          const texture = textureLoader.load(textureUrl);
-          texture.wrapS = THREE.RepeatWrapping;
-          texture.wrapT = THREE.RepeatWrapping;
-          texture.repeat.set(2, 2); // adjust as needed
-          // texture.encoding = THREE.sRGBEncoding;
+          const texture = textureLoader.load(textureUrl, (tex) => {
+            (tex as any).encoding = (THREE as any).sRGBEncoding;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(1, 1); // Adjust based on UV mapping
 
-          child.material.map = texture;
-          child.material.color = new THREE.Color(0xffffff);
+            child.material.map = tex;
+            child.material.roughness = 0.8; // ✅ Less shiny for leather
+            child.material.metalness = 0; // ✅ Leather is non-metallic
+            child.material.envMapIntensity = 0.5; // ✅ Balanced reflection
+
+            child.material.needsUpdate = true;
+          });
         } else {
           child.material.map = null;
-          child.material.color = new THREE.Color("#888888");
+          child.material.needsUpdate = true;
         }
-
-        child.material.needsUpdate = true;
       }
     });
 
@@ -100,6 +103,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
     height: typeof window !== "undefined" ? window.innerHeight : 600,
   });
   const [hasMounted, setHasMounted] = useState(false);
+  const [isTextureLoading, setIsTextureLoading] = useState(false);
 
   useGLTF.preload(avatarData);
 
@@ -119,7 +123,12 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   if (!hasMounted) return null;
 
   return (
-    <div>
+    <div className="relative">
+      {isTextureLoading && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <LoadingSpinner />
+        </div>
+      )}
       <Canvas
         style={{
           width: `${canvasSize.width}px`,
@@ -130,7 +139,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         onCreated={({ gl }) => {
           const renderer = gl as THREE.WebGLRenderer;
           renderer.toneMapping = THREE.ACESFilmicToneMapping;
-          renderer.toneMappingExposure = 1.0;
+          renderer.toneMappingExposure = 0.8; // ✅ Reduced from 1.0 for balanced exposure
 
           renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
@@ -138,10 +147,16 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
           });
         }}
       >
-        <ambientLight intensity={1} />
-        <directionalLight position={[-5, 2, -2]} intensity={1} />
+        {/* ✅ Lighting setup */}
+        {/* <ambientLight intensity={0.8} /> */}
+        {/* <directionalLight position={[5, 5, 5]} intensity={0.8} />
+        <directionalLight position={[-5, 5, -5]} intensity={0.5} /> */}
+
         <Suspense fallback={<LoadingSpinner />}>
-          <Environment preset="studio" />
+          {/* <Environment files="/hdri/studio_small_09_2k.hdr" background /> */}
+          {/* OR use preset fallback */}
+          <Environment preset="dawn" />
+
           <Avatar
             avatarData={avatarData}
             objectList={objectList}

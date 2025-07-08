@@ -27,7 +27,7 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar1"),
 const predefinedTextures = [
   { name: "Dark Red Leather", image: "/leather/2-3.png" },
   { name: "Brown Leather", image: "/leather/2 (1).jpg" },
-  { name: "Black Leather", image: "/leather/2 (2).jpg" },
+  { name: "Black Leather", image: "/new-leather/Leather027_1K-PNG_Color.png" },
   { name: "Suede Brown", image: "/leather/2 (2).png" },
 ];
 
@@ -41,7 +41,7 @@ const ProductPage = () => {
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [selectedPanelName, setSelectedPanelName] = useState<string | undefined>();
   const [selectedTextureMap, setSelectedTextureMap] = useState<Record<string, string>>({});
-  const [objectList, setObjectList] = useState<any[]>();
+  const [objectList, setObjectList] = useState<any[]>([]);
 
   // 🛠️ Fetch product data
   useEffect(() => {
@@ -72,9 +72,9 @@ const ProductPage = () => {
   // 🖼️ Image gallery with 3D ShoeAvatar
   const ImageGallery = () => (
     <div className="space-y-4">
-      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+      <div className="aspect-square bg-gray-300 rounded-lg overflow-hidden">
         <ShoeAvatar
-          avatarData="/ShoewthTex.glb"
+          avatarData="/Shoe-glb.glb"
           objectList={objectList}
           setObjectList={setObjectList}
           selectedTextureMap={selectedTextureMap}

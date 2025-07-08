@@ -9,7 +9,7 @@ interface AvatarProps {
   avatarData: string;
   objectList: any[];
   setObjectList: React.Dispatch<React.SetStateAction<any[]>>;
-  selectedTextureMap?: Record<string, string>;
+  selectedTextureMap?: Record<string, any>;
 }
 
 const textureLoader = new THREE.TextureLoader();
@@ -56,31 +56,66 @@ const Avatar: React.FC<AvatarProps> = ({
     const currentMapStr = JSON.stringify(selectedTextureMap);
     if (!scene || currentMapStr === prevTextureMapRef.current) return;
 
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
-        child.material = child.material.clone();
+   scene.traverse((child: any) => {
+  if (child.isMesh) {
+    child.material = child.material.clone();
 
-        const textureUrl = selectedTextureMap[child.name];
-        if (textureUrl) {
-          const texture = textureLoader.load(textureUrl, (tex) => {
-            (tex as any).encoding = (THREE as any).sRGBEncoding;
-            tex.wrapS = THREE.RepeatWrapping;
-            tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(1, 1); // Adjust based on UV mapping
+    const textureUrl = selectedTextureMap[child.name]?.colorUrl;
+    if (textureUrl) {
+      const diffuseTexture = textureLoader.load(textureUrl, (tex) => {
+        (tex as any).encoding = (THREE as any).sRGBEncoding;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(5, 5); // ✅ Tiling scale set to 20%
+      });
 
-            child.material.map = tex;
-            child.material.roughness = 0.8; // ✅ Less shiny for leather
-            child.material.metalness = 0; // ✅ Leather is non-metallic
-            child.material.envMapIntensity = 0.5; // ✅ Balanced reflection
-
-            child.material.needsUpdate = true;
+      // ✅ Load Normal GL Map (if exists)
+          const normalMapUrl = selectedTextureMap[child.name]?.normalUrl; // Assumes naming convention
+          const normalTexture = textureLoader.load(normalMapUrl, () => {
+            console.log(`Loaded normal map: ${normalMapUrl}`);
           });
-        } else {
-          child.material.map = null;
+          normalTexture.wrapS = THREE.RepeatWrapping;
+          normalTexture.wrapT = THREE.RepeatWrapping;
+          normalTexture.repeat.set(5, 5); // Same tiling scale
+
+           // ✅ Load roughness map
+          const roughnessMapUrl = selectedTextureMap[child.name]?.roughnessUrl;
+          const roughnessTexture = textureLoader.load(roughnessMapUrl, () => {
+            console.log(`Loaded roughness map: ${roughnessMapUrl}`);
+          });
+          roughnessTexture.wrapS = THREE.RepeatWrapping;
+          roughnessTexture.wrapT = THREE.RepeatWrapping;
+          roughnessTexture.repeat.set(5, 5);
+
+          // ✅ Apply textures
+          child.material.map = diffuseTexture;
+          child.material.normalMap = normalTexture;
+          child.material.roughnessMap = roughnessTexture;
+          child.material.normalScale = new THREE.Vector2(1, 1); // Normal scale 100%
+
+         
+
+          // ✅ Determine material type for finish
+          const isSuede = textureUrl.toLowerCase().includes("suede");
+
+          if (isSuede) {
+            child.material.roughness = 0.9;
+            child.material.metalness = 0;
+            child.material.envMapIntensity = 0.2;
+          } else {
+            child.material.roughness = 0.3;
+            child.material.metalness = 0;
+            child.material.envMapIntensity = 0.6;
+          }
+
           child.material.needsUpdate = true;
-        }
-      }
-    });
+    } else {
+      child.material.map = null;
+      child.material.needsUpdate = true;
+    }
+  }
+});
+
 
     prevTextureMapRef.current = currentMapStr;
   }, [selectedTextureMap, scene]);
@@ -88,6 +123,12 @@ const Avatar: React.FC<AvatarProps> = ({
   return (
     <group ref={meshRef} scale={[scale, scale, scale]}>
       <primitive object={scene} />
+
+      {/* ✅ Floor shadow plane */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.75, 0]} receiveShadow>
+        <planeGeometry args={[5, 5]} />
+        <shadowMaterial opacity={0.3} />
+      </mesh>
     </group>
   );
 };
@@ -130,6 +171,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         </div>
       )}
       <Canvas
+        shadows
         style={{
           width: `${canvasSize.width}px`,
           height: `${canvasSize.height}px`,
@@ -139,7 +181,9 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         onCreated={({ gl }) => {
           const renderer = gl as THREE.WebGLRenderer;
           renderer.toneMapping = THREE.ACESFilmicToneMapping;
-          renderer.toneMappingExposure = 0.8; // ✅ Reduced from 1.0 for balanced exposure
+          renderer.toneMappingExposure = 0.8;
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
           renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
             e.preventDefault();
@@ -148,15 +192,17 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         }}
       >
         {/* ✅ Lighting setup */}
-        {/* <ambientLight intensity={0.8} /> */}
-        {/* <directionalLight position={[5, 5, 5]} intensity={0.8} />
-        <directionalLight position={[-5, 5, -5]} intensity={0.5} /> */}
-
+        <ambientLight intensity={0.8} />
+        <directionalLight
+          position={[5, 10, 5]}
+          intensity={1.2}
+          color="white"
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
         <Suspense fallback={<LoadingSpinner />}>
-          {/* <Environment files="/hdri/studio_small_09_2k.hdr" background /> */}
-          {/* OR use preset fallback */}
-          <Environment preset="dawn" />
-
+          {/* <Environment preset="dawn" /> */}
           <Avatar
             avatarData={avatarData}
             objectList={objectList}

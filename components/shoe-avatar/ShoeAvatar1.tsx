@@ -177,7 +177,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
           height: `${canvasSize.height}px`,
           maxWidth: "100%",
         }}
-        camera={{ position: [2, 2, 9], fov: 35 }}
+        camera={{ position: [2, 1, 0], fov: 83 }}
         onCreated={({ gl }) => {
           const renderer = gl as THREE.WebGLRenderer;
           renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -196,7 +196,7 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
         <directionalLight
           position={[5, 10, 5]}
           intensity={1.2}
-          color="white"
+          color="#FAF9F6"
           castShadow
           shadow-mapSize-width={1024}
           shadow-mapSize-height={1024}

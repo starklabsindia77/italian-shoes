@@ -487,7 +487,7 @@ const ProductPage = () => {
       </div>
 
       <div className="space-y-4">
-        {(colorId && !materialId ? allMatchingMaterials : filteredMaterials)?.map((material) => {
+        {(filteredMaterials)?.slice(0, 1).map((material) => {
           // const materialColors = product?.variants.filter(v => v.options.material?.id === material.id)
           //     .map(v => v.options.color)
           //     .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index);

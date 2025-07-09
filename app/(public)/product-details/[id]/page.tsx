@@ -24,9 +24,15 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar1"),
 });
 
 const predefinedColors = [
-  { name: "Dark Red Leather", image: "/new-leather/Leather036D_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather036D_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather036D_1K-PNG_NormalGL.png' },
-  { name: "Brown Leather", image: "/new-leather/Leather030_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather030_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather030_1K-PNG_NormalGL.png'  },
-  { name: "Black Leather", image: "/new-leather/Leather027_1K-PNG_Color.png", roughnessImage: "/new-leather/Leather027_1K-PNG_Roughness.png", normalImage:"/new-leather/Leather027_1K-PNG_NormalGL.png"  },
+  { name: "Dark Red", image: "/new-leather/Leather036D_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather036D_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather036D_1K-PNG_NormalGL.png' },
+  { name: "Brown", image: "/new-leather/Leather030_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather030_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather030_1K-PNG_NormalGL.png'  },
+  { name: "Black", image: "/new-leather/Leather027_1K-PNG_Color.png", roughnessImage: "/new-leather/Leather027_1K-PNG_Roughness.png", normalImage:"/new-leather/Leather027_1K-PNG_NormalGL.png"  },
+  { name: "Orange", image: "/new-leather/Orange.png", roughnessImage: "/new-leather/Orange_Roughness.png", normalImage:"/new-leather/OrangeGL.png"  },
+  { name: "Yellow", image: "/new-leather/Yellow.png", roughnessImage: "/new-leather/Yellow_Roughness.png", normalImage:"/new-leather/YellowGL.png"  },
+  { name: "Grey", image: "/new-leather/Grey.png", roughnessImage: "/new-leather/Grey_Roughness.png", normalImage:"/new-leather/GreyGL.png"  },
+  { name: "Red", image: "/new-leather/Red.png", roughnessImage: "/new-leather/Red_Roughness.png", normalImage:"/new-leather/RedGL.png"  },
+  { name: "Light Brown", image: "/new-leather/Light-Brown.png", roughnessImage: "/new-leather/Light-Brown_Roughness.png", normalImage:"/new-leather/Light-BrownGL.png"  },
+  { name: "Mahroon", image: "/new-leather/Mahroon.png", roughnessImage: "/new-leather/Mahroon_Roughness.png", normalImage:"/new-leather/MahroonGL.png"  },
   
 ];
 
@@ -503,12 +509,12 @@ const ProductPage = () => {
             </div>
 
             {/* Color Swatches */}
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-12 sm:grid-cols-12 md:grid-cols-12 gap-2">
               {predefinedColors?.map((texture) => (
                 <button
                 key={texture.name}
                 onClick={() => handleTextureChange(selectedPanelName, texture.image, texture.normalImage, texture.roughnessImage)}
-                className={`border-2 rounded overflow-hidden transform transition hover:scale-105 ${
+                className={`overflow-hidden transform transition hover:scale-105 ${
                   selectedTextureMap[selectedPanelName] === texture.image
                     ? "border-red-500 scale-105"
                     : "border-gray-300"
@@ -518,9 +524,9 @@ const ProductPage = () => {
                 <img
                   src={texture.image}
                   alt={texture.name}
-                  className="w-full h-16 object-cover"
+                  className="w-full h-full object-cover"
                 />
-                <div className="text-xs text-center">{texture.name}</div>
+                {/* <div className="text-xs text-center">{texture.name}</div> */}
               </button>
               ))}
             </div>

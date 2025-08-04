@@ -52,73 +52,118 @@ const Avatar: React.FC<AvatarProps> = ({
     }
   }, [scene, setObjectList]);
 
-  useEffect(() => {
-    const currentMapStr = JSON.stringify(selectedTextureMap);
-    if (!scene || currentMapStr === prevTextureMapRef.current) return;
+//   useEffect(() => {
+//     const currentMapStr = JSON.stringify(selectedTextureMap);
+//     if (!scene || currentMapStr === prevTextureMapRef.current) return;
 
-   scene.traverse((child: any) => {
-  if (child.isMesh) {
-    child.material = child.material.clone();
+//    scene.traverse((child: any) => {
+//   if (child.isMesh) {
+//     child.material = child.material.clone();
 
-    const textureUrl = selectedTextureMap[child.name]?.colorUrl;
-    if (textureUrl) {
-      const diffuseTexture = textureLoader.load(textureUrl, (tex) => {
-        (tex as any).encoding = (THREE as any).sRGBEncoding;
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
-        tex.repeat.set(5, 5); // ✅ Tiling scale set to 20%
-      });
+//     const textureUrl = selectedTextureMap[child.name]?.colorUrl;
+//     if (textureUrl) {
+//       // const diffuseTexture = textureLoader.load(textureUrl, (tex) => {
+//       //   (tex as any).encoding = (THREE as any).sRGBEncoding;
+//       //   tex.wrapS = THREE.RepeatWrapping;
+//       //   tex.wrapT = THREE.RepeatWrapping;
+//       //   tex.repeat.set(5, 5); // ✅ Tiling scale set to 20%
+//       const diffuseTexture = textureLoader.load(textureUrl);
+//   diffuseTexture.colorSpace = THREE.SRGBColorSpace;
+//   diffuseTexture.wrapS = THREE.RepeatWrapping;
+//   diffuseTexture.wrapT = THREE.RepeatWrapping;
+//   child.material.map = diffuseTexture;
+//       };
 
-      // ✅ Load Normal GL Map (if exists)
-          const normalMapUrl = selectedTextureMap[child.name]?.normalUrl; // Assumes naming convention
-          const normalTexture = textureLoader.load(normalMapUrl, () => {
-            console.log(`Loaded normal map: ${normalMapUrl}`);
-          });
-          normalTexture.wrapS = THREE.RepeatWrapping;
-          normalTexture.wrapT = THREE.RepeatWrapping;
-          normalTexture.repeat.set(5, 5); // Same tiling scale
+//       // ✅ Load Normal GL Map (if exists)
+//           // const normalMapUrl = selectedTextureMap[child.name]?.normalUrl; // Assumes naming convention
+//           // const normalTexture = textureLoader.load(normalMapUrl, () => {
+//           //   console.log(`Loaded normal map: ${normalMapUrl}`);
+//           // });
+//           // normalTexture.wrapS = THREE.RepeatWrapping;
+//           // normalTexture.wrapT = THREE.RepeatWrapping;
+//           // normalTexture.repeat.set(5, 5); // Same tiling scale
 
-           // ✅ Load roughness map
-          const roughnessMapUrl = selectedTextureMap[child.name]?.roughnessUrl;
-          const roughnessTexture = textureLoader.load(roughnessMapUrl, () => {
-            console.log(`Loaded roughness map: ${roughnessMapUrl}`);
-          });
-          roughnessTexture.wrapS = THREE.RepeatWrapping;
-          roughnessTexture.wrapT = THREE.RepeatWrapping;
-          roughnessTexture.repeat.set(5, 5);
+//            // ✅ Load roughness map
+//           // const roughnessMapUrl = selectedTextureMap[child.name]?.roughnessUrl;
+//           // const roughnessTexture = textureLoader.load(roughnessMapUrl, () => {
+//           //   console.log(`Loaded roughness map: ${roughnessMapUrl}`);
+//           // });
+//           // roughnessTexture.wrapS = THREE.RepeatWrapping;
+//           // roughnessTexture.wrapT = THREE.RepeatWrapping;
+//           // roughnessTexture.repeat.set(5, 5);
 
-          // ✅ Apply textures
-          child.material.map = diffuseTexture;
-          child.material.normalMap = normalTexture;
-          child.material.roughnessMap = roughnessTexture;
-          child.material.normalScale = new THREE.Vector2(1, 1); // Normal scale 100%
+//           // ✅ Apply textures
+//           child.material.map = diffuseTexture;
+//           // child.material.normalMap = normalTexture;
+//           // child.material.roughnessMap = roughnessTexture;
+//           child.material.normalScale = new THREE.Vector2(1, 1); // Normal scale 100%
 
          
 
-          // ✅ Determine material type for finish
-          const isSuede = textureUrl.toLowerCase().includes("suede");
+//           // ✅ Determine material type for finish
+//           const isSuede = textureUrl.toLowerCase().includes("suede");
 
-          if (isSuede) {
-            child.material.roughness = 0.9;
-            child.material.metalness = 0;
-            child.material.envMapIntensity = 0.2;
-          } else {
-            child.material.roughness = 0.3;
-            child.material.metalness = 0;
-            child.material.envMapIntensity = 0.6;
-          }
+//           if (isSuede) {
+//             // child.material.roughness = 0.9;
+//             child.material.metalness = 0;
+//             child.material.envMapIntensity = 0.2;
+//           } else {
+//             // child.material.roughness = 0.3;
+//             child.material.metalness = 0;
+//             child.material.envMapIntensity = 0.6;
+//           }
 
-          child.material.needsUpdate = true;
-    } else {
-      child.material.map = null;
+//           child.material.needsUpdate = true;
+//     } else {
+//       child.material.map = null;
+//       child.material.needsUpdate = true;
+//       // child.material.map = null;
+//       // child.material.color = new THREE.Color("#d9b38c");
+//     }
+//   }
+// });
+
+
+//     prevTextureMapRef.current = currentMapStr;
+//   }, [selectedTextureMap, scene]);
+
+
+useEffect(() => {
+  const currentMapStr = JSON.stringify(selectedTextureMap);
+  if (!scene || currentMapStr === prevTextureMapRef.current) return;
+
+  scene.traverse((child: any) => {
+    if (child.isMesh) {
+      child.material = child.material.clone();
+
+      const textureUrl = selectedTextureMap[child.name]?.colorUrl;
+
+      if (textureUrl) {
+        const diffuseTexture = textureLoader.load(textureUrl, (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace; // correct brightness
+          tex.wrapS = THREE.RepeatWrapping;
+          tex.wrapT = THREE.RepeatWrapping;
+          tex.repeat.set(1, 1); // keep original UV scale
+        });
+
+        child.material.map = diffuseTexture;
+      } else {
+        // fallback base color if no texture
+        child.material.map = null;
+        // child.material.color = new THREE.Color("#747474ff");
+      }
+
+      // ✅ Material tweaks for better lighting
+      child.material.roughness = 0.2;          // shinier surface
+      child.material.metalness = 0.2;          // more reflectivity
+      child.material.envMapIntensity = 1;    // stronger reflections
       child.material.needsUpdate = true;
     }
-  }
-});
+  });
 
+  prevTextureMapRef.current = currentMapStr;
+}, [selectedTextureMap, scene]);
 
-    prevTextureMapRef.current = currentMapStr;
-  }, [selectedTextureMap, scene]);
 
   return (
     <group ref={meshRef} scale={[scale, scale, scale]}>
@@ -172,38 +217,54 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
       )}
       <Canvas
         shadows
+        gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace }}
         style={{
           width: `${canvasSize.width}px`,
           height: `${canvasSize.height}px`,
           maxWidth: "100%",
         }}
         camera={{ position: [2, 0, 0], fov: 78 }}
-        onCreated={({ gl }) => {
-          const renderer = gl as THREE.WebGLRenderer;
-          renderer.toneMapping = THREE.ACESFilmicToneMapping;
-          renderer.toneMappingExposure = 0.8;
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // onCreated={({ gl }) => {
+        //   const renderer = gl as THREE.WebGLRenderer;
+        //   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        //   renderer.toneMappingExposure = 0.8;
+        //   renderer.shadowMap.enabled = true;
+        //   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-          renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
-            e.preventDefault();
-            console.warn("WebGL context lost.");
-          });
-        }}
+        //   renderer.getContext().canvas.addEventListener("webglcontextlost", (e) => {
+        //     e.preventDefault();
+        //     console.warn("WebGL context lost.");
+        //   });
+        // }}
+        onCreated={({ gl }) => {
+    gl.outputColorSpace = THREE.SRGBColorSpace;
+    gl.toneMapping = THREE.ACESFilmicToneMapping;
+    gl.toneMappingExposure = 1.2;
+    
+  }}
       >
         {/* ✅ Lighting setup */}
-        <ambientLight intensity={0.8} />
+        <ambientLight intensity={0.7} />
         <directionalLight
-          position={[5, 10, 5]}
-          intensity={1}
-          color="White"
+          position={[5, 5, 5]}
+          intensity={0.8}
+          // color="White"
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          // shadow-mapSize-width={1024}
+          // shadow-mapSize-height={1024}
         />
-        <Suspense fallback={<LoadingSpinner />}>
-          {/* <Environment preset="dawn" /> */}
-          <Avatar
+        <directionalLight
+          position={[-5, 5, -5]}
+          intensity={0.5}
+        />
+        <directionalLight
+          position={[0, 5, -5]}
+          intensity={0.5}
+        />
+
+        <Suspense fallback={null}>
+          <Environment preset="studio" />
+          <Avatar 
             avatarData={avatarData}
             objectList={objectList}
             setObjectList={setObjectList}
@@ -236,7 +297,7 @@ const LoadingSpinner = () => {
   return (
     <mesh ref={meshRef}>
       <torusGeometry args={[0.5, 0.2, 16, 32]} />
-      <meshStandardMaterial color="white" />
+      {/* <meshStandardMaterial color="pink" /> */}
     </mesh>
   );
 };

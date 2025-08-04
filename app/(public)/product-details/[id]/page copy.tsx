@@ -286,7 +286,7 @@ const ProductPage = () => {
           />
         )} */}
         <ShoeAvatar
-          avatarData="/ShoewthTex.glb"
+          avatarData="/ShoeWithText.glb"
           objectList={objectList}
           setObjectList={setObjectList}
           // selectedPanelName={selectedPanelName}

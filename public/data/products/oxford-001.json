@@ -1,0 +1,252 @@
+{
+  "id": "oxford-001",
+  "title": "Premium Oxford Shoes",
+  "vendor": "Italian Shoes Company",
+  "description": "<p>Full-grain leather, Goodyear welt...</p>",
+  "price": [12999],
+
+  "assets": {
+    "glb": {"url":"/ShoeSoleFixed.glb"}
+            
+  },
+
+  "variantsOptions": {
+    "styles": [
+      {
+        "id": 10,
+        "name": "Cap Toe",
+        "imageUrl": "/images/styles/captoe.png",
+        "assets": { "glb": "/glb/styles/captoe.glb" }
+      },
+
+      {
+        "id": 11,
+        "name": "Plain Toe",
+        "imageUrl": "/images/styles/plain-toe.png",
+        "assets": { "glb": "/glb/styles/plaintoe.glb" }
+      }
+    ],
+
+    "soles": [
+      {
+        "id": 40,
+        "type": "Leather",
+        "height": "Standard",
+        "imageUrl": "/images/soles/leather.png",
+        "assets": { "glb": "/glb/soles/leather-sole.glb" } 
+      },
+
+      {
+        "id": 41,
+        "type": "Rubber",
+        "height": "Lug",
+        "imageUrl": "/images/soles/rubber.png",
+        "assets": { "glb": "/glb/soles/rubber-sole.glb" } 
+      }
+    ],
+    
+    "materials": [
+      { "id": 21, "name": "Soft Leather",                "description": "Soft Leather",                  "allowedColorIds": [30] },
+      { "id": 22, "name": "Premium hand-crafted Leather","description": "Premium hand-crafted Leather",  "allowedColorIds": [30] },
+      { "id": 23, "name": "Suede",                       "description": "Suede",                         "allowedColorIds": [31,32,36,37,38,39] },
+      { "id": 24, "name": "Crystal Metallic Leather",    "description": "Crystal Metallic Leather",      "allowedColorIds": [36,40] },
+      { "id": 25, "name": "Embossed Leather",            "description": "Embossed Leather",              "allowedColorIds": [37,38,39,41] },
+      { "id": 26, "name": "High Shine Leather",          "description": "High Shine Leather",            "allowedColorIds": [36,38,39] },
+      { "id": 27, "name": "Patent Leather",              "description": "Patent Leather",                "allowedColorIds": [36,39] }
+    ],
+    
+        
+  "colors": [
+    { "id": 30, "slug": "all",            "name": "All Color" },
+    { "id": 31, "type": "white",          "name": "White" },
+    { "id": 32, "slug": "beige",          "name": "Beige" },
+    { "id": 33, "slug": "yellow-orange",  "name": "Yellow-Orange" },
+    { "id": 34, "slug": "orange",         "name": "Orange" },
+    { "id": 35, "slug": "green",          "name": "Green" },
+    { "id": 36, "slug": "red",            "name": "Red" },
+    { "id": 37, "slug": "grey",           "name": "Grey" },
+    { "id": 38, "slug": "brown",          "name": "Brown" },
+    { "id": 39, "slug": "black",          "name": "Black" },
+    { "id": 40, "slug": "metallics",      "name": "Metallics" },
+    { "id": 41, "slug": "animal-print",   "name": "Animal Print" }
+  ],
+
+  "colorPalettes": {
+    "31": [
+      { "id": 3101, "name": "White 01", "textureUrl": "/leather/white-1.jpg" },
+      { "id": 3102, "name": "White 02", "textureUrl": "/leather/white-2.jpg" },
+      { "id": 3103, "name": "White 03", "textureUrl": "/leather/white-3.jpg" },
+      { "id": 3104, "name": "White 04", "textureUrl": "/leather/white-4.jpg" }
+    ],
+    "37": [
+      { "id": 3701, "name": "Grey 01", "textureUrl": "/leather/grey.png" },
+      { "id": 3702, "name": "Grey 02", "textureUrl": "/leather/grey-2.jpg" },
+      { "id": 3703, "name": "Grey 03", "textureUrl": "/leather/grey-3.jpg" }
+    ],
+    "39": [
+      { "id": 3901, "name": "Black 01", "textureUrl": "/leather/black.jpg" },
+      { "id": 3902, "name": "Black 02", "textureUrl": "/leather/black-2.jpg" },
+      { "id": 3903, "name": "Black 03", "textureUrl": "/leather/black-3.jpg" },
+      { "id": 3904, "name": "Black 04", "textureUrl": "/leather/black-4.jpg" },
+      { "id": 3905, "name": "Black 05", "textureUrl": "/leather/black-5.jpg" }
+    ],
+    "36": [
+      { "id": 3601, "name": "Dark Red", "textureUrl": "/leather/dark-red.png" },
+      { "id": 3602, "name": "Red 01",   "textureUrl": "/leather/red.jpg" },
+      { "id": 3603, "name": "Mahroon 01", "textureUrl": "/leather/2.png" },
+      { "id": 3604, "name": "Mahroon 02", "textureUrl": "/leather/3.png" }
+    ],
+    "38": [
+      { "id": 3801, "name": "Brown 01", "textureUrl": "/leather/brown.jpg" },
+      { "id": 3802, "name": "Brown 02", "textureUrl": "/leather/20.jpg" },
+      { "id": 3803, "name": "Brown 03", "textureUrl": "/leather/26.jpg" }
+    ],
+    "34": [
+      { "id": 3401, "name": "Orange 01", "textureUrl": "/leather/orange.png" }
+    ],
+    "33": [
+      { "id": 3301, "name": "Yellow 01", "textureUrl": "/leather/yellow.jpg" }
+    ]
+  }
+},
+
+  
+    "panels": ["Toe Cap", "Upper", "Quarter", "Back Cap", "Shoelaces", "Lining", "Insole", "Stiching"],
+
+  "glbOverrides": {
+    "byCombination": [
+      { "styleId": 10, "soleId": 41, "glb": "/glb/combo/captoe-rubber.glb" },
+      { "styleId": 11, "soleId": 40, "glb": "/glb/combo/plaintoe-leather.glb" }
+    ]
+  },
+
+  "variants": [
+    {
+      "id": "var-001",
+      "price": 12999,
+      "inventoryQuantity": 8,
+      "options": {
+        "size": { "id": 1 },
+        "style": { "id": 10 },
+        "sole":  { "id": 40 },
+        "material": { "id": 20 },
+        "color": { "id": 30 },
+        "panel": { "name": "Upper" }
+      }
+    }
+  ],
+
+  "textures": {
+  "leather": [
+    { "name": "Dark Red", "textureUrl": "/leather/dark-red.png", "colorId": 36 },
+    { "name": "Brown",    "textureUrl": "/leather/brown.jpg",    "colorId": 38 },
+    { "name": "Black",    "textureUrl": "/leather/black.jpg",    "colorId": 39 },
+    { "name": "Orange",   "textureUrl": "/leather/orange.png",   "colorId": 34 },
+    { "name": "Yellow",   "textureUrl": "/leather/yellow.jpg",   "colorId": 33 },
+    { "name": "Grey",     "textureUrl": "/leather/grey.png",     "colorId": 37 },
+    { "name": "Red",      "textureUrl": "/leather/red.jpg",      "colorId": 36 },
+    { "name": "Mahroon", "textureUrl": "/leather/2.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/3.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/4.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/5.jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/6.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/7.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/8.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/9.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/10.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/11.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/12.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/13.jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/14.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/15.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/16.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/17.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/18.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/19.jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/20.jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/21.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/22.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/23.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/24.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/25.png" },
+    { "name": "Mahroon", "textureUrl": "/leather/26.jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (21).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (23).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (24).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (24).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (25).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (25).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (26).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (26).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (27).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (27).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (28).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (28).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (29).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (29).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (30).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (30).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (31).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (31).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (32).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (32).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (33).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (33).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (34).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (34).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (35).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (35).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (36).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (36).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (37).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (37).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (38).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (38).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (41).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (41).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (42).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (42).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (43).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (43).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (44).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (44).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (45).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (45).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (46).jpg" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (46).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (53).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (54).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (55).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (56).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (57).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (58).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (59).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (62).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (63).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (64).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (65).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (66).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (67).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (68).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (69).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (70).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (71).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (72).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (73).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (74).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (75).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (76).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (77).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (78).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (79).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (80).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (81).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (82).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (83).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (84).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (85).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (86).png" },
+    { "name": "Mahroon", "textureUrl": "/leather/2 (87).png" }
+  ]
+}
+}

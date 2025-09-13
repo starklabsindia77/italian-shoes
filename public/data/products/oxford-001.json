@@ -1,0 +1,126 @@
+{
+  "id": "oxford-001",
+  "title": "Premium Oxford Shoes",
+  "vendor": "Italian Shoes Company",
+  "description": "<p>Full-grain leather, Goodyear welt...</p>",
+  "price": 12999,
+  "assets": {
+    "glb": {
+      "url": "/ShoeSoleFixed.glb",
+      "lighting": "directional",
+      "environment": "studio"
+    }
+  },
+  "sizes": [
+    {
+      "id": 1,
+      "name": "8",
+      "sizeSystem": "US",
+      "width": "Standard"
+    }
+  ],
+  "styles": [
+    {
+      "id": 1,
+      "name": "Cap Toe",
+      "imageUrl": "/images/styles/captoe.png",
+      "assets": {
+        "glb": "/glb/styles/captoe.glb",
+        "lighting": "directional",
+        "environment": "studio"
+      }
+    }
+  ],
+  "panels": [
+    "Toe Cap",
+    "Upper",
+    "Quarter",
+    "Back Cap",
+    "Shoelaces",
+    "Lining",
+    "Insole",
+    "Stiching"
+  ],
+  "materials": [
+    {
+      "id": 1,
+      "name": "Leather",
+      "description": "Leather",
+      "values": [
+        {
+          "id": 1,
+          "name": "White Oxford",
+          "type": "White",
+          "imageUrl": "/images/colors/white.png"
+        },
+        {
+          "id": 2,
+          "name": "Black Oxford",
+          "type": "Black",
+          "imageUrl": "/images/colors/black.png"
+        },
+        {
+          "id": 3,
+          "name": "Brown Oxford",
+          "type": "Brown",
+          "imageUrl": "/images/colors/brown.png"
+        },
+        {
+          "id": 4,
+          "name": "White Off Oxford",
+          "type": "White",
+          "imageUrl": "/images/colors/white-01.png"
+        },
+        {
+          "id": 5,
+          "name": "White Off Oxford 01",
+          "type": "White",
+          "imageUrl": "/images/colors/white-02.png"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Fabric",
+      "description": "Fabric",
+      "values": [
+        {
+          "id": 1,
+          "name": "White Fabric",
+          "type": "White",
+          "imageUrl": "/images/colors/white.png"
+        },
+        {
+          "id": 2,
+          "name": "White Fabric 01",
+          "type": "White",
+          "imageUrl": "/images/colors/white-01.png"
+        }
+      ]
+    }
+  ],
+  "soles": [
+    {
+      "id": 1,
+      "name": "Sole 01",
+      "description": "Sole 01",
+      "imageUrl": "/images/soles/sole-01.png",
+      "assets": {
+        "glb": "/glb/soles/sole-01.glb",
+        "lighting": "directional",
+        "environment": "studio"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Sole 02",
+      "description": "Sole 02",
+      "imageUrl": "/images/soles/sole-02.png",
+      "assets": {
+        "glb": "/glb/soles/sole-02.glb",
+        "lighting": "directional",
+        "environment": "studio"
+      }
+    }
+  ]
+}

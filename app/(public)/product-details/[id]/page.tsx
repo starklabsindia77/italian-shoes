@@ -137,38 +137,7 @@ const predefinedColors = [
 ];
 
 
-// Interfaces for Product Data
 
-const relatedProducts = [
-  {
-    id: 1,
-    title: "Premium Oxford Shoes",
-    price: 299.0,
-    image:
-      "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400&h=400&fit=crop",
-  },
-  {
-    id: 2,
-    title: "Elegant Derby Shoes",
-    price: 279.0,
-    image:
-      "https://images.unsplash.com/photo-1595341888016-a392ef81b7de?w=400&h=400&fit=crop",
-  },
-  {
-    id: 3,
-    title: "Classic Loafers",
-    price: 229.0,
-    image:
-      "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=400&h=400&fit=crop",
-  },
-  {
-    id: 4,
-    title: "Luxury Monk Straps",
-    price: 319.0,
-    image:
-      "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400&h=400&fit=crop",
-  },
-];
 
 const ProductPage = () => {
   const params = useParams();
@@ -294,46 +263,6 @@ const ProductPage = () => {
           {tab}
         </button>
       ))}
-    </div>
-  );
-
-  const RelatedProductsSlider = () => (
-    <div className="py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8">You May Also Like</h2>
-        <div className="relative">
-          <div className="overflow-hidden">
-            <Swiper
-              spaceBetween={10}
-              slidesPerView={4}
-              className="related-products-slider"
-              breakpoints={{
-                640: { slidesPerView: 2 },
-                768: { slidesPerView: 3 },
-                1024: { slidesPerView: 4 },
-              }}
-            >
-              {relatedProducts.map((related) => (
-                <SwiperSlide key={related.id}>
-                  <div className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <img
-                      src={related.image}
-                      alt={related.title}
-                      className="object-cover w-full h-48"
-                    />
-                    <div className="p-4">
-                      <h3 className="font-medium mb-2">{related.title}</h3>
-                      <p className="text-lg font-semibold text-red-500">
-                        ${related.price}
-                      </p>
-                    </div>
-                  </div>
-                </SwiperSlide>
-              ))}
-            </Swiper>
-          </div>
-        </div>
-      </div>
     </div>
   );
 
@@ -722,7 +651,7 @@ const ProductPage = () => {
     <div className="min-h-screen bg-white">
       {/* Main Product Information */}
       <div className="max-w-7xl mx-auto p-4 md:p-8">
-        <div className="grid grid-cols-1 md:grid-cols-[65%_35%] gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-[50%_50%] gap-8">
           <ImageGallery />
 
           <div className="space-y-6">

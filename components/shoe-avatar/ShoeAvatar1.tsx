@@ -20,7 +20,8 @@ interface AvatarProps {
     string,
     {
       colorUrl?: string;
-      // future: normalUrl?: string; roughnessUrl?: string;
+      normalUrl?: string;
+      roughnessUrl?: string;
     }
   >;
   setIsTextureLoading?: React.Dispatch<SetStateAction<boolean>>;
@@ -39,7 +40,6 @@ const Avatar: React.FC<AvatarProps> = ({
   const meshRef = useRef<THREE.Group>(null);
   const prevTextureMapRef = useRef<string>("");
 
-  // caches + bookkeeping
   const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
   const originalMapRef = useRef<WeakMap<THREE.Material, THREE.Texture | null>>(
     new WeakMap()
@@ -50,37 +50,54 @@ const Avatar: React.FC<AvatarProps> = ({
     setIsTextureLoading?.(isLoading);
   };
 
-  // ---------- CENTER ONLY (preserve author scale; no forced length) ----------
-useLayoutEffect(() => {
+  // --- Center + scale ---
+  useLayoutEffect(() => {
     if (!scene || !meshRef.current) return;
-    // keep authoring scale (1,1,1)
-    meshRef.current.scale.set(27, 28, 31); 
-    // center the model at the origin
+    meshRef.current.scale.set(27, 28, 31);
+
     const box = new THREE.Box3().setFromObject(scene);
     const center = box.getCenter(new THREE.Vector3());
     meshRef.current.position.set(-center.x, -center.y, -center.z);
   }, [scene]);
 
-  // Pass 2: re-ground the shoe so the lowest point (sole) sits at y=0
+  // --- Ground on Y=0 ---
   useLayoutEffect(() => {
     if (!meshRef.current) return;
     const scaledBox = new THREE.Box3().setFromObject(meshRef.current);
     const minY = scaledBox.min.y;
     meshRef.current.position.y -= minY;
   }, []);
-  
+
+  // --- Material Enhancements ---
   useLayoutEffect(() => {
-  if (!scene) return;
-  scene.traverse((o: any) => {
-    if (o.isMesh && o.material && 'envMapIntensity' in o.material) {
-      (o.material as THREE.MeshStandardMaterial).envMapIntensity = 0.35; // 0.3–0.5
-      o.material.needsUpdate = true;
-    }
-  });
-}, [scene]);
+    if (!scene) return;
 
+    scene.traverse((o: any) => {
+      if (o.isMesh && o.material) {
+        const mat = o.material as THREE.MeshStandardMaterial;
 
-  // Gather mesh children once the scene is available (for your UI lists)
+        // Leather-like tuning
+        mat.envMapIntensity = 1.2;
+        mat.roughness = 0.45;
+        mat.metalness = 0.1;
+        mat.needsUpdate = true;
+
+        const texConfig = selectedTextureMap?.[o.name];
+        if (texConfig?.normalUrl) {
+          const normalMap = textureLoader.load(texConfig.normalUrl);
+          normalMap.flipY = false;
+          mat.normalMap = normalMap;
+        }
+        if (texConfig?.roughnessUrl) {
+          const roughnessMap = textureLoader.load(texConfig.roughnessUrl);
+          roughnessMap.flipY = false;
+          mat.roughnessMap = roughnessMap;
+        }
+      }
+    });
+  }, [scene, selectedTextureMap]);
+
+  // --- Collect meshes for UI ---
   useEffect(() => {
     if (!scene) return;
     const children: THREE.Mesh[] = [];
@@ -95,7 +112,7 @@ useLayoutEffect(() => {
     });
   }, [scene, setObjectList]);
 
-  // ---------- TEXTURE SWAP (preserve transforms, keep GLB defaults) ----------
+  // --- Texture swapping ---
   useEffect(() => {
     const currentMapStr = JSON.stringify(selectedTextureMap || {});
     if (!scene || currentMapStr === prevTextureMapRef.current) return;
@@ -118,13 +135,12 @@ useLayoutEffect(() => {
       beginLoad();
       const tex = textureLoader.load(
         url,
-        () => endLoad(), // onLoad
+        () => endLoad(),
         undefined,
-        () => endLoad() // onError
+        () => endLoad()
       );
-      // GLTF compatibility + quality
-      tex.flipY = false; // baseColorTexture from glTF expects this
-      tex.colorSpace = THREE.SRGBColorSpace; // base color uses sRGB
+      tex.flipY = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
       cache.set(url, tex);
@@ -133,27 +149,21 @@ useLayoutEffect(() => {
 
     scene.traverse((child: any) => {
       if (!child.isMesh) return;
-
       const prevMat = child.material as THREE.MeshStandardMaterial;
 
-      // remember original GLB map once
       if (!originalMapRef.current.has(prevMat)) {
         originalMapRef.current.set(prevMat, prevMat.map ?? null);
       }
 
-      // requested swap for this mesh?
       const textureUrl: string | undefined =
         selectedTextureMap?.[child.name]?.colorUrl;
 
-      // Clone so shared materials aren’t mutated
       child.material = prevMat.clone();
       const mat = child.material as THREE.MeshStandardMaterial;
 
-      // currently applied/known previous map
       const prevMap = prevMat.map ?? originalMapRef.current.get(prevMat) ?? null;
 
       if (!textureUrl) {
-        // No swap requested -> keep / restore GLB’s baked map
         const original = originalMapRef.current.get(prevMat) ?? null;
         if (mat.map !== original) {
           mat.map = original;
@@ -162,10 +172,8 @@ useLayoutEffect(() => {
         return;
       }
 
-      // Skip if already applied
       if ((mat.map as any)?.userData?._appliedUrl === textureUrl) return;
 
-      // Load / reuse texture and preserve transforms (KHR_texture_transform)
       const tex = getTexture(textureUrl);
       if (prevMap) {
         tex.offset.copy(prevMap.offset);
@@ -180,7 +188,6 @@ useLayoutEffect(() => {
       };
 
       mat.map = tex;
-      // Keep PBR values from GLB (don’t force roughness/metalness here)
       mat.needsUpdate = true;
     });
 
@@ -191,7 +198,7 @@ useLayoutEffect(() => {
     <group ref={meshRef}>
       <primitive object={scene} />
 
-      {/* Ground plane for soft shadow */}
+      {/* Soft shadow ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[5, 5]} />
         <shadowMaterial opacity={0.25} />
@@ -240,62 +247,51 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
 
       <Canvas
         shadows
-                gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace }}
-                style={{
-                  width: `${canvasSize.width}px`,
-                  height: `${canvasSize.height}px`,
-                  maxWidth: "100%",
-                }}
-                camera={{ position: [2, 0.25, 0.2], fov: 50 }}
+        gl={{ antialias: true, outputColorSpace: THREE.SRGBColorSpace }}
+        style={{
+          width: `${canvasSize.width}px`,
+          height: `${canvasSize.height}px`,
+          maxWidth: "100%",
+        }}
+        camera={{ position: [2.2, 0.25, 0], fov: 50 }}
         onCreated={({ gl }) => {
           gl.outputColorSpace = THREE.SRGBColorSpace;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.2;
+          gl.toneMappingExposure = 1.5;
 
           const renderer = gl as THREE.WebGLRenderer;
           renderer.shadowMap.enabled = true;
           renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-          // guard against context loss
-          renderer.getContext().canvas.addEventListener(
-            "webglcontextlost",
-            (e) => {
-              e.preventDefault();
-              console.warn("WebGL context lost.");
-            }
-          );
         }}
       >
-        {/* Balanced lights + studio env */}
-        <ambientLight intensity={0.1} />
+        {/* Lighting setup */}
+        <ambientLight intensity={0.2} />
+
         <directionalLight
-          position={[-18, -5, 1]}
-          intensity={0.8}
-          // color="White"
+          position={[5, 8, 5]}
+          intensity={1.6}
           castShadow
-          // shadow-mapSize-width={1024}
-          // shadow-mapSize-height={1024}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
         />
-        <directionalLight
-          position={[-10, 0, 5]}
-          intensity={0.5}
+        <directionalLight position={[-5, 3, 5]} intensity={0.6} />
+        <directionalLight position={[0, 5, -6]} intensity={0.8} color={"#fff"} />
+
+        {/* Studio HDRI */}
+        <Environment
+          files="/hdri/studio_small_08_4k.hdr"
+          background={false}
         />
-        <directionalLight
-          position={[0, 0, -5]}
-          intensity={0.5}
-        />
-        <Environment preset="studio" />
-       
 
         <Suspense fallback={null}>
           <Bounds margin={1.1}>
-          <Avatar
-            avatarData={avatarData}
-            objectList={objectList}
-            setObjectList={setObjectList}
-            selectedTextureMap={selectedTextureMap}
-            setIsTextureLoading={setIsTextureLoading}
-          />
+            <Avatar
+              avatarData={avatarData}
+              objectList={objectList}
+              setObjectList={setObjectList}
+              selectedTextureMap={selectedTextureMap}
+              setIsTextureLoading={setIsTextureLoading}
+            />
           </Bounds>
         </Suspense>
 
@@ -312,21 +308,12 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   );
 };
 
-// Pure DOM spinner for the overlay (no R3F hooks here)
+// Loading spinner
 const DomSpinner: React.FC = () => {
   return (
     <div
       aria-label="Loading"
       className="animate-spin rounded-full h-12 w-12 border-4 border-white/70 border-t-transparent"
-      // If you don't use Tailwind, uncomment inline styles:
-      // style={{
-      //   width: 48,
-      //   height: 48,
-      //   border: "4px solid rgba(255,255,255,.7)",
-      //   borderTopColor: "transparent",
-      //   borderRadius: "9999px",
-      //   animation: "spin 0.8s linear infinite",
-      // }}
     />
   );
 };

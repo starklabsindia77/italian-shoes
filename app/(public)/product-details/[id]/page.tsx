@@ -24,6 +24,7 @@ const ShoeAvatar = dynamic(() => import("@/components/shoe-avatar/ShoeAvatar1"),
 });
 
 const predefinedColors = [
+<<<<<<< Updated upstream
   { name: "Dark Red", image: "/new-leather/Leather036D_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather036D_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather036D_1K-PNG_NormalGL.png' },
   { name: "Brown", image: "/new-leather/Leather030_1K-PNG_Color.png", roughnessImage: '/new-leather/Leather030_1K-PNG_Roughness.png', normalImage:'/new-leather/Leather030_1K-PNG_NormalGL.png'  },
   { name: "Black", image: "/new-leather/Leather027_1K-PNG_Color.png", roughnessImage: "/new-leather/Leather027_1K-PNG_Roughness.png", normalImage:"/new-leather/Leather027_1K-PNG_NormalGL.png"  },
@@ -34,6 +35,118 @@ const predefinedColors = [
   { name: "Light Brown", image: "/new-leather/Light-Brown.png", roughnessImage: "/new-leather/Light-Brown_Roughness.png", normalImage:"/new-leather/Light-BrownGL.png"  },
   { name: "Mahroon", image: "/new-leather/Mahroon.png", roughnessImage: "/new-leather/Mahroon_Roughness.png", normalImage:"/new-leather/MahroonGL.png"  },
   
+=======
+  // { name: "Dark Red", textureUrl: "/leather/dark-red.png" },
+  // { name: "Brown", textureUrl: "/leather/brown.jpg" },
+  // { name: "Black", textureUrl: "/leather/black.jpg" },
+  // { name: "Orange", textureUrl: "/leather/orange.png" },
+  // { name: "Yellow", textureUrl: "/leather/yellow.jpg" },
+  // { name: "Grey", textureUrl: "/leather/grey.png" },
+  // { name: "Red", textureUrl: "/leathers/1.jpg" },
+  // { name: "Light Brown", textureUrl: "/leather/light-brown.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/2.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/3.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/4.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/5.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/6.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/7.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/8.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/9.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/10.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/11.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/12.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/13.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/14.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/15.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/16.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/17.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/18.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/19.jpg" },
+  { name: "Mahroon", textureUrl: "/leathers/20.jpg" },
+  { name: "Mahroon", textureUrl: "/leather/21.png" },
+  { name: "Mahroon", textureUrl: "/leather/22.png" },
+  { name: "Mahroon", textureUrl: "/leather/23.png" },
+  { name: "Mahroon", textureUrl: "/leather/24.png" },
+  { name: "Mahroon", textureUrl: "/leather/25.png" },
+  { name: "Mahroon", textureUrl: "/leather/26.jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (21).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (23).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (24).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (24).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (25).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (25).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (26).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (26).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (27).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (27).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (28).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (28).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (29).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (29).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (30).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (30).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (31).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (31).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (32).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (32).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (33).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (33).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (34).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (34).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (35).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (35).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (36).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (36).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (37).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (37).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (38).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (38).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (41).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (41).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (42).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (42).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (43).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (43).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (44).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (44).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (45).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (45).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (46).jpg" },
+  { name: "Mahroon", textureUrl: "/leather/2 (46).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (53).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (54).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (55).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (56).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (57).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (58).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (59).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (62).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (63).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (64).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (65).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (66).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (67).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (68).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (69).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (70).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (71).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (72).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (73).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (74).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (75).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (76).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (77).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (78).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (79).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (80).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (81).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (82).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (83).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (84).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (85).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (86).png" },
+  { name: "Mahroon", textureUrl: "/leather/2 (87).png" },
+>>>>>>> Stashed changes
 ];
 
 
@@ -195,6 +308,7 @@ const ProductPage = () => {
 
   const ImageGallery = () => (
     <div className="space-y-4">
+<<<<<<< Updated upstream
       <div className="aspect-square relative overflow-hidden rounded-lg justify-start bg-gray-100">
         {/* {currentVariant ? (
           <img
@@ -209,6 +323,10 @@ const ProductPage = () => {
             className="object-cover w-full h-full"
           />
         )} */}
+=======
+      <div className="aspect-square relative overflow-hidden rounded-lg justify-start">
+        
+>>>>>>> Stashed changes
         <ShoeAvatar
           avatarData="/Shoe-glb.glb"
           objectList={objectList}
@@ -216,68 +334,10 @@ const ProductPage = () => {
           // selectedPanelName={selectedPanelName}
           selectedTextureMap={selectedTextureMap}
         />
-        {/* <img src={'/glb/Shoe.glb'} alt="shoe-glb" className="object-cover w-full h-full" /> */}
+        
       </div>
 
-      {/* {currentVariant ? (
-        <Swiper
-          spaceBetween={10}
-          slidesPerView={4}
-          className="image-slider"
-          breakpoints={{
-            320: { slidesPerView: 3 },
-            640: { slidesPerView: 4 },
-          }}
-        >
-          {currentVariant.images.map((image, index) => (
-            <SwiperSlide key={index}>
-              <button
-                className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                  selectedImage?.url === image.url
-                    ? "border-red-500"
-                    : "border-transparent hover:border-red-300"
-                }`}
-                onClick={() => setSelectedImage(image)}
-              >
-                <img
-                  src={image.url}
-                  alt={image.altText || `View ${index + 1}`}
-                  className="object-cover w-full h-full"
-                />
-              </button>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : product.shopifyImages.length > 0 ? (
-        <Swiper
-          spaceBetween={10}
-          slidesPerView={4}
-          className="image-slider"
-          breakpoints={{
-            320: { slidesPerView: 3 },
-            640: { slidesPerView: 4 },
-          }}
-        >
-          {product.shopifyImages.map((image, index) => (
-            <SwiperSlide key={index}>
-              <button
-                className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                  selectedImage === image?.src
-                    ? "border-red-500"
-                    : "border-transparent hover:border-red-300"
-                }`}
-                onClick={() => setSelectedImage(image.src)}
-              >
-                <img
-                  src={image.src}
-                  alt={`View ${index + 1}`}
-                  className="object-cover w-full h-full"
-                />
-              </button>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : null} */}
+      
     </div>
   );
 
@@ -315,25 +375,7 @@ const ProductPage = () => {
         </h3>
         {/* Panel Selection Dropdown */}
         <div className="flex flex-col items-start gap-2">
-          {/* <label className="text-xs font-medium">Select Panel:</label>
-          <select
-            value={selectedCombination.panel?.name || ""}
-            onChange={(e) => {
-              const selected = objectList.find((obj: { name: string; }) => obj.name === e.target.value);
-              setSelectedCombination({
-                ...selectedCombination,
-                panel: selected ? { name: selected.name } : null,
-              });
-            }}
-            className=" text-xs border rounded-lg px-2 py-1 w-48"
-          >
-            <option value="">Choose a Panel</option>
-            {objectList && objectList?.map((panel: any) => (
-              <option key={panel.uuid} value={panel.name}>
-                {panel.name}
-              </option>
-            ))}
-          </select> */}
+          
           <label className="font-medium">Select Panel:</label>
         <select
           value={selectedPanelName || ""}
@@ -378,27 +420,7 @@ const ProductPage = () => {
         </div>
 
         <div className="flex flex-col items-start gap-2">
-          {/* <label className="text-xs font-medium">Select Color:</label>
-          <select
-            value={selectedCombination.color?.id || ""}
-            onChange={(e) => {
-              const matInfo = product.variantsOptions.colors.find(
-                (p) => p.id === Number(e.target.value)
-              );
-              setSelectedCombination({
-                ...selectedCombination,
-                color: matInfo || null,
-              });
-            }}
-            className="border text-sm rounded-lg px-2 py-1 w-48"
-          >
-            <option value="">Choose a Color</option>
-            {filteredColors?.map((mat) => (
-              <option key={mat.id} value={mat.id}>
-                {mat.name}
-              </option>
-            ))}
-          </select> */}
+          
           {selectedPanelName && (
           <div className="mt-2">
             <label className="font-medium">Color for {selectedPanelName?.replace('_', ' ')}:</label>
@@ -423,9 +445,7 @@ const ProductPage = () => {
 
       <div className="space-y-4">
         {(filteredMaterials)?.slice(0, 1).map((material) => {
-          // const materialColors = product?.variants.filter(v => v.options.material?.id === material.id)
-          //     .map(v => v.options.color)
-          //     .filter((value, index, self) => value && self.findIndex(t => t?.id === value.id) === index);
+          
           return (
           <div key={material.id} className="space-y-2">
             <div className="flex items-center gap-2">
@@ -579,36 +599,7 @@ const ProductPage = () => {
                   )}
                 </div>
               </div>
-              {/* {product.variants.length > 0 &&
-                (!isDesignEditorOpen ? (
-                  <button
-                    className="px-6 py-2 text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
-                    onClick={() => {
-                      // Pre-select the first size for convenience if none selected
-                      if (
-                        !selectedCombination.size &&
-                        product.variantsOptions.sizes.length > 0
-                      ) {
-                        setSelectedCombination({
-                          ...selectedCombination,
-                          size: product.variantsOptions.sizes[0],
-                        });
-                      }
-                      setIsDesignEditorOpen(true);
-                    }}
-                  >
-                    <Edit2 className="w-4 h-4 inline-block mr-2" />
-                    Edit Design
-                  </button>
-                ) : (
-                  <button
-                    className="text-gray-600 hover:text-gray-800 cursor-pointer shrink-0"
-                    onClick={CloseEditor}
-                  >
-                    <X className="w-5 h-5 inline-block mr-1" />
-                    Close Editor
-                  </button>
-                ))} */}
+              
             </div>
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-4 border-b pb-4">
@@ -636,17 +627,9 @@ const ProductPage = () => {
                   ))}
                 </select>
               </div>
-              {/* {isDesignEditorOpen && (
-                <button
-                  className="px-4 py-2 text-black transition-colors"
-                  onClick={appliedSelections ? clearSelections : applySelection}
-                >
-                  {appliedSelections ? "Reset Design" : "Apply Selection"}
-                </button>
-              )} */}
+              
             </div>
-            {/* Size Selection Dropdown (simplified version) */}
-
+           
             {isDesignEditorOpen && <DesignEditor />}
 
             {/* Product Features */}
@@ -691,13 +674,7 @@ const ProductPage = () => {
         </div>
       </div>
 
-      {/* Design Editor (Customization Interface) */}
-      {/* <DesignEditor /> */}
-
-      {/* Related Products */}
-      {/* <RelatedProductsSlider /> */}
-
-      {/* Modal for unavailable combinations */}
+      
       <CombinationNotAvailableModal />
     </div>
   );

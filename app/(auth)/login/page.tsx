@@ -32,7 +32,7 @@ export default function LoginPage() {
     const res = await p;
     setLoading(false);
 
-    if (res?.ok) router.push(callbackUrl);
+    if (res?.ok) router.push("/dashboard");
     else toast.error(res?.error || "Sign-in failed");
   };
 

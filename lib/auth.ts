@@ -13,6 +13,46 @@ import { prisma } from "@/lib/prisma";
  */
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET, // ensure set in .env
+  // In HTTP (non-SSL) environments, secure cookies must be disabled or the
+  // browser will drop them, causing sign-in loops and failed redirects.
+  cookies: {
+    sessionToken: {
+      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
+      },
+    },
+    csrfToken: {
+      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.csrf-token`,
+      options: {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
+      },
+    },
+    callbackUrl: {
+      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.callback-url`,
+      options: {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
+      },
+    },
+    state: {
+      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.state`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
+      },
+    },
+  },
   pages: {
     signIn: "/login",
   },

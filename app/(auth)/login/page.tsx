@@ -32,15 +32,10 @@ export default function LoginPage() {
     const res = await p;
     setLoading(false);
 
-    if (res?.ok) router.push("/dashboard");
+    if (res?.ok) router.push(callbackUrl || "/dashboard");
     else toast.error(res?.error || "Sign-in failed");
   };
 
-  React.useEffect(() => {
-    if (callbackUrl) {
-      router.push(callbackUrl);
-    }
-  }, [callbackUrl, router]);
 
   return (
     <div className="min-h-screen grid place-items-center p-6">

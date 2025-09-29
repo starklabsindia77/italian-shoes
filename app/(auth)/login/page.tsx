@@ -18,7 +18,6 @@ export default function LoginPage() {
   const router = useRouter();
 
   const callbackUrl = search.get("callbackUrl");
-  console.log("callbackUrl", callbackUrl);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +38,7 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     if (callbackUrl) {
-      //router.push(callbackUrl);
-      console.log("callbackUrl 2", callbackUrl);
+      router.push(callbackUrl);
     }
   }, [callbackUrl, router]);
 

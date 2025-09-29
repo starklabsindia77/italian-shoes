@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? null,
           email: user.email,
           role: user.role, // "ADMIN" | "USER"
-        } as any;
+        } as { id: string; name: string | null; email: string; role: string };
       },
     }),
   ],
@@ -108,7 +108,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         // first sign-in: copy role from `authorize`
-        token.role = (user as any).role ?? "USER";
+        token.role = (user as { role?: "USER" | "ADMIN" }).role ?? "USER";
       } else {
         // subsequent requests: ensure token.role stays in sync with DB (optional)
         if (token?.email) {
@@ -128,8 +128,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         // attach id + role to session.user
-        (session.user as any).id = token.sub as string;
-        (session.user as any).role = (token as any).role ?? "USER";
+        (session.user as { id?: string; role?: string }).id = token.sub as string;
+        (session.user as { id?: string; role?: string }).role = (token as { role?: string }).role ?? "USER";
       }
       return session;
     },
@@ -149,7 +149,7 @@ export async function requireUser() {
 /** Throw if not ADMIN; returns the session otherwise */
 export async function requireAdmin() {
   const session = await getServerAuthSession();
-  if (!session || (session.user as any).role !== "ADMIN") {
+  if (!session || (session.user as { role?: string }).role !== "ADMIN") {
     throw new Error("Unauthorized");
   }
   return session;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-export function ok(data: any, init?: number | ResponseInit) {
+export function ok(data: unknown, init?: number | ResponseInit) {
   return NextResponse.json(data, typeof init === "number" ? { status: init } : init);
 }
 export function bad(message = "Bad Request", status = 400) {
@@ -9,9 +9,13 @@ export function bad(message = "Bad Request", status = 400) {
 }
 export function notFound(message = "Not Found") { return bad(message, 404); }
 export function forbidden(message = "Forbidden") { return bad(message, 403); }
-export function server(e: any) {
+export function server(e: unknown) {
   console.error(e);
-  return NextResponse.json({ error: e?.message ?? "Server Error" }, { status: 500 });
+  const message =
+    typeof e === "object" && e !== null && "message" in e && typeof (e as { message?: unknown }).message === "string"
+      ? (e as { message: string }).message
+      : "Server Error";
+  return NextResponse.json({ error: message }, { status: 500 });
 }
 
 export async function requireAuth() {
@@ -21,7 +25,7 @@ export async function requireAuth() {
 }
 export async function requireAdmin() {
   const session = await requireAuth();
-  if ((session.user as any).role !== "ADMIN") throw Object.assign(new Error("Forbidden"), { code: 403 });
+  if ((session.user as { role?: string }).role !== "ADMIN") throw Object.assign(new Error("Forbidden"), { code: 403 });
   return session;
 }
 

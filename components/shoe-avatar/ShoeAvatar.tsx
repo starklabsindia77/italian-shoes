@@ -43,7 +43,7 @@ class WebGLErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('WebGL Error:', error, errorInfo);
+    console.error("WebGL Error:", error, errorInfo);
   }
 
   render() {
@@ -51,7 +51,9 @@ class WebGLErrorBoundary extends React.Component<
       return (
         <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
           <div className="text-center p-4">
-            <p className="text-gray-600 mb-2">3D Viewer temporarily unavailable</p>
+            <p className="text-gray-600 mb-2">
+              3D Viewer temporarily unavailable
+            </p>
             <button
               onClick={() => this.setState({ hasError: false })}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -87,11 +89,14 @@ const Avatar: React.FC<AvatarProps> = ({
   );
   const pendingLoadsRef = useRef(0);
 
-  const setLoading = useCallback((isLoading: boolean) => {
-    if (isMountedRef.current) {
-      setIsTextureLoading?.(isLoading);
-    }
-  }, [setIsTextureLoading]);
+  const setLoading = useCallback(
+    (isLoading: boolean) => {
+      if (isMountedRef.current) {
+        setIsTextureLoading?.(isLoading);
+      }
+    },
+    [setIsTextureLoading]
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -108,7 +113,7 @@ const Avatar: React.FC<AvatarProps> = ({
   // --- Center + scale ---
   useLayoutEffect(() => {
     if (!scene || !meshRef.current || !isMountedRef.current) return;
-    
+
     try {
       meshRef.current.scale.set(27, 28, 31);
 
@@ -116,20 +121,20 @@ const Avatar: React.FC<AvatarProps> = ({
       const center = box.getCenter(new THREE.Vector3());
       meshRef.current.position.set(-center.x, -center.y, -center.z);
     } catch (error) {
-      console.error('Error setting up scene positioning:', error);
+      console.error("Error setting up scene positioning:", error);
     }
   }, [scene]);
 
   // --- Ground on Y=0 ---
   useLayoutEffect(() => {
     if (!meshRef.current || !isMountedRef.current) return;
-    
+
     try {
       const scaledBox = new THREE.Box3().setFromObject(meshRef.current);
       const minY = scaledBox.min.y;
       meshRef.current.position.y -= minY;
     } catch (error) {
-      console.error('Error setting ground position:', error);
+      console.error("Error setting ground position:", error);
     }
   }, []);
 
@@ -164,20 +169,23 @@ const Avatar: React.FC<AvatarProps> = ({
               roughnessMap.flipY = false;
               mat.roughnessMap = roughnessMap;
             } catch (error) {
-              console.error(`Error loading roughness map for ${o.name}:`, error);
+              console.error(
+                `Error loading roughness map for ${o.name}:`,
+                error
+              );
             }
           }
         }
       });
     } catch (error) {
-      console.error('Error enhancing materials:', error);
+      console.error("Error enhancing materials:", error);
     }
   }, [scene, selectedTextureMap]);
 
   // --- Collect meshes for UI ---
   useEffect(() => {
     if (!scene || !isMountedRef.current) return;
-    
+
     try {
       const children: THREE.Mesh[] = [];
       scene.traverse((child: THREE.Object3D) => {
@@ -187,12 +195,18 @@ const Avatar: React.FC<AvatarProps> = ({
       });
 
       setObjectList((prev: THREE.Mesh[]) => {
-        const prevNames = prev?.map((o) => o.name).sort().join(",");
-        const newNames = children.map((o) => o.name).sort().join(",");
+        const prevNames = prev
+          ?.map((o) => o.name)
+          .sort()
+          .join(",");
+        const newNames = children
+          .map((o) => o.name)
+          .sort()
+          .join(",");
         return prevNames === newNames ? prev : children;
       });
     } catch (error) {
-      console.error('Error collecting meshes:', error);
+      console.error("Error collecting meshes:", error);
     }
   }, [scene, setObjectList]);
 
@@ -211,39 +225,47 @@ const Avatar: React.FC<AvatarProps> = ({
     }
   }, [setLoading]);
 
-  const getTexture = useCallback((url: string) => {
-    const cache = textureCacheRef.current;
-    const cached = cache.get(url);
-    if (cached) return cached;
+  const getTexture = useCallback(
+    (url: string) => {
+      const cache = textureCacheRef.current;
+      const cached = cache.get(url);
+      if (cached) return cached;
 
-    beginLoad();
-    try {
-      const tex = textureLoader.load(
-        url,
-        () => endLoad(),
-        undefined,
-        (error) => {
-          console.error(`Error loading texture ${url}:`, error);
-          endLoad();
-        }
-      );
-      tex.flipY = false;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      cache.set(url, tex);
-      return tex;
-    } catch (error) {
-      console.error(`Error creating texture for ${url}:`, error);
-      endLoad();
-      return null;
-    }
-  }, [beginLoad, endLoad]);
+      beginLoad();
+      try {
+        const tex = textureLoader.load(
+          url,
+          () => endLoad(),
+          undefined,
+          (error) => {
+            console.error(`Error loading texture ${url}:`, error);
+            endLoad();
+          }
+        );
+        tex.flipY = false;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        cache.set(url, tex);
+        return tex;
+      } catch (error) {
+        console.error(`Error creating texture for ${url}:`, error);
+        endLoad();
+        return null;
+      }
+    },
+    [beginLoad, endLoad]
+  );
 
   // --- Texture swapping ---
   useEffect(() => {
     const currentMapStr = JSON.stringify(selectedTextureMap || {});
-    if (!scene || currentMapStr === prevTextureMapRef.current || !isMountedRef.current) return;
+    if (
+      !scene ||
+      currentMapStr === prevTextureMapRef.current ||
+      !isMountedRef.current
+    )
+      return;
 
     try {
       scene.traverse((child: THREE.Object3D) => {
@@ -260,7 +282,8 @@ const Avatar: React.FC<AvatarProps> = ({
         child.material = prevMat.clone();
         const mat = child.material as THREE.MeshStandardMaterial;
 
-        const prevMap = prevMat.map ?? originalMapRef.current.get(prevMat) ?? null;
+        const prevMap =
+          prevMat.map ?? originalMapRef.current.get(prevMat) ?? null;
 
         if (!textureUrl) {
           const original = originalMapRef.current.get(prevMat) ?? null;
@@ -294,7 +317,7 @@ const Avatar: React.FC<AvatarProps> = ({
 
       prevTextureMapRef.current = currentMapStr;
     } catch (error) {
-      console.error('Error swapping textures:', error);
+      console.error("Error swapping textures:", error);
     }
   }, [selectedTextureMap, scene, getTexture]);
 
@@ -326,17 +349,20 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
   const [hasError, setHasError] = useState(false);
 
   // Memoize canvas size calculation
-  const memoizedCanvasSize = useMemo(() => ({
-    width: Math.min(canvasSize.width, 800),
-    height: Math.min(canvasSize.height * 0.8, 600),
-  }), [canvasSize.width, canvasSize.height]);
+  const memoizedCanvasSize = useMemo(
+    () => ({
+      width: Math.min(canvasSize.width, 800),
+      height: Math.min(canvasSize.height * 0.8, 600),
+    }),
+    [canvasSize.width, canvasSize.height]
+  );
 
   // Preload the model with error handling
   useEffect(() => {
     try {
       useGLTF.preload(avatarData);
     } catch (error) {
-      console.error('Error preloading model:', error);
+      console.error("Error preloading model:", error);
       setHasError(true);
     }
   }, [avatarData]);
@@ -358,12 +384,19 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
 
   if (hasError) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+      <div
+        className="flex flex-col items-center justify-center w-full bg-blue-100 rounded-lg"
+        style={{
+          width: `${memoizedCanvasSize.width}px`,
+          height: `${memoizedCanvasSize.height}px`,
+          maxWidth: "100%",
+        }}
+      >
         <div className="text-center p-4">
-          <p className="text-gray-600 mb-2">Failed to load 3D model</p>
+          <p className="text-gray-700 mb-2">Failed to load 3D model</p>
           <button
             onClick={() => setHasError(false)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
           >
             Retry
           </button>
@@ -383,12 +416,12 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
 
         <Canvas
           shadows
-          gl={{ 
-            antialias: true, 
-            outputColorSpace: THREE.SRGBColorSpace, 
+          gl={{
+            antialias: true,
+            outputColorSpace: THREE.SRGBColorSpace,
             powerPreference: "high-performance",
             preserveDrawingBuffer: false,
-            failIfMajorPerformanceCaveat: false
+            failIfMajorPerformanceCaveat: false,
           }}
           style={{
             width: `${memoizedCanvasSize.width}px`,
@@ -405,42 +438,46 @@ const ShoeAvatar: React.FC<AvatarProps> = ({
               const renderer = gl as THREE.WebGLRenderer;
               renderer.shadowMap.enabled = true;
               renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-              
+
               const canvas = renderer.getContext().canvas;
               canvas.addEventListener("webglcontextlost", (e) => {
                 e.preventDefault();
                 console.warn("WebGL context lost.");
                 setHasError(true);
               });
-              
+
               canvas.addEventListener("webglcontextrestored", () => {
                 console.log("WebGL context restored.");
                 setHasError(false);
               });
             } catch (error) {
-              console.error('Error setting up WebGL renderer:', error);
+              console.error("Error setting up WebGL renderer:", error);
               setHasError(true);
             }
           }}
         >
-        {/* Lighting setup */}
-        <ambientLight intensity={0.2} />
+          {/* Lighting setup */}
+          <ambientLight intensity={0.2} />
 
-        <directionalLight
-          position={[5, 8, 5]}
-          intensity={1.6}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-        />
-        <directionalLight position={[-5, 3, 5]} intensity={0.6} />
-        <directionalLight position={[0, 5, -6]} intensity={0.8} color={"#fff"} />
+          <directionalLight
+            position={[5, 8, 5]}
+            intensity={1.6}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+          />
+          <directionalLight position={[-5, 3, 5]} intensity={0.6} />
+          <directionalLight
+            position={[0, 5, -6]}
+            intensity={0.8}
+            color={"#fff"}
+          />
 
-        {/* Studio HDRI */}
-        <Environment
-          files="/hdri/studio_small_08_4k.hdr"
-          background={false}
-        />
+          {/* Studio HDRI */}
+          <Environment
+            files="/hdri/studio_small_08_4k.hdr"
+            background={false}
+          />
 
           <Suspense fallback={<DomSpinner />}>
             <Bounds margin={1.1}>

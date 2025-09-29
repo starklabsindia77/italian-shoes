@@ -1,123 +1,61 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
+import { PanelCreateSchema } from "@/lib/validators";
 
-const prisma = new PrismaClient();
-
-// Configure common error handling
-const handleError = (error: any, message: string, status = 500) => {
-  console.error(message, error);
-  return NextResponse.json({ error: message }, { status });
-};
-
-// GET: Fetch list of panels with pagination and sorting
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "asc";
+    const sp = getSearchParams(req);
+    const q = sp.get("q")?.trim();
+    const { skip, limit } = pagination(req);
 
-    const totalPanels = await prisma.panel.count();
-    const panels = await prisma.panel.findMany({
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-    });
+    const where = q
+      ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { panelId: { contains: q, mode: "insensitive" } }] }
+      : {};
 
-    return NextResponse.json({
-      data: panels,
-      meta: {
-        totalItems: totalPanels,
-        totalPages: Math.ceil(totalPanels / pageSize),
-        currentPage: page,
-        itemsPerPage: pageSize,
-      },
-      total: totalPanels,
-    });
-  } catch (error) {
-    return handleError(error, "Error fetching panels");
-  }
+    // Fix: Ensure 'mode' is of correct type (QueryMode) for Prisma
+    
+
+    const [items, total] = await Promise.all([
+      prisma.panel.findMany({
+        where: q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { panelId: { contains: q, mode: "insensitive" } }
+              ]
+            }
+          : {},
+        skip,
+        take: limit,
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
+      }),
+      prisma.panel.count({
+        where: q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { panelId: { contains: q, mode: "insensitive" } }
+              ]
+            }
+          : {}
+      })
+    ]);
+    return ok({ items, total, limit });
+  } catch (e) { return server(e); }
 }
 
-// POST: Add a new panel
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
+    await requireAdmin();
     const body = await req.json();
-    const { name, description } = body;
+    const parsed = PanelCreateSchema.safeParse(body);
+    if (!parsed.success) return bad(parsed.error.message);
 
-    if (!name) {
-      return NextResponse.json(
-        { error: "Panel name is required" },
-        { status: 400 }
-      );
-    }
+    // Ensure panelId is present in the data, as required by the Prisma schema
+    const { panelId, ...rest } = parsed.data as any;
+    if (!panelId) return bad("panelId is required.");
 
-    const newPanel = await prisma.panel.create({
-      data: {
-        name,
-        description,
-      },
-    });
-
-    return NextResponse.json(newPanel, { status: 201 });
-  } catch (error) {
-    return handleError(error, "Error creating panel");
-  }
-}
-
-// PUT: Update a panel by ID
-export async function PUT(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Panel ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const body = await req.json();
-    const { name, description } = body;
-
-    const updatedData: any = {};
-    if (name) updatedData.name = name;
-    if (description) updatedData.description = description;
-
-    const updatedPanel = await prisma.panel.update({
-      where: { id: Number(id) },
-      data: updatedData,
-    });
-
-    return NextResponse.json(updatedPanel, { status: 200 });
-  } catch (error) {
-    return handleError(error, "Error updating panel");
-  }
-}
-
-// DELETE: Delete a panel by ID
-export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Panel ID is required" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.panel.delete({
-      where: { id: Number(id) },
-    });
-
-    return NextResponse.json({ message: "Panel deleted successfully" });
-  } catch (error) {
-    return handleError(error, "Error deleting panel");
-  }
+    const created = await prisma.panel.create({ data: { panelId, ...rest } });
+    return ok(created, 201);
+  } catch (e) { return server(e); }
 }

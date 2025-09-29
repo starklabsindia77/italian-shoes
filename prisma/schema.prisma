@@ -1,368 +1,442 @@
-// schema.prisma
+// prisma/schema.prisma
+// PostgreSQL + Prisma 5/6
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql" // Use PostgreSQL for scalability
-  url      = env("DATABASE_URL")
+/**
+ * ============================
+ * Enums
+ * ============================
+ */
+enum Role {
+  USER
+  ADMIN
 }
 
-// ----------------- User Table -----------------
+enum Currency {
+  USD
+  EUR
+  GBP
+  INR
+}
+
+enum Region {
+  US
+  EU
+  UK
+}
+
+enum PanelGroup {
+  FRONT
+  SIDE
+  BACK
+  TOP
+  SOLE
+  LINING
+}
+
+enum OrderStatus {
+  DESIGN_RECEIVED
+  IN_PRODUCTION
+  QUALITY_CHECK
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  IN_PRODUCTION
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+}
+
+enum ShipmentStatus {
+  PENDING
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+enum ShoeWidth {
+  STANDARD
+  WIDE
+  EXTRA_WIDE
+  NARROW
+}
+
+enum OptionType {
+  SIZE
+  WIDTH
+  STYLE
+  SOLE
+  COLOR
+  MATERIAL
+  CUSTOM
+}
+
+/**
+ * ============================
+ * Auth (NextAuth-compatible)
+ * ============================
+ */
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  firstName String?
-  lastName  String?
-  isActive  Boolean  @default(true)
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+
+  role Role @default(USER)
+
+  accounts Account[]
+  sessions Session[]
+  orders   Order[]   @relation("UserOrders")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  userLogs      UserLog[]
-  notifications Notification[]
-  sessions      Session[]
-  roles         UserRole[] // Many-to-many relation with Role
 }
 
-// ----------------- Role Table -----------------
-model Role {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // Role name (e.g., "admin", "editor", "user")
-  description String? // Optional description
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       UserRole[] // Many-to-many relation with User
-  permissions RolePermission[] // Many-to-many relation with Permission
-}
-
-// ----------------- Permission Table -----------------
-model Permission {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // Permission name (e.g., "read", "write", "delete")
-  description String? // Optional description
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  roles RolePermission[] // Many-to-many relation with Role
-}
-
-// ----------------- User-Role Junction Table -----------------
-model UserRole {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  roleId     Int
-  assignedAt DateTime @default(now())
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, roleId]) // Prevent duplicate role assignments
+  @@unique([provider, providerAccountId])
 }
 
-// ----------------- Role-Permission Junction Table -----------------
-model RolePermission {
-  id           Int      @id @default(autoincrement())
-  roleId       Int
-  permissionId Int
-  assignedAt   DateTime @default(now())
-
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@unique([roleId, permissionId]) // Prevent duplicate permissions for a role
-}
-
-// ----------------- UserLog Table -----------------
-model UserLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  activity  String
-  ipAddress String
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ----------------- Notification Table -----------------
-model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  title     String
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-}
-
-// ----------------- Session Table -----------------
 model Session {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ----------------- Shopify Collection Table -----------------
-model ShopifyCollection {
-  id                Int       @id @default(autoincrement())
-  collectionId      String    @unique // Shopify Collection ID as String
-  handle            String
-  title             String
-  description       String? // body_html field
-  publishedAt       DateTime?
-  updatedAt         DateTime?
-  sortOrder         String
-  templateSuffix    String?
-  productsCount     Int       @default(0)
-  collectionType    String
-  publishedScope    String
-  adminGraphqlApiId String
-  imageUrl          String? // Image URL
-  imageAlt          String? // Alternate text for image
-  imageWidth        Int?
-  imageHeight       Int?
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
-  createdAt      DateTime @default(now())
-  updatedAtField DateTime @updatedAt
+  @@unique([identifier, token])
 }
 
-model ProductVariant {
-  id                Int       @id @default(autoincrement())
-  shopifyProductId  Int // Foreign key to ShopifyProduct
-  variantId         Int // Foreign key to shared Variant
-  title             String?
-  description       String? // body_html
-  vendor            String?
-  productType       String?
-  handle            String?    
-  status            String? // active, draft, archived
-  tags              String? // Comma-separated tags
-  templateSuffix    String?
-  publishedAt       DateTime?
-  price             Float? // Price specific to this product-variant
-  inventoryQuantity Int?       @default(0) // Quantity in stock
-  images            Image[] // Images specific to this product-variant
-  seoMetadata       SEO?      @relation(fields: [seoMetadataId], references: [id]) // Optional relation
-  seoMetadataId     Int? // Optional SEO metadata ID
+/**
+ * ============================
+ * Master Data
+ * ============================
+ */
+model Material {
+  id          String  @id @default(cuid()) @unique
+  name        String
+  description String?
+  category    String // leather | suede | fabric | etc.
+  isActive    Boolean @default(true)
+  extId       Int?
 
-  shopifyProduct ShopifyProduct @relation(fields: [shopifyProductId], references: [id], onDelete: Cascade)
-  variant        Variant        @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  colors MaterialColor[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Variant {
-  id       Int          @id @default(autoincrement())
-  name     String? // variant name (e.g., "Classic", "Modern")
-  size     SizeOption?  @relation(fields: [sizeOptionId], references: [id]) // Linked size
-  style    StyleOption? @relation(fields: [styleOptionId], references: [id]) // Linked style
-  sole     SoleOption?  @relation(fields: [soleOptionId], references: [id]) // Linked sole
-  material Material?    @relation(fields: [materialId], references: [id]) // Linked material
-  color    Color?       @relation(fields: [colorId], references: [id]) // Linked color
-  panel    Panel?       @relation(fields: [panelId], references: [id]) // Linked Panel
+model MaterialColor {
+  id         String  @id @default(cuid())
+  materialId String
+  name       String // e.g., "White Oxford"
+  colorCode  String?
+  family     String? // e.g., "White" / "Black"
+  hexCode    String?
+  imageUrl   String?
+  isActive   Boolean @default(true)
+  extId      Int?
 
-  sizeOptionId  Int?
-  styleOptionId Int?
-  soleOptionId  Int?
-  materialId    Int?
-  colorId       Int?
-  panelId       Int?
+  material    Material            @relation(fields: [materialId], references: [id], onDelete: Cascade)
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  ProductVariant ProductVariant[]
+
+  // back-rel for ProductPanel.defaultMaterialColor
+
+
+  @@index([materialId])
+  @@index([name])
 }
 
-model Image {
-  id               Int            @id @default(autoincrement())
-  url              String // Image URL
-  altText          String? // Alt text for accessibility/SEO
-  productVariantId Int
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+model Style {
+  id          String  @id @default(cuid()) @unique
+  name        String
+  description String?
+  category    String?
+  isActive    Boolean @default(true)
+  imageUrl    String?
+
+  glbUrl      String?
+  lighting    Json?
+  environment Json?
+  assets      Json?
+
+ 
+
+  // back-rel for OrderItem.style
+  orderItems OrderItem[] @relation("OrderItemStyle")
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model SEO {
-  id             Int              @id @default(autoincrement())
-  title          String? // SEO title
-  description    String? // Meta description
-  keywords       String? // Keywords
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  ProductVariant ProductVariant[]
+model Sole {
+  id          String  @id @default(cuid()) @unique  
+  name        String
+  description String?
+  category    String?
+  isActive    Boolean @default(true)
+  imageUrl    String?
+
+  glbUrl      String?
+  lighting    Json?
+  environment Json?
+  assets      Json?
+
+  
+
+  // back-rel for OrderItem.sole
+  orderItems OrderItem[] @relation("OrderItemSole")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model SizeOption {
-  id         Int     @id @default(autoincrement())
-  sizeSystem String // e.g., "US", "EU", "UK"
-  size       String // e.g., "8", "9"
-  width      String? // e.g., "Standard", "Wide"
+model Size {
+  id           String  @id @default(cuid()) @unique
+  name         String // display "8"
+  region       Region
+  value        Float
+  euEquivalent String?
+  ukEquivalent String?
+  isActive     Boolean @default(true)
+  sortOrder    Int     @default(0)
+  extId        Int?
 
-  createdAt DateTime  @default(now())
-  Variant   Variant[]
-}
 
-model StyleOption {
-  id       Int     @id @default(autoincrement())
-  name     String // Style name (e.g., "Classic", "Modern")
-  imageUrl String? // Optional style image
+  // back-rel for OrderItem.size
+  orderItems OrderItem[] @relation("OrderItemSize")
 
-  createdAt DateTime  @default(now())
-  Variant   Variant[]
-}
-
-model SoleOption {
-  id     Int     @id @default(autoincrement())
-  type   String // Sole type (e.g., "Rubber", "Leather")
-  height String? // Height (e.g., "0.79 in")
-  imageUrl String? // Optional style image
-
-  createdAt DateTime  @default(now())
-  Variant   Variant[]
-}
-
-model Material {
-  id          Int     @id @default(autoincrement())
-  name        String // Material name (e.g., "Premium leather", "Metallic finish")
-  description String? // Material description
-
-  createdAt DateTime  @default(now())
-  Variant   Variant[]
-}
-
-model Color {
-  id        Int       @id @default(autoincrement())
-  name      String // Color name (e.g., "Blue", "Red")
-  hexCode   String? // HEX code for the color (e.g., "#0000FF")
-  imageUrl  String? // Optional color image
-  createdAt DateTime  @default(now())
-  Variant   Variant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Panel {
-  id          Int       @id @default(autoincrement())
-  name        String // Panel name (e.g., "Upper", "Quarter")
-  description String? // Material description
-  createdAt   DateTime  @default(now())
-  Variant     Variant[]
+  id        String      @id @default(cuid()) 
+  panelId   String      @unique // e.g., "toe-cap"
+  name      String
+  group     PanelGroup?
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// ----------------- Shopify Collect Table -----------------
-model ShopifyCollect {
-  id           Int       @id @default(autoincrement())
-  collectId    String    @unique // Shopify Collect ID as String
-  collectionId String // Shopify Collection ID
-  productId    String // Shopify Product ID
-  position     Int
-  sortValue    String
-  createdAt    DateTime? // Nullable
-  updatedAt    DateTime? // Nullable
+/**
+ * ============================
+ * Product Catalog
+ * ============================
+ */
+model Product {
+  id String @id @default(cuid())
 
-  createdAtField DateTime @default(now())
-}
+  // slug/key from JSON
+  productId String @unique
 
-// ----------------- Shopify Product Table -----------------
-model ShopifyProduct {
-  id                Int       @id @default(autoincrement())
-  productId         String    @unique // Shopify Product ID
-  title             String
-  description       String? // body_html field
-  vendor            String
-  productType       String
-  handle            String    @unique
-  status            String // active, draft, archived
-  tags              String? // Comma-separated tags
-  templateSuffix    String?
-  publishedAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  adminGraphqlApiId String? // Shopify GraphQL API ID
-  publishedScope    String? // web, global, etc.
+  title       String
+  vendor      String?
+  description String? // HTML ok
 
-  // Default Image
-  imageId     String? // Reference to default image ID
-  imageUrl    String? // Default image URL
-  imageWidth  Int?
-  imageHeight Int?
+  // SEO (meta_*)
+  metaTitle            String?
+  metaDescription      String?
+  metaKeywords         String?
 
-  variants       ShopifyVariant[] // One-to-many relationship with variants
-  images         ShopifyImage[] // One-to-many relationship with images
-  ProductVariant ProductVariant[]
-}
+  // Pricing
+  price          Int
+  currency       Currency @default(INR)
+  compareAtPrice Int?
 
-// ----------------- Shopify Variant Table -----------------
-model ShopifyVariant {
-  id                  Int     @id @default(autoincrement())
-  variantId           String  @unique // Shopify Variant ID
-  productId           String // Shopify Product ID
-  title               String
-  price               Float
-  sku                 String
-  position            Int
-  inventoryQuantity   Int     @default(0)
-  inventoryPolicy     String // continue, deny
-  barcode             String?
-  weight              Float
-  weightUnit          String // lb, kg, etc.
-  inventoryItemId     String? // Shopify Inventory Item ID
-  fulfillmentService  String?
-  inventoryManagement String?
-  taxable             Boolean @default(true)
-  requiresShipping    Boolean @default(true)
+  // Assets (JSON: { glb: { url, lighting, environment } })
+  assets Json?
+
+  // Selected materials with colors (JSON array)
+  selectedMaterials Json?
+
+  // Selected styles (JSON array)
+  selectedStyles Json?
+
+  // Selected soles (JSON array)
+  selectedSoles Json?
+
+  isActive Boolean @default(true)
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  product ShopifyProduct @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  @@index([title])
+  @@index([productId])
 }
 
-// ----------------- Shopify Image Table -----------------
-model ShopifyImage {
-  id        Int     @id @default(autoincrement())
-  imageId   String  @unique // Shopify Image ID
-  productId String // Shopify Product ID
-  src       String // Image URL
-  alt       String?
-  position  Int?
-  width     Int?
-  height    Int?
+
+
+
+
+/**
+ * ============================
+ * Orders (MTO)
+ * ============================
+ */
+model Order {
+  id          String @id @default(cuid())
+  orderId     String @unique
+  orderNumber String
+
+  // customer snapshot + optional link
+  customerId        String?
+  customerEmail     String
+  customerFirstName String?
+  customerLastName  String?
+  customerPhone     String?
+  isGuest           Boolean @default(false)
+
+  customer User? @relation("UserOrders", fields: [customerId], references: [id], onDelete: SetNull)
+
+  // addresses
+  shippingAddress Json
+  billingAddress  Json
+
+  // pricing (cents)
+  subtotal       Int
+  tax            Int
+  shippingAmount Int
+  discount       Int
+  total          Int
+  currency       Currency @default(USD)
+
+  // statuses
+  status            OrderStatus       @default(DESIGN_RECEIVED)
+  paymentStatus     PaymentStatus     @default(PENDING)
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+
+  // manufacturing
+  estimatedProductionTime Int       @default(0)
+  actualProductionTime    Int?
+  productionStartDate     DateTime?
+  productionEndDate       DateTime?
+  qualityCheckDate        DateTime?
+  manufacturingNotes      String?
+
+  // timeline
+  designReceivedAt      DateTime  @default(now())
+  productionStartedAt   DateTime?
+  productionCompletedAt DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+
+  items    OrderItem[]
+  shipment OrderShipment?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  product ShopifyProduct @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  @@index([customerEmail])
+  @@index([status, createdAt])
 }
 
-model Shopify_Custom_Collection {
-  id                Int       @id @default(autoincrement())
-  collectionId      String    @unique // Shopify Collection ID
-  title             String
-  description       String? // body_html field
-  handle            String    @unique
-  sortOrder         String // manual, etc.
-  templateSuffix    String?
-  publishedAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  adminGraphqlApiId String? // Shopify GraphQL API ID
-  publishedScope    String? // web, global, etc.
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
 
-  // Default Image
-  imageId     String? // Reference to default image ID (if any)
-  imageAlt    String? // Alt text for the image
-  imageUrl    String? // Default image URL
-  imageWidth  Int?
-  imageHeight Int?
+  productId    String?
+  productTitle String
+  sku          String?
+  quantity     Int
 
-  // Relations (if applicable)
-  // You could add relationships to products, metafields, or other models if needed.
+  price      Int
+  totalPrice Int
+
+  // variant linkage
+  productVariantId String?
+ 
+
+  // optional high-level pointers
+  styleId String?
+  style   Style?  @relation("OrderItemStyle", fields: [styleId], references: [id], onDelete: SetNull)
+  soleId  String?
+  sole    Sole?   @relation("OrderItemSole", fields: [soleId], references: [id], onDelete: SetNull)
+  sizeId  String?
+  size    Size?   @relation("OrderItemSize", fields: [sizeId], references: [id], onDelete: SetNull)
+
+  // product link for reporting
+  
+
+  // panel-level customization snapshot
+  panelCustomization Json
+
+  // design snapshot
+  designGlbUrl    String?
+  designThumbnail String?
+  designConfig    Json?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([productVariantId])
+}
+
+model OrderShipment {
+  id                String         @id @default(cuid())
+  orderId           String         @unique
+  provider          String         @default("shiprocket")
+  providerOrderId   String?
+  awbNumber         String?
+  courierName       String?
+  courierId         String?
+  trackingUrl       String?
+  labelUrl          String?
+  status            ShipmentStatus @default(PENDING)
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

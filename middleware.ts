@@ -11,14 +11,24 @@ export async function middleware(req: NextRequest) {
   }
 
   // Protect dashboard pages
-  if (pathname.startsWith("/dashboard")) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      const url = new URL("/login", req.url);
-      url.searchParams.set("callbackUrl", req.nextUrl.pathname);
-      return NextResponse.redirect(url);
-    }
-  }
+  // if (pathname.startsWith("/dashboard")) {
+  //   // On HTTP, cookies are non-secure (no __Secure- prefix). Ensure we read the right cookie
+  //   const cookiePrefix = process.env.AUTH_COOKIE_PREFIX ?? "next-auth";
+  //   const isHttps = req.nextUrl.protocol === "https:" || (process.env.AUTH_COOKIE_SECURE ?? "false") === "true";
+  //   const cookieName = `${isHttps ? "__Secure-" : ""}${cookiePrefix}.session-token`;
+
+  //   const token = await getToken({
+  //     req,
+  //     secret: process.env.NEXTAUTH_SECRET,
+  //     secureCookie: isHttps,
+  //     cookieName,
+  //   });
+  //   // if (!token) {
+  //   //   const url = new URL("/login", req.url);
+  //   //   url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+  //   //   return NextResponse.redirect(url);
+  //   // }
+  // }
 
   return NextResponse.next();
 }

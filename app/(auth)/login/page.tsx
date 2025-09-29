@@ -26,7 +26,7 @@ export default function LoginPage() {
       email,
       password,
       redirect: false,
-      callbackUrl,
+      callbackUrl: "/dashboard",
     });
     toast.promise(p, { loading: "Signing in…", success: "Welcome back!", error: "Invalid credentials" });
     const res = await p;

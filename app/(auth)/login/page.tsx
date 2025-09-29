@@ -17,7 +17,8 @@ export default function LoginPage() {
   const search = useSearchParams();
   const router = useRouter();
 
-  const callbackUrl = search.get("callbackUrl") || "/dashboard";
+  const callbackUrl = search.get("callbackUrl");
+  console.log("callbackUrl", callbackUrl);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +36,13 @@ export default function LoginPage() {
     if (res?.ok) router.push("/dashboard");
     else toast.error(res?.error || "Sign-in failed");
   };
+
+  React.useEffect(() => {
+    if (callbackUrl) {
+      //router.push(callbackUrl);
+      console.log("callbackUrl 2", callbackUrl);
+    }
+  }, [callbackUrl, router]);
 
   return (
     <div className="min-h-screen grid place-items-center p-6">

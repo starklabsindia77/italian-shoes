@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Save } from "lucide-react";
 
 type Currency = "USD" | "EUR" | "GBP";
@@ -40,6 +41,11 @@ type Settings = {
   integrations: {
     shiprocketEmail?: string | null;
     shiprocketStatus?: "connected" | "disconnected";
+    shiprocketStoreId?: string | null;
+    shiprocketFasterCheckoutEnabled: boolean;
+    razorpayKeyId?: string | null;
+    razorpayKeySecret?: string | null;
+    razorpayMagicCheckoutEnabled: boolean;
   };
   // (optional) roles/permissions would usually be separate; stubbed in UI
 };
@@ -55,7 +61,15 @@ const FALLBACK: Settings = {
   },
   currency: { defaultCurrency: "USD", multiCurrency: true },
   taxes: { enabled: true, taxInclusive: false, defaultRate: 18 },
-  integrations: { shiprocketEmail: "", shiprocketStatus: "disconnected" },
+  integrations: {
+    shiprocketEmail: "",
+    shiprocketStatus: "disconnected",
+    shiprocketStoreId: "",
+    shiprocketFasterCheckoutEnabled: false,
+    razorpayKeyId: "",
+    razorpayKeySecret: "",
+    razorpayMagicCheckoutEnabled: false,
+  },
 };
 
 export default function SettingsPage() {
@@ -244,32 +258,107 @@ export default function SettingsPage() {
         </TabsContent>
 
         {/* INTEGRATIONS */}
-        <TabsContent value="integrations" className="mt-4">
+        <TabsContent value="integrations" className="mt-4 space-y-6">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>ShipRocket</CardTitle>
-              <CardDescription>Connect shipping and label generation.</CardDescription>
+              <CardTitle>ShipRocket Integration</CardTitle>
+              <CardDescription>Manage your shipping and Faster Checkout with ShipRocket.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
-              <Field label="Account Email">
+              <Field label="ShipRocket Email">
                 <Input
-                  type="email"
+                  placeholder="email@example.com"
                   value={data.integrations.shiprocketEmail ?? ""}
                   onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, shiprocketEmail: e.target.value } }))}
                 />
               </Field>
-              <div className="rounded-lg border p-3">
-                <div className="text-xs text-muted-foreground">Connection</div>
-                <div className="text-sm font-medium">
-                  {data.integrations.shiprocketStatus === "connected" ? "Connected" : "Disconnected"}
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="text-sm font-medium">Connection Status</div>
+                  <div className="text-xs text-muted-foreground">{data.integrations.shiprocketStatus === "connected" ? "Successfully connected" : "Not connected"}</div>
                 </div>
+                <Badge variant={data.integrations.shiprocketStatus === "connected" ? "default" : "secondary"}>
+                  {data.integrations.shiprocketStatus === "connected" ? "Connected" : "Disconnected"}
+                </Badge>
               </div>
+
+              <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h4 className="text-sm font-semibold mb-4">Faster Checkout (FastRR)</h4>
+              </div>
+
+              <Field label="Shiprocket Store ID">
+                <Input
+                  placeholder="e.g. 123456"
+                  value={data.integrations.shiprocketStoreId ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, shiprocketStoreId: e.target.value } }))}
+                />
+              </Field>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="text-sm font-medium">Enable Faster Checkout</div>
+                  <div className="text-xs text-muted-foreground">Enable FastRR one-click checkout.</div>
+                </div>
+                <Switch
+                  checked={data.integrations.shiprocketFasterCheckoutEnabled}
+                  onCheckedChange={(v) => setData((d) => ({
+                    ...d,
+                    integrations: {
+                      ...d.integrations,
+                      shiprocketFasterCheckoutEnabled: v,
+                      razorpayMagicCheckoutEnabled: v ? false : d.integrations.razorpayMagicCheckoutEnabled
+                    }
+                  }))}
+                />
+              </div>
+
               <div className="md:col-span-2">
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Integration</Button>
-                  {/* optional action endpoints you might add */}
-                  {/* <Button variant="outline" onClick={() => fetch("/api/integrations/shiprocket/connect", { method: "POST" })}>Connect</Button> */}
+                  <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save ShipRocket Settings</Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle>Razorpay Magic Checkout</CardTitle>
+              <CardDescription>Enable one-click checkout with Razorpay Magic.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <Field label="Razorpay Key ID">
+                <Input
+                  placeholder="rzp_test_..."
+                  value={data.integrations.razorpayKeyId ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, razorpayKeyId: e.target.value } }))}
+                />
+              </Field>
+              <Field label="Razorpay Key Secret">
+                <Input
+                  type="password"
+                  placeholder="Secret key"
+                  value={data.integrations.razorpayKeySecret ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, razorpayKeySecret: e.target.value } }))}
+                />
+              </Field>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="text-sm font-medium">Enable Magic Checkout</div>
+                  <div className="text-xs text-muted-foreground">Pre-fill addresses and checkout faster.</div>
+                </div>
+                <Switch
+                  checked={data.integrations.razorpayMagicCheckoutEnabled}
+                  onCheckedChange={(v) => setData((d) => ({
+                    ...d,
+                    integrations: {
+                      ...d.integrations,
+                      razorpayMagicCheckoutEnabled: v,
+                      shiprocketFasterCheckoutEnabled: v ? false : d.integrations.shiprocketFasterCheckoutEnabled
+                    }
+                  }))}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Razorpay Settings</Button>
               </div>
             </CardContent>
           </Card>

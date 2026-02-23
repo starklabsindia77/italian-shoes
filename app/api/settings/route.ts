@@ -23,8 +23,26 @@ const DEFAULTS = {
   },
   currency: { defaultCurrency: "USD" as "USD" | "EUR" | "GBP", multiCurrency: true },
   taxes: { enabled: true, taxInclusive: false, defaultRate: 18 },
-  integrations: { shiprocketEmail: "", shiprocketStatus: "disconnected" as "connected" | "disconnected" },
+  integrations: {
+    shiprocketEmail: "",
+    shiprocketStatus: "disconnected" as "connected" | "disconnected",
+    shiprocketStoreId: "",
+    shiprocketFasterCheckoutEnabled: false,
+    razorpayKeyId: "",
+    razorpayKeySecret: "",
+    razorpayMagicCheckoutEnabled: false,
+  },
 };
+
+export async function getSettings() {
+  const db = await readFromDb();
+  const merged = {
+    ...DEFAULTS,
+    ...(MEMORY_CACHE ?? {}),
+    ...(db ?? {}),
+  };
+  return merged;
+}
 
 let MEMORY_CACHE: any | null = null;
 const KEY = "app_settings";

@@ -10,8 +10,10 @@ export const ProductCreateSchema = z.object({
   metaDescription: z.string().optional(),
   metaKeywords: z.string().optional(),
   price: z.number().int().nonnegative(),
-  currency: z.enum(["USD","EUR","GBP","INR"]).default("INR"),
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("INR"),
   compareAtPrice: z.number().int().optional(),
+  glbUrl: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
   assets: z.any().optional(),
   isActive: z.boolean().optional(),
   selectedMaterials: z.array(z.object({
@@ -81,7 +83,7 @@ export const SoleCreateSchema = z.object({
 // Size
 export const SizeCreateSchema = z.object({
   name: z.string(),
-  region: z.enum(["US","EU","UK"]),
+  region: z.enum(["US", "EU", "UK"]),
   value: z.number(),
   euEquivalent: z.string().optional(),
   ukEquivalent: z.string().optional(),
@@ -93,7 +95,7 @@ export const SizeCreateSchema = z.object({
 export const PanelCreateSchema = z.object({
   panelId: z.string().optional(),
   name: z.string(),
-  group: z.enum(["FRONT","SIDE","BACK","TOP","SOLE","LINING"]).optional(),
+  group: z.enum(["FRONT", "SIDE", "BACK", "TOP", "SOLE", "LINING"]).optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional()
 });
@@ -102,7 +104,7 @@ export const PanelCreateSchema = z.object({
 export const ProductOptionCreateSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
-  type: z.enum(["SIZE","WIDTH","STYLE","SOLE","COLOR","MATERIAL","CUSTOM"]).default("CUSTOM"),
+  type: z.enum(["SIZE", "WIDTH", "STYLE", "SOLE", "COLOR", "MATERIAL", "CUSTOM"]).default("CUSTOM"),
   position: z.number().int().optional(),
   isActive: z.boolean().optional(),
   metadata: z.any().optional(),
@@ -117,13 +119,13 @@ export const ProductOptionValueCreateSchema = z.object({
   styleId: z.string().optional(),
   soleId: z.string().optional(),
   materialColorId: z.string().optional(),
-  width: z.enum(["STANDARD","WIDE","EXTRA_WIDE","NARROW"]).optional()
+  width: z.enum(["STANDARD", "WIDE", "EXTRA_WIDE", "NARROW"]).optional()
 });
 
 // Product Sizes
 export const ProductSizeLinkSchema = z.object({
   sizeId: z.string(),
-  width: z.enum(["STANDARD","WIDE","EXTRA_WIDE","NARROW"]).default("STANDARD")
+  width: z.enum(["STANDARD", "WIDE", "EXTRA_WIDE", "NARROW"]).default("STANDARD")
 });
 
 // Panels & allowed colors
@@ -161,7 +163,7 @@ export const OrderCreateSchema = z.object({
   shippingAmount: z.number().int(),
   discount: z.number().int(),
   total: z.number().int(),
-  currency: z.enum(["USD","EUR","GBP","INR"]).default("INR"),
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("INR"),
   items: z.array(z.object({
     productId: z.string().optional(),
     productTitle: z.string(),
@@ -180,7 +182,7 @@ export const OrderCreateSchema = z.object({
   })).min(1)
 });
 export const OrderUpdateStatusSchema = z.object({
-  status: z.enum(["DESIGN_RECEIVED","IN_PRODUCTION","QUALITY_CHECK","READY_TO_SHIP","SHIPPED","DELIVERED","CANCELLED"]).optional(),
-  paymentStatus: z.enum(["PENDING","PAID","FAILED","REFUNDED","PARTIALLY_REFUNDED"]).optional(),
-  fulfillmentStatus: z.enum(["UNFULFILLED","IN_PRODUCTION","READY_TO_SHIP","SHIPPED","DELIVERED"]).optional(),
+  status: z.enum(["DESIGN_RECEIVED", "IN_PRODUCTION", "QUALITY_CHECK", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "CANCELLED"]).optional(),
+  paymentStatus: z.enum(["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"]).optional(),
+  fulfillmentStatus: z.enum(["UNFULFILLED", "IN_PRODUCTION", "READY_TO_SHIP", "SHIPPED", "DELIVERED"]).optional(),
 });

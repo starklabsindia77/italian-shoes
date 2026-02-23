@@ -17,7 +17,7 @@ export default function LoginPage() {
   const search = useSearchParams();
   const router = useRouter();
 
-  const callbackUrl = search.get("callbackUrl");
+  const callbackUrl = search.get("callbackUrl") || "/dashboard";
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,16 +26,15 @@ export default function LoginPage() {
       email,
       password,
       redirect: false,
-      callbackUrl: "/dashboard",
+      callbackUrl,
     });
     toast.promise(p, { loading: "Signing in…", success: "Welcome back!", error: "Invalid credentials" });
     const res = await p;
     setLoading(false);
 
-    if (res?.ok) router.push(callbackUrl || "/dashboard");
+    if (res?.ok) router.push(callbackUrl);
     else toast.error(res?.error || "Sign-in failed");
   };
-
 
   return (
     <div className="min-h-screen grid place-items-center p-6">

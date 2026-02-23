@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,16 @@ import { ContactForm } from "@/components/checkout/ContactForm";
 import { Shield, Lock } from "lucide-react";
 
 const Checkout = () => {
+  const [settings, setSettings] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedShipping, setSelectedShipping] = useState<{ name: string; price: number }>({ name: "Standard", price: 15 });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => setSettings(data))
+      .catch((err) => console.error("Failed to load settings", err));
+  }, []);
 
   const orderItems = [
     {
@@ -49,6 +57,21 @@ const Checkout = () => {
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <Shield className="w-4 h-4" />
             <span>Secure SSL encrypted checkout</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-4 mt-6">
+            {settings?.integrations?.shiprocketFasterCheckoutEnabled && (
+              <div className="bg-[#f3f0ff] border border-[#d8ccff] p-4 rounded-xl max-w-md w-full shadow-sm">
+                <p className="text-[#4b1dbd] text-sm font-medium mb-3">Skip the forms and checkout in 1-click!</p>
+                <button
+                  id="fastrr-checkout-button"
+                  className="w-full bg-[#6328ff] text-white py-2.5 rounded-lg font-bold shadow-md hover:bg-[#5219e6] transition-colors flex items-center justify-center gap-2"
+                >
+                  🚀 Faster Checkout
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -88,9 +111,8 @@ const Checkout = () => {
               <CardContent className="space-y-3">
                 <div
                   onClick={() => handleShippingSelect({ name: "Standard", price: 15 })}
-                  className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${
-                    selectedShipping.name === "Standard" ? "border-blue-600 bg-blue-50" : "hover:border-gray-400"
-                  }`}
+                  className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${selectedShipping.name === "Standard" ? "border-blue-600 bg-blue-50" : "hover:border-gray-400"
+                    }`}
                 >
                   <div>
                     <div className="font-medium text-gray-900">Standard Shipping</div>
@@ -101,9 +123,8 @@ const Checkout = () => {
 
                 <div
                   onClick={() => handleShippingSelect({ name: "Express", price: 25 })}
-                  className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${
-                    selectedShipping.name === "Express" ? "border-blue-600 bg-blue-50" : "hover:border-gray-400"
-                  }`}
+                  className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition ${selectedShipping.name === "Express" ? "border-blue-600 bg-blue-50" : "hover:border-gray-400"
+                    }`}
                 >
                   <div>
                     <div className="font-medium text-gray-900">Express Shipping</div>

@@ -297,6 +297,8 @@ model Product {
   // Assets (JSON: { glb: { url, lighting, environment } })
   assets Json?
 
+  
+
   // Selected materials with colors (JSON array)
   selectedMaterials Json?
 

@@ -1,24 +1,39 @@
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, requireAdmin } from "@/lib/api-helpers";
 import { ProductCreateSchema } from "@/lib/validators";
+import { unstable_cache, revalidateTag } from "next/cache";
+
+// Cache product fetch for 1 hour (3600 seconds)
+const getCachedProduct = (id: string) =>
+  unstable_cache(
+    async () => {
+      return prisma.product.findUnique({
+        where: { id }
+      });
+    },
+    [`product-${id}`],
+    { revalidate: 3600, tags: [`product-${id}`] }
+  )();
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = await params;
 
-    // Find the product
-    const product = await prisma.product.findUnique({
-      where: { id }
-    });
+    // Find the product using cached function
+    const product = await getCachedProduct(id);
 
     if (!product) {
       return bad("Product not found", 404);
     }
 
-    return ok(product);
-  } catch (e) { 
+    const response = ok(product);
+    // Add cache headers for the browser/CDN (1 hour)
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=59');
+
+    return response;
+  } catch (e) {
     console.error("GET product error:", e);
-    return server(e); 
+    return server(e);
   }
 }
 
@@ -27,7 +42,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     await requireAdmin();
     const { id } = await params;
     const body = await req.json();
-    
+
     // Validate the request body
     const parsed = ProductCreateSchema.safeParse(body);
     if (!parsed.success) return bad(parsed.error.message);
@@ -55,7 +70,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           price: d.price,
           currency: d.currency,
           compareAtPrice: d.compareAtPrice ?? null,
-          assets: d.assets ?? {},
+          assets: d.assets ?? {
+            glb: { url: d.glbUrl, lighting: body.glbLighting, environment: body.glbEnvironment },
+            thumbnail: d.thumbnailUrl
+          },
           selectedMaterials: d.selectedMaterials ?? undefined,
           selectedStyles: d.selectedStyles ?? undefined,
           selectedSoles: d.selectedSoles ?? undefined,
@@ -65,6 +83,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
       return product;
     });
+
+    // Invalidate product cache
+    revalidateTag(`product-${id}`);
 
     return ok(updated);
   } catch (e: any) {
@@ -99,6 +120,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     await prisma.product.delete({
       where: { id }
     });
+
+    // Invalidate product cache
+    revalidateTag(`product-${id}`);
 
     return ok({ message: "Product deleted successfully" });
   } catch (e: any) {

@@ -13,46 +13,6 @@ import { prisma } from "@/lib/prisma";
  */
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET, // ensure set in .env
-  // In HTTP (non-SSL) environments, secure cookies must be disabled or the
-  // browser will drop them, causing sign-in loops and failed redirects.
-  cookies: {
-    sessionToken: {
-      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
-      },
-    },
-    csrfToken: {
-      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.csrf-token`,
-      options: {
-        httpOnly: false,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
-      },
-    },
-    callbackUrl: {
-      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.callback-url`,
-      options: {
-        httpOnly: false,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
-      },
-    },
-    state: {
-      name: `${process.env.AUTH_COOKIE_PREFIX ?? "next-auth"}.state`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production" && (process.env.AUTH_COOKIE_SECURE ?? "true") === "true",
-      },
-    },
-  },
   pages: {
     signIn: "/login",
   },
@@ -99,7 +59,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? null,
           email: user.email,
           role: user.role, // "ADMIN" | "USER"
-        } as { id: string; name: string | null; email: string; role: string };
+        } as any;
       },
     }),
   ],
@@ -108,7 +68,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         // first sign-in: copy role from `authorize`
-        token.role = (user as { role?: "USER" | "ADMIN" }).role ?? "USER";
+        token.role = (user as any).role ?? "USER";
       } else {
         // subsequent requests: ensure token.role stays in sync with DB (optional)
         if (token?.email) {
@@ -128,8 +88,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         // attach id + role to session.user
-        (session.user as { id?: string; role?: string }).id = token.sub as string;
-        (session.user as { id?: string; role?: string }).role = (token as { role?: string }).role ?? "USER";
+        (session.user as any).id = token.sub as string;
+        (session.user as any).role = (token as any).role ?? "USER";
       }
       return session;
     },
@@ -149,7 +109,7 @@ export async function requireUser() {
 /** Throw if not ADMIN; returns the session otherwise */
 export async function requireAdmin() {
   const session = await getServerAuthSession();
-  if (!session || (session.user as { role?: string }).role !== "ADMIN") {
+  if (!session || (session.user as any).role !== "ADMIN") {
     throw new Error("Unauthorized");
   }
   return session;

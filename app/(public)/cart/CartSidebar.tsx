@@ -1,7 +1,7 @@
 // components/CartUI.tsx
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -164,84 +164,84 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Cross-tab sync (BroadcastChannel preferred, storage fallback)
   useEffect(() => {
-  // If we are on the server, do nothing.
-  if (typeof window === "undefined") return;
+    // If we are on the server, do nothing.
+    if (typeof window === "undefined") return;
 
-  // keep a ref to the latest updatedAt so listener callbacks don't close over stale "state"
-  const latestUpdatedAtRef = { current: state.updatedAt };
+    // keep a ref to the latest updatedAt so listener callbacks don't close over stale "state"
+    const latestUpdatedAtRef = { current: state.updatedAt };
 
-  // update the ref whenever state.updatedAt changes
-  // (we do this synchronously here because this effect runs again when state.updatedAt changes)
-  latestUpdatedAtRef.current = state.updatedAt;
+    // update the ref whenever state.updatedAt changes
+    // (we do this synchronously here because this effect runs again when state.updatedAt changes)
+    latestUpdatedAtRef.current = state.updatedAt;
 
-  // Define the storage handler BEFORE attaching it
-  const onStorage = (e: StorageEvent) => {
-    try {
-      if (!e) return;
-      // Only react to our keys
-      if (e.key && (e.key === STORAGE_KEY || e.key === `${STORAGE_KEY}_sync`)) {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          // other tab cleared cart
-          dispatch({
-            type: "SET_CART",
-            payload: { items: [], version: state.version + 1, updatedAt: Date.now() },
-          });
-          return;
-        }
-        const parsed: CartState = JSON.parse(raw);
-        // Last-write-wins: accept remote if it's newer than the local last-updated
-        if (parsed.updatedAt > latestUpdatedAtRef.current) {
-          dispatch({ type: "SET_CART", payload: parsed });
-        }
-      }
-    } catch (err) {
-      console.warn("parse cart on storage event failed", err);
-    }
-  };
-
-  let bc: BroadcastChannel | null = null;
-  // Prefer BroadcastChannel (faster / direct) but only if actually available in this environment
-  if ("BroadcastChannel" in window) {
-    try {
-      bc = new BroadcastChannel(CHANNEL_NAME);
-      bc.onmessage = (m) => {
-        try {
-          if (m.data?.type === "CART_UPDATE") {
-            const remote: CartState = m.data.payload;
-            if (remote.updatedAt > latestUpdatedAtRef.current) {
-              dispatch({ type: "SET_CART", payload: remote });
-            }
+    // Define the storage handler BEFORE attaching it
+    const onStorage = (e: StorageEvent) => {
+      try {
+        if (!e) return;
+        // Only react to our keys
+        if (e.key && (e.key === STORAGE_KEY || e.key === `${STORAGE_KEY}_sync`)) {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            // other tab cleared cart
+            dispatch({
+              type: "SET_CART",
+              payload: { items: [], version: state.version + 1, updatedAt: Date.now() },
+            });
+            return;
           }
-        } catch (err) {
-          // ignore malformed messages
+          const parsed: CartState = JSON.parse(raw);
+          // Last-write-wins: accept remote if it's newer than the local last-updated
+          if (parsed.updatedAt > latestUpdatedAtRef.current) {
+            dispatch({ type: "SET_CART", payload: parsed });
+          }
         }
-      };
-    } catch (err) {
-      // If BroadcastChannel construction fails for any reason, fall back to storage event
-      window.addEventListener("storage", onStorage);
-    }
-  } else {
-    // fallback for older browsers / environments
-    window.addEventListener("storage", onStorage);
-  }
-
-  // Cleanup
-  return () => {
-    try {
-      if (bc) {
-        bc.close();
-        bc = null;
-      } else {
-        window.removeEventListener("storage", onStorage);
+      } catch (err) {
+        console.warn("parse cart on storage event failed", err);
       }
-    } catch (err) {
-      // swallow cleanup errors
+    };
+
+    let bc: BroadcastChannel | null = null;
+    // Prefer BroadcastChannel (faster / direct) but only if actually available in this environment
+    if ("BroadcastChannel" in window) {
+      try {
+        bc = new BroadcastChannel(CHANNEL_NAME);
+        bc.onmessage = (m) => {
+          try {
+            if (m.data?.type === "CART_UPDATE") {
+              const remote: CartState = m.data.payload;
+              if (remote.updatedAt > latestUpdatedAtRef.current) {
+                dispatch({ type: "SET_CART", payload: remote });
+              }
+            }
+          } catch (err) {
+            // ignore malformed messages
+          }
+        };
+      } catch (err) {
+        // If BroadcastChannel construction fails for any reason, fall back to storage event
+        window.addEventListener("storage", onStorage);
+      }
+    } else {
+      // fallback for older browsers / environments
+      (window as any).addEventListener("storage", onStorage);
     }
-  };
-// Intentionally keep deps conservative — effect should re-run when `state.updatedAt` or STORAGE_KEY/CHANNEL_NAME change.
-// We used a ref technique above; include STORAGE_KEY and CHANNEL_NAME if they're not module constants.
-}, [state.updatedAt]);
+
+    // Cleanup
+    return () => {
+      try {
+        if (bc) {
+          (bc as any).close();
+          bc = null;
+        } else {
+          (window as any).removeEventListener("storage", onStorage);
+        }
+      } catch (err) {
+        // swallow cleanup errors
+      }
+    };
+    // Intentionally keep deps conservative — effect should re-run when `state.updatedAt` or STORAGE_KEY/CHANNEL_NAME change.
+    // We used a ref technique above; include STORAGE_KEY and CHANNEL_NAME if they're not module constants.
+  }, [state.updatedAt]);
 
   // Public actions (optimistic; server sync separate)
   async function addItem(item: Omit<CartItem, "id">, qty = 1) {
@@ -329,6 +329,14 @@ function CartHeader() {
 
 function CartDrawer({ initialOpen = false }: { initialOpen?: boolean }) {
   const { cart, itemCount, subtotal, updateQuantity, removeItem, clearCart } = useCart();
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => setSettings(data))
+      .catch((err) => console.error("Failed to load settings", err));
+  }, []);
 
   useEffect(() => {
     const el = document.getElementById("isc-cart-drawer");
@@ -433,10 +441,32 @@ function CartDrawer({ initialOpen = false }: { initialOpen?: boolean }) {
               // Start checkout: call your checkout flow which will create order, call Shiprocket, etc.
               window.location.href = "/checkout";
             }}
-            className="w-full inline-flex justify-center items-center px-4 py-2 bg-black text-white rounded"
+            className="w-full inline-flex justify-center items-center px-4 py-2 bg-black text-white rounded mb-3"
           >
             Checkout
           </button>
+
+          {settings?.integrations?.shiprocketFasterCheckoutEnabled && (
+            <div className="mt-3">
+              <button
+                id="fastrr-checkout-button"
+                className="w-full flex justify-center items-center px-4 py-3 bg-[#6328ff] text-white rounded font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
+              >
+                🚀 Faster Checkout
+              </button>
+            </div>
+          )}
+
+          {settings?.integrations?.razorpayMagicCheckoutEnabled && (
+            <div className="mt-3">
+              <button
+                id="razorpay-magic-checkout-button"
+                className="w-full flex justify-center items-center px-4 py-3 bg-[#2463eb] text-white rounded font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
+              >
+                ✨ Magic Checkout
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="mt-3 text-center text-xs text-gray-500">Secure checkout • Easy returns</div>

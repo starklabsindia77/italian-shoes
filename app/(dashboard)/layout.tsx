@@ -34,6 +34,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils"; // if you don’t have this helper, see inline fallback below
@@ -76,12 +78,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Products", href: "/products", icon: Package },
   { label: "Orders", href: "/orders", icon: ShoppingCart },
   { label: "Materials", href: "/materials", icon: Palette },
-  { label: "Styles", href: "/styles", icon: Boxes },
-  { label: "Soles", href: "/soles", icon: Truck },
+  { label: "Styles", href: "/styles", icon: Sparkles },
+  { label: "Soles", href: "/soles", icon: Layers },
   { label: "Sizes", href: "/sizes", icon: Ruler },
   { label: "Panels", href: "/panels", icon: PanelsTopLeft },
   { label: "Customers", href: "/customers", icon: Users },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  // { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -175,23 +177,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
               </nav>
             </ScrollArea>
             <Separator />
-            <div className="p-3">
-              <div className={cn("rounded-xl border p-3", collapsed && "text-center")}>
-                {!collapsed ? (
-                  <>
-                    <div className="text-sm font-medium">Storage</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      12.8 GB of 50 GB used
-                    </div>
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full w-[26%] bg-primary" />
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-xs text-muted-foreground">26%</div>
-                )}
-              </div>
-            </div>
+
           </aside>
 
           {/* Mobile Sidebar (Sheet) */}
@@ -298,7 +284,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
                         <Link href="/profile">Profile</Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => signOut({ callbackUrl: "/login" })}
                         className="cursor-pointer"
                       >
@@ -359,7 +345,7 @@ function ThemeToggle() {
     // optional: persist to localStorage
     try {
       localStorage.setItem("theme", next ? "dark" : "light");
-    } catch {}
+    } catch { }
   };
 
   return (

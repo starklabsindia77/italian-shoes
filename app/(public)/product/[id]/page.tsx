@@ -1,19 +1,19 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
-  ZoomIn,
-  Save,
   Share2,
   Heart,
   MessageCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { WishlistButton } from "@/components/wishlist/WishlistButton";
+import { getAssetUrl } from "@/lib/utils";
+import { ShoeAvatarRef } from "@/components/shoe-avatar/ShoeAvatar";
 
 const ShoeAvatar = dynamic(
   () => import("@/components/shoe-avatar/ShoeAvatar"),
@@ -27,213 +27,84 @@ const ShoeAvatar = dynamic(
   }
 );
 
-/* ----------------------
-   Types & Product Config
-   ---------------------- */
-type Panel = {
-  id: string;
-  name: string;
-  meshName?: string;
-  thumbnail?: string;
-};
-type Material = {
-  id: string;
-  name: string;
-  thumbnail?: string;
-  description?: string;
-  textures?: string[];
-};
-type Style = { id: string; name: string; thumbnail?: string; glb?: string };
-type Sole = { id: string; name: string; thumbnail?: string; height?: string };
-type Color = { id: string; name: string; textureUrl: string };
 
-const product = {
-  id: "mens-luxury-dress-shoes",
-  title: "Men's Luxury Dress Shoes",
-  vendor: "GIROTTI",
-  price: 329,
-  compareAtPrice: 519,
-  currency: "USD",
-  images: [
-    "/placeholder/shoe-main.jpg",
-    "/placeholder/shoe-side.jpg",
-    "/placeholder/shoe-top.jpg",
-    "/placeholder/shoe-heel.jpg",
-  ],
-  colorVariants: [
-    { id: "brown", name: "Brown", image: "/placeholder/shoe-brown.jpg" },
-    { id: "black", name: "Black", image: "/placeholder/shoe-black.jpg" },
-    { id: "red", name: "Red", image: "/placeholder/shoe-red.jpg" },
-    { id: "blue", name: "Blue", image: "/placeholder/shoe-blue.jpg" },
-  ],
-  panels: [
-    {
-      id: "upper",
-      name: "Upper",
-      meshName: "Upper_Mesh",
-      thumbnail: "/placeholder/panel-upper.jpg",
-    },
-    {
-      id: "toe",
-      name: "Toe",
-      meshName: "Toe_Mesh",
-      thumbnail: "/placeholder/panel-toe.jpg",
-    },
-    {
-      id: "quarter",
-      name: "Quarter",
-      meshName: "Quarter_Mesh",
-      thumbnail: "/placeholder/panel-quarter.jpg",
-    },
-    {
-      id: "heel",
-      name: "Heel",
-      meshName: "Heel_Mesh",
-      thumbnail: "/placeholder/panel-heel.jpg",
-    },
-  ] as Panel[],
-  materialCategories: [
-    {
-      id: "metallic",
-      name: "Metallic finish premium leather",
-      colors: [
-        { id: "metallic-brown-1", name: "Metallic Brown 1", hex: "#8B4513" },
-        { id: "metallic-brown-2", name: "Metallic Brown 2", hex: "#A0522D" },
-        { id: "metallic-orange", name: "Metallic Orange", hex: "#FF8C00" },
-        { id: "metallic-red-1", name: "Metallic Red 1", hex: "#DC143C" },
-        { id: "metallic-red-2", name: "Metallic Red 2", hex: "#B22222" },
-        { id: "metallic-blue-1", name: "Metallic Blue 1", hex: "#4169E1" },
-        { id: "metallic-blue-2", name: "Metallic Blue 2", hex: "#0000CD" },
-        { id: "metallic-green-1", name: "Metallic Green 1", hex: "#228B22" },
-        { id: "metallic-green-2", name: "Metallic Green 2", hex: "#006400" },
-        { id: "metallic-purple", name: "Metallic Purple", hex: "#8A2BE2" },
-        { id: "metallic-gold", name: "Metallic Gold", hex: "#FFD700" },
-        { id: "metallic-silver", name: "Metallic Silver", hex: "#C0C0C0" },
-        { id: "metallic-copper", name: "Metallic Copper", hex: "#B87333" },
-        { id: "metallic-bronze", name: "Metallic Bronze", hex: "#CD7F32" },
-        { id: "metallic-rose", name: "Metallic Rose", hex: "#E91E63" },
-      ],
-    },
-    {
-      id: "premium",
-      name: "Premium leather",
-      colors: [
-        { id: "premium-brown-1", name: "Premium Brown 1", hex: "#8B4513" },
-        { id: "premium-brown-2", name: "Premium Brown 2", hex: "#A0522D" },
-        { id: "premium-brown-3", name: "Premium Brown 3", hex: "#D2691E" },
-        { id: "premium-red-1", name: "Premium Red 1", hex: "#DC143C" },
-        { id: "premium-red-2", name: "Premium Red 2", hex: "#B22222" },
-        { id: "premium-blue-1", name: "Premium Blue 1", hex: "#4169E1" },
-        { id: "premium-blue-2", name: "Premium Blue 2", hex: "#0000CD" },
-        { id: "premium-green-1", name: "Premium Green 1", hex: "#228B22" },
-        { id: "premium-green-2", name: "Premium Green 2", hex: "#006400" },
-        { id: "premium-black", name: "Premium Black", hex: "#000000" },
-        { id: "premium-tan", name: "Premium Tan", hex: "#D2B48C" },
-        { id: "premium-burgundy", name: "Premium Burgundy", hex: "#800020" },
-        { id: "premium-navy", name: "Premium Navy", hex: "#000080" },
-        { id: "premium-forest", name: "Premium Forest", hex: "#228B22" },
-        { id: "premium-cognac", name: "Premium Cognac", hex: "#9F4E3B" },
-      ],
-    },
-    {
-      id: "high-shine",
-      name: "High shine premium leather",
-      colors: [
-        { id: "shine-black", name: "High Shine Black", hex: "#000000" },
-        { id: "shine-navy", name: "High Shine Navy", hex: "#000080" },
-        { id: "shine-forest", name: "High Shine Forest", hex: "#228B22" },
-        { id: "shine-burgundy", name: "High Shine Burgundy", hex: "#800020" },
-        { id: "shine-brown", name: "High Shine Brown", hex: "#8B4513" },
-      ],
-    },
-  ],
-  styles: [
-    {
-      id: "derby",
-      name: "Derby",
-      thumbnail: "/placeholder/style-derby.jpg",
-      glb: "/glb/derby.glb",
-    },
-    {
-      id: "oxford",
-      name: "Oxford",
-      thumbnail: "/placeholder/style-oxford.jpg",
-      glb: "/glb/oxford.glb",
-    },
-  ] as Style[],
-  soles: [
-    {
-      id: "leather",
-      name: "Leather Sole",
-      thumbnail: "/placeholder/sole-leather.jpg",
-      height: "2.0 cm",
-    },
-    {
-      id: "rubber",
-      name: "Rubber Sole",
-      thumbnail: "/placeholder/sole-rubber.jpg",
-      height: "2.5 cm",
-    },
-  ] as Sole[],
-  sizes: [
-    { id: "40", label: "EU 40 / UK 6 / US 7" },
-    { id: "41", label: "EU 41 / UK 7 / US 8" },
-    { id: "42", label: "EU 42 / UK 8 / US 9" },
-    { id: "43", label: "EU 43 / UK 9 / US 10" },
-    { id: "44", label: "EU 44 / UK 9.5 / US 10.5" },
-    { id: "45", label: "EU 45 / UK 10 / US 11" },
-  ],
-  description:
-    "Luxury Edition of hand-dyed dress shoes. These shoes embody authority, elegance, and comfort, blending classic and modern looks. Start designing your handcrafted shoes now.",
-  shippingInfo:
-    "Manufacturing and delivery to India in 5-10 days only: $ 48.10",
-  orderStatus: "4 customers are processing an order",
-};
-
-/* ----------------------
-   Small Presentational Components
-   ---------------------- */
-
-const Badge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-    {children}
-  </span>
-);
-
-const Toolbar: React.FC<{ onClear: () => void }> = ({ onClear }) => (
-  <div className="absolute top-3 left-3 flex gap-2 z-20">
-    <button className="bg-white p-2 rounded-md shadow-sm text-sm">Undo</button>
-    <button className="bg-white p-2 rounded-md shadow-sm text-sm">Redo</button>
-    <button
-      onClick={onClear}
-      className="bg-white p-2 rounded-md shadow-sm text-sm text-red-600"
-    >
-      Clear
-    </button>
-  </div>
-);
-
-const ViewerPlaceholder: React.FC<{
-  src: string;
-  panels: Panel[];
-  activePanel?: string | null;
-  appliedTextures: Record<string, string | null>;
-}> = ({ src, panels, activePanel, appliedTextures }) => (
-  <div className="relative bg-white border rounded-lg overflow-hidden h-[540px] flex items-center justify-center">
-    <div className="absolute top-3 right-3 z-10 text-xs text-gray-500 bg-white p-2 rounded-md">
-      Double tap to zoom
-    </div>
-    <img
-      src={src}
-      alt="shoe"
-      className="object-contain max-h-full max-w-full"
-    />
-  </div>
-);
 
 /* ----------------------
    Main Builder Component
    ---------------------- */
+
+// Transform API data to match UI expectations
+const transformApiData = (
+  productApiData: any,
+  sizesApiData: any,
+  panelsApiData: any
+) => {
+  return {
+    ...(productApiData || {}),
+    // Add default images if not present
+    images: productApiData?.images || (
+      productApiData?.assets?.thumbnail
+        ? [productApiData.assets.thumbnail]
+        : [
+          "/placeholder/shoe-1.jpg",
+          "/placeholder/shoe-2.jpg",
+          "/placeholder/shoe-3.jpg",
+          "/placeholder/shoe-4.jpg",
+        ]
+    ),
+
+    // Transform panels from panels API data or use defaults
+    panels: panelsApiData?.items
+      ? panelsApiData.items.map((panel: any) => ({
+        id: panel.panelId,
+        name: panel.name,
+        meshName: `${panel.name.replace(/\s+/g, "_")}_Mesh`,
+        thumbnail: `/placeholder/panel-${panel.panelId}.jpg`,
+        group: panel.group,
+      }))
+      : [
+        {
+          id: "upper",
+          name: "Upper",
+          meshName: "Upper_Mesh",
+          thumbnail: "/placeholder/panel-upper.jpg",
+        },
+        {
+          id: "toe",
+          name: "Toe",
+          meshName: "Toe_Mesh",
+          thumbnail: "/placeholder/panel-toe.jpg",
+        },
+        {
+          id: "quarter",
+          name: "Quarter",
+          meshName: "Quarter_Mesh",
+          thumbnail: "/placeholder/panel-quarter.jpg",
+        },
+        {
+          id: "heel",
+          name: "Heel",
+          meshName: "Heel_Mesh",
+          thumbnail: "/placeholder/panel-heel.jpg",
+        },
+      ],
+
+    // Transform sizes from sizes API data or use defaults
+    sizes: sizesApiData?.items
+      ? sizesApiData.items.map((size: any) => ({
+        id: size.id,
+        label: `${size.name}${size.euEquivalent ? ` / ${size.euEquivalent}` : ""
+          }${size.ukEquivalent ? ` / ${size.ukEquivalent}` : ""}`,
+        value: size.value,
+        region: size.region,
+      }))
+      : [
+        { id: "42", label: "EU 42 / UK 8 / US 9" },
+        { id: "43", label: "EU 43 / UK 9 / US 10" },
+        { id: "44", label: "EU 44 / UK 9.5 / US 10.5" },
+      ],
+  };
+};
 
 export default function DerbyBuilderClean() {
   // State for API data
@@ -246,20 +117,13 @@ export default function DerbyBuilderClean() {
   const [error, setError] = useState<string | null>(null);
 
   // UI-only state
-  const [imageIndex, setImageIndex] = useState(0);
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "Materials" | "Style" | "Soles" | "Colors" | "Inscription"
   >("Materials");
-  const [selectedMaterial, setSelectedMaterial] = useState<string | null>(
-    "premium-black"
-  );
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedSole, setSelectedSole] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [appliedTextures, setAppliedTextures] = useState<
-    Record<string, string | null>
-  >({});
   const [inscription, setInscription] = useState({ toe: "", tongue: "" });
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
@@ -268,6 +132,7 @@ export default function DerbyBuilderClean() {
     useState<string>("all");
   const [selectedColorFilter, setSelectedColorFilter] = useState<string>("all");
   const [selectedPanelName, setSelectedPanelName] = useState<string>("");
+  const shoeAvatarRef = useRef<ShoeAvatarRef>(null);
 
   const handlePanelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPanelName(e.target.value);
@@ -318,14 +183,8 @@ export default function DerbyBuilderClean() {
         setPanelsData(panelsData);
         setMaterialsData(productData.selectedMaterials);
 
-        // Initialize UI state with first available options
         if (panelsData.items && panelsData.items.length > 0) {
           setActivePanel(panelsData.items[0].panelId);
-          setAppliedTextures(
-            Object.fromEntries(
-              panelsData.items.map((p: any) => [p.panelId, null])
-            )
-          );
         }
         if (productData.styles && productData.styles.length > 0) {
           setSelectedStyle(productData.styles[0].id);
@@ -344,79 +203,21 @@ export default function DerbyBuilderClean() {
     fetchAllData();
   }, [id]);
 
-  // Transform API data to match UI expectations
-  const transformApiData = (
-    productApiData: any,
-    sizesApiData: any,
-    panelsApiData: any
-  ) => {
-    if (!productApiData) return product;
-
-    return {
-      ...productApiData,
-      // Add default images if not present
-      images: productApiData.images || [
-        "/placeholder/shoe-1.jpg",
-        "/placeholder/shoe-2.jpg",
-        "/placeholder/shoe-3.jpg",
-      ],
-
-      // Transform panels from panels API data or use defaults
-      panels: panelsApiData?.items
-        ? panelsApiData.items.map((panel: any) => ({
-            id: panel.panelId,
-            name: panel.name,
-            meshName: `${panel.name.replace(/\s+/g, "_")}_Mesh`,
-            thumbnail: `/placeholder/panel-${panel.panelId}.jpg`,
-            group: panel.group,
-          }))
-        : [
-            {
-              id: "upper",
-              name: "Upper",
-              meshName: "Upper_Mesh",
-              thumbnail: "/placeholder/panel-upper.jpg",
-            },
-            {
-              id: "toe",
-              name: "Toe",
-              meshName: "Toe_Mesh",
-              thumbnail: "/placeholder/panel-toe.jpg",
-            },
-            {
-              id: "quarter",
-              name: "Quarter",
-              meshName: "Quarter_Mesh",
-              thumbnail: "/placeholder/panel-quarter.jpg",
-            },
-            {
-              id: "heel",
-              name: "Heel",
-              meshName: "Heel_Mesh",
-              thumbnail: "/placeholder/panel-heel.jpg",
-            },
-          ],
-
-      // Transform sizes from sizes API data or use defaults
-      sizes: sizesApiData?.items
-        ? sizesApiData.items.map((size: any) => ({
-            id: size.id,
-            label: `${size.name}${
-              size.euEquivalent ? ` / ${size.euEquivalent}` : ""
-            }${size.ukEquivalent ? ` / ${size.ukEquivalent}` : ""}`,
-            value: size.value,
-            region: size.region,
-          }))
-        : [
-            { id: "42", label: "EU 42 / UK 8 / US 9" },
-            { id: "43", label: "EU 43 / UK 9 / US 10" },
-            { id: "44", label: "EU 44 / UK 9.5 / US 10.5" },
-          ],
-    };
-  };
 
   // Use transformed API data or fallback to mock data
-  const cfg = transformApiData(productData, sizesData, panelsData);
+  const cfg = useMemo(
+    () => transformApiData(productData, sizesData, panelsData),
+    [productData, sizesData, panelsData]
+  );
+
+  const selectedSizeObject = useMemo(() => {
+    return cfg.sizes?.find((s: any) => s.id === selectedSize);
+  }, [cfg.sizes, selectedSize]);
+
+  const avatarData = useMemo(
+    () => getAssetUrl(cfg.assets?.glb?.url),
+    [cfg.assets?.glb?.url]
+  );
 
   // Helper functions to get filtered materials and colors
   const getAvailableMaterials = () => {
@@ -508,53 +309,28 @@ export default function DerbyBuilderClean() {
     }
   };
 
-  const getFilteredMaterialCategories = () => {
-    if (!materialsData?.materials) return cfg.materialCategories || [];
 
-    // Transform API materials data to match the expected format
-    return materialsData.materials.map((material: any) => ({
-      id: material.id,
-      name: material.name,
-      colors: material.colors.map((color: any) => ({
-        id: color.id,
-        name: color.name,
-        hex: color.hexCode || "#000000",
-      })),
-    }));
-  };
 
   const actionsCount = useMemo(
     () =>
       [
-        selectedMaterial,
         selectedStyle,
         selectedSole,
         selectedColor,
-        ...Object.values(appliedTextures),
       ].filter(Boolean).length,
     [
-      selectedMaterial,
       selectedStyle,
       selectedSole,
       selectedColor,
-      appliedTextures,
     ]
   );
 
-  const applyTexture = (textureUrl: string) => {
-    if (!activePanel) return;
-    setAppliedTextures((prev) => ({ ...prev, [activePanel]: textureUrl }));
-    setSelectedColor(textureUrl);
-  };
+
 
   const clearAll = () => {
     if (cfg.panels && cfg.panels.length > 0) {
       setActivePanel(cfg.panels[0].id);
-      setAppliedTextures(
-        Object.fromEntries(cfg.panels.map((p: any) => [p.id, null]))
-      );
     }
-    setSelectedMaterial(null);
     setSelectedSole(null);
     setSelectedColor(null);
     setInscription({ toe: "", tongue: "" });
@@ -567,6 +343,15 @@ export default function DerbyBuilderClean() {
   const [selectedTextureMap, setSelectedTextureMap] = useState<
     Record<string, any>
   >({});
+
+  const handleBeforeAdd = async () => {
+    if (shoeAvatarRef.current) {
+      const screenshot = shoeAvatarRef.current.captureScreenshot();
+      if (screenshot) {
+        return { image: screenshot };
+      }
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -604,18 +389,11 @@ export default function DerbyBuilderClean() {
       {/* Header with back button and title */}
       <header className="bg-white mt-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* <div className="flex items-center gap-4 mb-2">
-            <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Back to list</span>
-            </button>
-          </div> */}
           <div className="flex flex-col justify-center items-center text-sm text-gray-500 w-full">
             <h1 className="text-xl font-semibold text-gray-900">
-              {cfg.title || "Men's Luxury Dress Shoes"}
+              {cfg.title?.replace("`", "'") || "Men's Luxury Dress Shoes"}
             </h1>
-            Home &gt; Create Design &gt; Create Men's Shoes &gt; Men`s Derby
-            Shoes
+            Home {" > "} Create Design {" > "} Create Men's Shoes {" > "} Men's Derby Shoes
           </div>
           {/* Divider */}
           <div className="w-full border-t border-gray-300 mt-4"></div>
@@ -628,40 +406,11 @@ export default function DerbyBuilderClean() {
           <div className="space-y-6">
             {/* Main Product Image with Controls */}
             <div className="relative bg-gray-50 rounded-lg overflow-hidden">
-              {/* <div className="absolute top-4 left-4 z-10 flex gap-2">
-                <button className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition-colors">
-                  <ZoomIn className="w-4 h-4" />
-                </button>
-                <button className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition-colors">
-                  <Save className="w-4 h-4" />
-                </button>
-                <button className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition-colors">
-                  <Share2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              
-              <button className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition-colors z-10">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-sm hover:bg-white transition-colors z-10">
-                <ChevronRight className="w-5 h-5" />
-              </button>
-
-              
-              <div className="aspect-square flex items-center justify-center p-8">
-                <img
-                  src={cfg.images?.[imageIndex] || '/placeholder/shoe-main.jpg'}
-                  alt="Product"
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div> */}
-
               <ShoeAvatar
-                avatarData="/ShoeSoleFixed.glb"
+                ref={shoeAvatarRef}
+                avatarData={avatarData}
                 objectList={objectList}
                 setObjectList={setObjectList}
-                // selectedPanelName={selectedPanelName}
                 selectedTextureMap={selectedTextureMap}
               />
             </div>
@@ -682,7 +431,7 @@ export default function DerbyBuilderClean() {
           <div className="space-y-8">
             {/* Pricing Section */}
             <div className="mb-6">
-              <div className="flex justify-between items-center gap-4">
+              <div className="flex justify-between items-center gap-4 mb-6">
                 {/* Price Section */}
                 <div className="flex flex-col gap-0.5">
                   <div className="text-lg font-normal text-red-600 leading-none">
@@ -712,16 +461,20 @@ export default function DerbyBuilderClean() {
                   </select>
 
                   {/* Add to Cart Button */}
-                  <button className="bg-red-600 flex items-center justify-center h-10 text-white px-6 rounded-full font-normal hover:bg-red-700 transition-colors text-sm">
-                    ADD TO CART
-                  </button>
+                  <AddToCartButton
+                    productId={cfg.productId}
+                    title={cfg.title}
+                    price={cfg.price}
+                    originalPrice={cfg.compareAtPrice}
+                    image={getAssetUrl(cfg.assets?.thumbnail || "/ShoeSoleFixed.glb")}
+                    size={selectedSizeObject || selectedSize}
+                    variant="Default"
+                    buttonVariant="default"
+                    buttonSize="sm"
+                    config={selectedTextureMap}
+                    onBeforeAdd={handleBeforeAdd}
+                  />
                 </div>
-              </div>
-
-              {/* Shipping Info */}
-              <div className="text-xs text-gray-600 mt-2 text-right">
-                {cfg.shippingInfo ||
-                  "Manufacturing and delivery to India in 5-10 days only"}
               </div>
             </div>
 
@@ -733,11 +486,10 @@ export default function DerbyBuilderClean() {
                     <button
                       key={t}
                       onClick={() => setActiveTab(t)}
-                      className={`relative px-6 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center ${
-                        activeTab === t
-                          ? "bg-red-500 text-white shadow-sm h-10 -my-1"
-                          : "text-gray-700 hover:text-gray-900 h-8"
-                      }`}
+                      className={`relative px-6 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center ${activeTab === t
+                        ? "bg-red-500 text-white shadow-sm h-10 -my-1"
+                        : "text-gray-700 hover:text-gray-900 h-8"
+                        }`}
                     >
                       {t}
                     </button>
@@ -930,11 +682,10 @@ export default function DerbyBuilderClean() {
                                     color.imageUrl
                                   );
                                 }}
-                                className={`rounded-md transition flex-shrink-0 ${
-                                  selectedColor === color.id
-                                    ? "border-red-500 ring-1 ring-red-100"
-                                    : "border-gray-200"
-                                }`}
+                                className={`rounded-md transition flex-shrink-0 ${selectedColor === color.id
+                                  ? "border-red-500 ring-1 ring-red-100"
+                                  : "border-gray-200"
+                                  }`}
                               >
                                 <img
                                   src={color.imageUrl}
@@ -960,11 +711,10 @@ export default function DerbyBuilderClean() {
                       <button
                         key={s.id}
                         onClick={() => setSelectedStyle(s.id)}
-                        className={`p-2 rounded-md border transition ${
-                          selectedStyle === s.id
-                            ? "border-red-500 ring-1 ring-red-100"
-                            : "border-gray-200"
-                        }`}
+                        className={`p-2 rounded-md border transition ${selectedStyle === s.id
+                          ? "border-red-500 ring-1 ring-red-100"
+                          : "border-gray-200"
+                          }`}
                       >
                         <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-1 flex items-center justify-center">
                           <img
@@ -989,11 +739,10 @@ export default function DerbyBuilderClean() {
                       <button
                         key={so.id || so.name}
                         onClick={() => setSelectedSole(so.id || so.name)}
-                        className={`p-2 rounded-md border transition ${
-                          selectedSole === (so.id || so.name)
-                            ? "border-red-500 ring-1 ring-red-100"
-                            : "border-gray-200"
-                        }`}
+                        className={`p-2 rounded-md border transition ${selectedSole === (so.id || so.name)
+                          ? "border-red-500 ring-1 ring-red-100"
+                          : "border-gray-200"
+                          }`}
                       >
                         <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
                           <img
@@ -1009,32 +758,7 @@ export default function DerbyBuilderClean() {
                 </div>
               )}
 
-              {/* Colors */}
-              {activeTab === "Colors" && (
-                <div>
-                  <h3 className="font-medium mb-2">Colors & Textures</h3>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(cfg.colors || []).map((c: any) => (
-                      <button
-                        key={c.id}
-                        onClick={() => applyTexture(c.textureUrl)}
-                        title={c.name}
-                        className={`rounded-md overflow-hidden w-full h-20 border transition ${
-                          selectedColor === c.textureUrl
-                            ? "ring-2 ring-red-400 border-transparent"
-                            : "border-gray-200"
-                        }`}
-                      >
-                        <img
-                          src={c.textureUrl}
-                          alt={c.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               {/* Inscription */}
               {activeTab === "Inscription" && (

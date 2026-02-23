@@ -30,7 +30,7 @@ import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-  ArrowLeft, Check, CircleOff, Factory, Plus, RefreshCw, Save, Sparkles, Trash2,
+  ArrowLeft, Check, CircleOff, Factory, Loader2, Plus, RefreshCw, Save, Sparkles, Trash2, Upload,
 } from "lucide-react";
 import { MaterialSelection, Material, SelectedMaterial } from "@/components/material-selection";
 import { StyleSoleSelection, Style, Sole, SelectedItem } from "@/components/style-sole-selection";
@@ -42,10 +42,11 @@ type OptionType = "SIZE" | "WIDTH" | "STYLE" | "SOLE" | "COLOR" | "MATERIAL" | "
 
 /** -------- Local UI schema (compatible with server) -------- */
 const ProductEditSchema = ServerProductCreateSchema.extend({
-  // UI-only fields for easier entry of GLB
+  // UI-only fields for easier entry of GLB and Thumbnail
   glbUrl: z.string().optional(),
   glbLighting: z.string().optional(),
   glbEnvironment: z.string().optional(),
+  thumbnailUrl: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof ProductEditSchema>;
@@ -61,6 +62,8 @@ type Product = {
   compareAtPrice?: number | null;
   isActive: boolean;
   assets?: any;
+  glbUrl?: string | null;
+  thumbnailUrl?: string | null;
   metaTitle: string;
   metaDescription: string;
   metaKeywords: string;
@@ -130,6 +133,7 @@ export default function ProductEditPage() {
   const [saving, setSaving] = React.useState(false);
 
   const [product, setProduct] = React.useState<Product | null>(null);
+  const [uploading, setUploading] = React.useState(false);
 
   // Form setup
   const form = useForm<FormValues>({
@@ -149,6 +153,7 @@ export default function ProductEditPage() {
       glbUrl: "/ShoeSoleFixed.glb",
       glbLighting: "directional",
       glbEnvironment: "studio",
+      thumbnailUrl: "",
       selectedMaterials: [],
       selectedStyles: [],
       selectedSoles: [],
@@ -159,7 +164,7 @@ export default function ProductEditPage() {
   // Wizard state
   const steps = React.useMemo(
     () => [
-      { id: "basic", label: "Basic" as const, validate: ["title", "productId", "vendor", "description"] as const },
+      { id: "basic", label: "Basic" as const, validate: ["title", "productId", "vendor", "description", "thumbnailUrl"] as const },
       {
         id: "seo", label: "SEO" as const, validate: [
           "metaTitle",
@@ -211,17 +216,55 @@ export default function ProductEditPage() {
   const [solesLoading, setSolesLoading] = React.useState(true);
   const [selectedSoles, setSelectedSoles] = React.useState<SelectedItem[]>([]);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: string = "GLB") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/assets/upload?folder=${folder}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      if (folder === "GLB") {
+        form.setValue("glbUrl", data.url);
+      } else if (folder === "thumbnail") {
+        form.setValue("thumbnailUrl", data.url);
+      }
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Helper function for building assets
   const buildAssets = React.useCallback((values: Partial<FormValues>) => {
     const glbUrl = values.glbUrl?.trim();
-    if (!glbUrl) return {};
-    return {
-      glb: {
+    const assets: any = {};
+
+    if (glbUrl) {
+      assets.glb = {
         url: glbUrl,
         lighting: values.glbLighting || "directional",
         environment: values.glbEnvironment || "studio",
-      },
-    };
+      };
+    }
+
+    if (values.thumbnailUrl) {
+      assets.thumbnail = values.thumbnailUrl;
+    }
+
+    return assets;
   }, []);
 
   // Helper function to map product data to form format
@@ -286,9 +329,10 @@ export default function ProductEditPage() {
       currency: product.currency as Currency,
       compareAtPrice: product.compareAtPrice ?? undefined,
       isActive: product.isActive,
-      glbUrl: product.assets?.glb?.url || "/ShoeSoleFixed.glb",
+      glbUrl: product.glbUrl || product.assets?.glb?.url || "/ShoeSoleFixed.glb",
       glbLighting: product.assets?.glb?.lighting || "directional",
       glbEnvironment: product.assets?.glb?.environment || "studio",
+      thumbnailUrl: product.thumbnailUrl || product.assets?.thumbnail || "",
       selectedMaterials: mappedMaterials,
       selectedStyles: mappedStyles,
       selectedSoles: mappedSoles,
@@ -441,6 +485,8 @@ export default function ProductEditPage() {
       compareAtPrice: values.compareAtPrice ? Number(values.compareAtPrice) : undefined,
       isActive: values.isActive ?? true,
       assets: buildAssets(values),
+      glbUrl: values.glbUrl,
+      thumbnailUrl: values.thumbnailUrl,
       selectedMaterials: selectedMaterials,
       selectedStyles: selectedStyles,
       selectedSoles: selectedSoles,
@@ -509,19 +555,43 @@ export default function ProductEditPage() {
 
   return (
     <div className="space-y-6">
-      {/* header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
             <Link href="/products"><ArrowLeft className="mr-2 size-4" />Back</Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{product?.title || "Edit Product"}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {product?.title?.replace("`", "'") || "Edit Product"}
+            </h1>
             <p className="text-sm text-muted-foreground">ID: {product?.productId || id}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={refreshAll}><RefreshCw className="mr-2 size-4" />Refresh</Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log("🧪 Test button clicked - form values:", form.getValues());
+              console.log("🧪 Form errors:", form.formState.errors);
+              console.log("🧪 Form is valid:", form.formState.isValid);
+            }}
+          >
+            Test State
+          </Button>
+          <Button variant="outline" size="sm" onClick={refreshAll}>
+            <RefreshCw className="mr-2 size-4" />Refresh
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={saving}
+            onClick={form.handleSubmit(onSubmit)}
+          >
+            <Save className="mr-2 size-4" />
+            {saving ? "Updating..." : "Update Product"}
+          </Button>
         </div>
       </div>
 
@@ -540,7 +610,7 @@ export default function ProductEditPage() {
             </TabsList>
 
             <TabsContent value="basic">
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-6 lg:grid-cols-1">
                 <div className="lg:col-span-2 space-y-6">
                   <Card className="rounded-2xl">
                     <CardHeader className="pb-3">
@@ -586,6 +656,43 @@ export default function ProductEditPage() {
                       </div>
                       <FormField
                         control={form.control as any}
+                        name="thumbnailUrl"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Thumbnail Image</FormLabel>
+                            <div className="flex gap-2">
+                              <FormControl>
+                                <Input placeholder="/thumbnail/shoe.jpg" {...field} />
+                              </FormControl>
+                              <div className="relative">
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                                  onChange={(e) => handleFileUpload(e, "thumbnail")}
+                                  disabled={uploading}
+                                />
+                                <Button type="button" variant="outline" disabled={uploading}>
+                                  {uploading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Upload
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            <FormDescription>
+                              Main product image for the storefront.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control as any}
                         name="description"
                         render={({ field }) => (
                           <FormItem>
@@ -605,7 +712,7 @@ export default function ProductEditPage() {
             </TabsContent>
 
             <TabsContent value="seo">
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-6 lg:grid-cols-1">
                 <div className="lg:col-span-2 space-y-6">
                   <Card className="rounded-2xl">
                     <CardHeader className="pb-3">
@@ -653,13 +760,13 @@ export default function ProductEditPage() {
                 </div>
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <Button type="button" variant="outline" onClick={() => handleBack()}>Back</Button>
+                <Button type="button" variant="outline" onClick={() => handleBack()}>Previous</Button>
                 <Button type="button" onClick={() => handleNext()}>Next</Button>
               </div>
             </TabsContent>
 
             <TabsContent value="pricing">
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-6 lg:grid-cols-1">
                 <div className="space-y-6">
                   <Card className="rounded-2xl">
                     <CardHeader className="pb-3">
@@ -754,13 +861,13 @@ export default function ProductEditPage() {
                 </div>
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <Button type="button" variant="outline" onClick={() => handleBack()}>Back</Button>
+                <Button type="button" variant="outline" onClick={() => handleBack()}>Previous</Button>
                 <Button type="button" onClick={() => handleNext()}>Next</Button>
               </div>
             </TabsContent>
 
             <TabsContent value="assets">
-              <div className="grid gap-6 lg:grid-cols-3">
+              <div className="grid gap-6 lg:grid-cols-1">
                 <div className="space-y-6">
                   <Card className="rounded-2xl">
                     <CardHeader className="pb-3">
@@ -774,7 +881,33 @@ export default function ProductEditPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>GLB URL</FormLabel>
-                            <FormControl><Input placeholder="/ShoeSoleFixed.glb" {...field} /></FormControl>
+                            <div className="flex gap-2">
+                              <FormControl>
+                                <Input placeholder="/ShoeSoleFixed.glb" {...field} />
+                              </FormControl>
+                              <div className="relative">
+                                <Input
+                                  type="file"
+                                  accept=".glb"
+                                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                                  onChange={(e) => handleFileUpload(e, "GLB")}
+                                  disabled={uploading}
+                                />
+                                <Button type="button" variant="outline" disabled={uploading}>
+                                  {uploading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Upload className="h-4 w-4 mr-2" />
+                                      Upload
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                            <FormDescription>
+                              Paste a URL or upload a .glb file to S3.
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -814,14 +947,14 @@ export default function ProductEditPage() {
                         }}
                       >
                         <Sparkles className="mr-2 size-4" />
-                        Preview assets JSON (console)
+                        Validate Asset Data
                       </Button>
                     </CardContent>
                   </Card>
                 </div>
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <Button type="button" variant="outline" onClick={() => handleBack()}>Back</Button>
+                <Button type="button" variant="outline" onClick={() => handleBack()}>Previous</Button>
                 <Button type="button" onClick={() => handleNext()}>Next</Button>
               </div>
             </TabsContent>
@@ -836,7 +969,7 @@ export default function ProductEditPage() {
                 />
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <Button type="button" variant="outline" onClick={() => handleBack()}>Back</Button>
+                <Button type="button" variant="outline" onClick={() => handleBack()}>Previous</Button>
                 <Button type="button" onClick={handleNext}>Next</Button>
               </div>
             </TabsContent>
@@ -854,7 +987,7 @@ export default function ProductEditPage() {
                 />
               </div>
               <div className="mt-6 flex justify-between gap-2">
-                <Button type="button" variant="outline" onClick={() => handleBack()}>Back</Button>
+                <Button type="button" variant="outline" onClick={() => handleBack()}>Previous</Button>
                 <Button type="button" onClick={() => handleNext()}>Next</Button>
               </div>
             </TabsContent>
@@ -880,31 +1013,6 @@ export default function ProductEditPage() {
 
           </Tabs>
 
-          {/* Update Button - Now inside the form */}
-          <div className="flex justify-end gap-2 pt-6 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                console.log("🧪 Test button clicked - form values:", form.getValues());
-                console.log("🧪 Form errors:", form.formState.errors);
-                console.log("🧪 Form is valid:", form.formState.isValid);
-              }}
-            >
-              Test Form State
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving}
-              onClick={() => {
-                console.log("🔘 Update button clicked");
-                console.log("Form errors:", form.formState.errors);
-                console.log("Form is valid:", form.formState.isValid);
-              }}
-            >
-              <Save className="mr-2 size-4" />{saving ? "Updating..." : "Update Product"}
-            </Button>
-          </div>
         </form>
       </Form>
     </div>

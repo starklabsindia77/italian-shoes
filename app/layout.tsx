@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import Script from "next/script";
 
 
 
@@ -40,11 +41,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { getSettings } from "@/app/api/settings/route";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await getSettings();
+  const {
+    shiprocketFasterCheckoutEnabled,
+    shiprocketStoreId,
+    razorpayMagicCheckoutEnabled,
+    razorpayKeyId
+  } = settings.integrations;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -58,6 +69,42 @@ export default function RootLayout({
           </div>
           {/* 👇 Required for sonner toasts */}
           <Toaster richColors position="top-center" />
+
+          {/* Shiprocket Faster Checkout */}
+          {shiprocketFasterCheckoutEnabled && (
+            <>
+              <Script
+                src="https://fastrr-boost-ui.shiprocket.in/assets/js/sdk.js"
+                strategy="afterInteractive"
+              />
+              <Script
+                id="shiprocket-fastrr-config"
+                strategy="afterInteractive"
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    window.fastrr_config = {
+                      "app_id": "${shiprocketStoreId}",
+                      "is_sandbox": true
+                    };
+                  `,
+                }}
+              />
+            </>
+          )}
+
+          {/* Razorpay Magic Checkout */}
+          {razorpayMagicCheckoutEnabled && (
+            <Script
+              src="https://checkout.razorpay.com/v1/magic-checkout.js"
+              strategy="afterInteractive"
+              onLoad={() => {
+                // Initial configuration if needed
+                (window as any).RazorpayMagicCheckout?.init({
+                  key_id: razorpayKeyId,
+                });
+              }}
+            />
+          )}
         </SessionProvider>
       </body>
     </html>

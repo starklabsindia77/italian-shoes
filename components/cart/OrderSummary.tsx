@@ -20,25 +20,25 @@ export const OrderSummary = ({
       <div className="space-y-3">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium">${subtotal.toFixed(2)}</span>
+          <span className="font-medium">₹{subtotal.toFixed(2)}</span>
         </div>
         
         <div className="flex justify-between">
           <span className="text-muted-foreground">Shipping</span>
           <span className="font-medium">
-            {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+            {shipping === 0 ? 'Free' : `₹${shipping.toFixed(2)}`}
           </span>
         </div>
         
         <div className="flex justify-between">
           <span className="text-muted-foreground">Taxes</span>
-          <span className="font-medium">${taxes.toFixed(2)}</span>
+          <span className="font-medium">₹{taxes.toFixed(2)}</span>
         </div>
         
         {discount > 0 && (
           <div className="flex justify-between text-success">
             <span>Discount</span>
-            <span className="font-medium">-${discount.toFixed(2)}</span>
+            <span className="font-medium">-₹{discount.toFixed(2)}</span>
           </div>
         )}
         
@@ -46,7 +46,7 @@ export const OrderSummary = ({
         
         <div className="flex justify-between text-lg font-semibold">
           <span>Total</span>
-          <span>${total.toFixed(2)}</span>
+          <span>₹{total.toFixed(2)}</span>
         </div>
       </div>
     </div>

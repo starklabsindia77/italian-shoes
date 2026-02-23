@@ -1,9 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ShoppingBag, Heart, Eye, Filter, ArrowUpDown } from "lucide-react";
-import Link from "next/link";
-import { Product } from "../../../types/product";
+import { ArrowUpDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Product } from "@/types/product_type";
+import { getAssetUrl } from "@/lib/utils";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,47 +23,63 @@ const ProductsPage = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   const observer = useRef<IntersectionObserver | null>(null);
   const lastProductRef = useRef<HTMLDivElement | null>(null);
 
   // Function to fetch products from the API
   const fetchProducts = async (pageNum: number, reset: boolean = false) => {
     setLoading(true);
-    
+
     try {
-      // Build query parameters
-      const params = new URLSearchParams({
+      // Build query parameters for Prisma API
+      const prismaParams = new URLSearchParams({
         page: pageNum.toString(),
-        pageSize: pageSize.toString(),
+        limit: pageSize.toString(),
         sortBy,
         sortOrder,
       });
-      
+
       // Add filters if they exist
-      if (filters.vendor) params.append('vendor', filters.vendor);
-      if (filters.productType) params.append('productType', filters.productType);
-      if (filters.minPrice) params.append('minPrice', filters.minPrice);
-      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-      
-      const response = await fetch(`/api/product?${params}`);
+      if (filters.vendor) prismaParams.append('vendor', filters.vendor);
+      if (filters.productType) prismaParams.append('productType', filters.productType);
+      if (filters.minPrice) prismaParams.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) prismaParams.append('maxPrice', filters.maxPrice);
+
+      const response = await fetch(`/api/products?${prismaParams}`);
       const data = await response.json();
-      
-      if (data.success) {
+
+      if (data.items) {
+        // Map Prisma product objects to the frontend's expected Product type
+        const mappedItems = data.items.map((p: any) => ({
+          ...p,
+          price: p.price ? [p.price] : [], // Wrap single price in array to match expectations
+          // Try to find a usable image from assets or selected variants/styles/soles
+          imageUrl: p.thumbnailUrl ||
+            p.assets?.thumbnail ||
+            p.assets?.glb?.thumbnail ||
+            p.selectedStyles?.[0]?.imageUrl ||
+            p.selectedSoles?.[0]?.imageUrl ||
+            p.imageUrl ||
+            null,
+        }));
+
         if (reset) {
-          setProducts(data.data);
+          setProducts(mappedItems);
         } else {
-          setProducts(prev => [...prev, ...data.data]);
+          setProducts(prev => [...prev, ...mappedItems]);
         }
-        
-        setTotalItems(data.meta.totalItems);
-        setTotalPages(data.meta.totalPages);
-        setCurrentPage(data.meta.currentPage);
-        
+
+        const total = data.total || 0;
+        setTotalItems(total);
+        const totalPagesCount = Math.ceil(total / pageSize);
+        setTotalPages(totalPagesCount);
+        setCurrentPage(pageNum);
+
         // Check if there are more pages to load
-        setHasMore(data.meta.currentPage < data.meta.totalPages);
+        setHasMore(pageNum < totalPagesCount);
       } else {
-        console.error("Error fetching products:", data.message);
+        console.error("Error fetching products:", data.error || "Unknown error");
       }
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -115,10 +132,10 @@ const ProductsPage = () => {
   // Function to handle sort change
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    
+
     // Reset page to 1 when sorting changes
     setPage(1);
-    
+
     if (value === "price_asc") {
       setSortBy("price");
       setSortOrder("asc");
@@ -136,7 +153,7 @@ const ProductsPage = () => {
       setSortBy("createdAt");
       setSortOrder("desc");
     }
-    
+
     // Reset products when sort changes to avoid mixing differently sorted items
     setProducts([]);
   };
@@ -147,10 +164,10 @@ const ProductsPage = () => {
       ...prev,
       [name]: value,
     }));
-    
+
     // Reset page to 1 when filters change
     setPage(1);
-    
+
     // Reset products when filters change to avoid mixing filtered items
     setProducts([]);
   };
@@ -167,50 +184,40 @@ const ProductsPage = () => {
   // Product Card Component
   const ProductCard = ({ product, isLast }: { product: Product, isLast: boolean }) => {
     const [hovered, setHovered] = useState(false);
-    
+    const router = useRouter();
+
+    const handleNavigate = () => {
+      router.push(`/product/${product.id}`);
+    };
+
     return (
-      <div 
+      <div
         ref={isLast ? lastProductRef : null}
-        className="relative bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md"
+        className="relative bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md cursor-pointer"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         {/* Product Image */}
         <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <img 
-            src={product.imageUrl ||  "/api/placeholder/400/400"} 
+          <img
+            onClick={handleNavigate}
+            src={getAssetUrl(product.assets?.thumbnail) || "/api/placeholder/400/400"}
             alt={product.title}
             className="object-cover w-full h-full transition-transform duration-500 ease-in-out"
             style={{
               transform: hovered ? 'scale(1.05)' : 'scale(1)'
             }}
           />
-          
+
           {/* Quick action buttons (show on hover) */}
-          <div 
-            className={`absolute bottom-0 left-0 right-0 flex justify-center space-x-2 py-3 bg-white bg-opacity-90 transition-all duration-300 ${
-              hovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'
-            }`}
-          >
-            <button className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors">
-              <ShoppingBag size={18} />
-            </button>
-            <button className="p-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
-              <Heart size={18} />
-            </button>
-            <Link href={`/product-details/${product.productId}`}>
-              <button className="p-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors">
-                <Eye size={18} />
-              </button>
-            </Link>
-          </div>
+
         </div>
-        
+
         {/* Product Details */}
-        <div className="p-4">
+        <div className="p-4" onClick={handleNavigate}>
           <p className="text-xs text-gray-500 mb-1">{product.vendor}</p>
           <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">{product.title}</h3>
-          
+
           {/* Price */}
           <div className="flex justify-between items-center mt-2">
             <div>
@@ -229,7 +236,7 @@ const ProductsPage = () => {
                 <span className="font-bold text-red-500">Price not available</span>
               )}
             </div>
-            
+
             {/* Stock indicator */}
             {/* <div className="text-xs">
               {product.variants && product.variants.length > 0 ? (
@@ -330,25 +337,25 @@ const ProductsPage = () => {
             Reset Filters
           </button> */}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <ArrowUpDown size={18} className="text-gray-600" />
             <span className="font-medium">Sort:</span>
           </div>
-          <select 
+          <select
             className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700"
             onChange={handleSortChange}
             value={
-              sortBy === "price" && sortOrder === "asc" 
-                ? "price_asc" 
+              sortBy === "price" && sortOrder === "asc"
+                ? "price_asc"
                 : sortBy === "price" && sortOrder === "desc"
-                ? "price_desc"
-                : sortBy === "createdAt" && sortOrder === "desc"
-                ? "newest"
-                : sortBy === "title" && sortOrder === "asc"
-                ? "title_asc"
-                : "default"
+                  ? "price_desc"
+                  : sortBy === "createdAt" && sortOrder === "desc"
+                    ? "newest"
+                    : sortBy === "title" && sortOrder === "asc"
+                      ? "title_asc"
+                      : "default"
             }
           >
             <option value="default">Featured</option>
@@ -371,9 +378,9 @@ const ProductsPage = () => {
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((product, index) => (
-          <ProductCard 
-            key={product.id} 
-            product={product} 
+          <ProductCard
+            key={product.id}
+            product={product}
             isLast={index === products.length - 1}
           />
         ))}

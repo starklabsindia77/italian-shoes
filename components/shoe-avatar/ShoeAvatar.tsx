@@ -9,10 +9,12 @@ import React, {
   SetStateAction,
   useCallback,
   useMemo,
+  memo,
 } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Environment, Bounds } from "@react-three/drei";
+import { OrbitControls, useGLTF, Environment, Bounds, Html } from "@react-three/drei";
 import * as THREE from "three";
+import { getAssetUrl } from "@/lib/utils";
 
 interface TextureConfig {
   colorUrl?: string;
@@ -78,7 +80,7 @@ const Avatar: React.FC<AvatarProps> = ({
   selectedTextureMap = {},
   setIsTextureLoading,
 }) => {
-  const { scene } = useGLTF(avatarData);
+  const { scene, gl } = useGLTF(avatarData) as any;
   const meshRef = useRef<THREE.Group>(null);
   const prevTextureMapRef = useRef<string>("");
   const isMountedRef = useRef(true);
@@ -156,7 +158,7 @@ const Avatar: React.FC<AvatarProps> = ({
           const texConfig = selectedTextureMap?.[o.name];
           if (texConfig?.normalUrl) {
             try {
-              const normalMap = textureLoader.load(texConfig.normalUrl);
+              const normalMap = textureLoader.load(getAssetUrl(texConfig.normalUrl));
               normalMap.flipY = false;
               mat.normalMap = normalMap;
             } catch (error) {
@@ -165,7 +167,7 @@ const Avatar: React.FC<AvatarProps> = ({
           }
           if (texConfig?.roughnessUrl) {
             try {
-              const roughnessMap = textureLoader.load(texConfig.roughnessUrl);
+              const roughnessMap = textureLoader.load(getAssetUrl(texConfig.roughnessUrl));
               roughnessMap.flipY = false;
               mat.roughnessMap = roughnessMap;
             } catch (error) {
@@ -296,7 +298,7 @@ const Avatar: React.FC<AvatarProps> = ({
 
         if ((mat.map as any)?.userData?._appliedUrl === textureUrl) return;
 
-        const tex = getTexture(textureUrl);
+        const tex = getTexture(getAssetUrl(textureUrl));
         if (!tex) return;
 
         if (prevMap) {
@@ -328,182 +330,201 @@ const Avatar: React.FC<AvatarProps> = ({
       {/* Soft shadow ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[5, 5]} />
-        <shadowMaterial opacity={0.25} />
+        <shadowMaterial attach="material" opacity={0.25} />
       </mesh>
     </group>
   );
 };
 
-const ShoeAvatar: React.FC<AvatarProps> = ({
-  avatarData,
-  objectList,
-  setObjectList,
-  selectedTextureMap,
-}) => {
-  const [canvasSize, setCanvasSize] = useState({
-    width: typeof window !== "undefined" ? window.innerWidth : 800,
-    height: typeof window !== "undefined" ? window.innerHeight : 600,
-  });
-  const [hasMounted, setHasMounted] = useState(false);
-  const [isTextureLoading, setIsTextureLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
+export interface ShoeAvatarRef {
+  captureScreenshot: () => string | null;
+}
 
-  // Memoize canvas size calculation
-  const memoizedCanvasSize = useMemo(
-    () => ({
-      width: Math.min(canvasSize.width, 800),
-      height: Math.min(canvasSize.height * 0.8, 600),
-    }),
-    [canvasSize.width, canvasSize.height]
-  );
+const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
+  ({ avatarData, objectList, setObjectList, selectedTextureMap }, ref) => {
+    const [canvasSize, setCanvasSize] = useState({
+      width: typeof window !== "undefined" ? window.innerWidth : 800,
+      height: typeof window !== "undefined" ? window.innerHeight : 600,
+    });
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isTextureLoading, setIsTextureLoading] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    const glRef = useRef<THREE.WebGLRenderer | null>(null);
 
-  // Preload the model with error handling
-  useEffect(() => {
-    try {
-      useGLTF.preload(avatarData);
-    } catch (error) {
-      console.error("Error preloading model:", error);
-      setHasError(true);
-    }
-  }, [avatarData]);
+    // Expose screenshot capture method
+    React.useImperativeHandle(ref, () => ({
+      captureScreenshot: () => {
+        if (glRef.current) {
+          return glRef.current.domElement.toDataURL("image/png");
+        }
+        return null;
+      },
+    }));
 
-  useEffect(() => {
-    setHasMounted(true);
-    const resize = () => {
-      setCanvasSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
-
-  if (!hasMounted) return null;
-
-  if (hasError) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center w-full bg-blue-100 rounded-lg"
-        style={{
-          width: `${memoizedCanvasSize.width}px`,
-          height: `${memoizedCanvasSize.height}px`,
-          maxWidth: "100%",
-        }}
-      >
-        <div className="text-center p-4">
-          <p className="text-gray-700 mb-2">Failed to load 3D model</p>
-          <button
-            onClick={() => setHasError(false)}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+    // Memoize canvas size calculation
+    const memoizedCanvasSize = useMemo(
+      () => ({
+        width: Math.min(canvasSize.width, 800),
+        height: Math.min(canvasSize.height * 0.8, 600),
+      }),
+      [canvasSize.width, canvasSize.height]
     );
-  }
 
-  return (
-    <WebGLErrorBoundary>
-      <div className="relative">
-        {isTextureLoading && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-            <DomSpinner />
-          </div>
-        )}
+    // Preload the model with error handling
+    useEffect(() => {
+      if (!avatarData || avatarData === "") {
+        setHasError(false); // Reset error if URL is empty (waiting for data)
+        return;
+      }
 
-        <Canvas
-          shadows
-          gl={{
-            antialias: true,
-            outputColorSpace: THREE.SRGBColorSpace,
-            powerPreference: "high-performance",
-            preserveDrawingBuffer: false,
-            failIfMajorPerformanceCaveat: false,
-          }}
+      try {
+        // Clear previous error when starting a new load
+        setHasError(false);
+        useGLTF.preload(avatarData);
+      } catch (error) {
+        console.error("Error preloading model:", error);
+      }
+    }, [avatarData]);
+
+    useEffect(() => {
+      setHasMounted(true);
+      const resize = () => {
+        setCanvasSize({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+      };
+      resize();
+      window.addEventListener("resize", resize);
+      return () => window.removeEventListener("resize", resize);
+    }, []);
+
+    if (!hasMounted) return null;
+
+    if (hasError) {
+      return (
+        <div
+          className="flex flex-col items-center justify-center w-full bg-blue-100 rounded-lg"
           style={{
             width: `${memoizedCanvasSize.width}px`,
             height: `${memoizedCanvasSize.height}px`,
             maxWidth: "100%",
           }}
-          camera={{ position: [2.2, 0.25, 0], fov: 50 }}
-          onCreated={({ gl }: { gl: THREE.WebGLRenderer }) => {
-            try {
-              gl.outputColorSpace = THREE.SRGBColorSpace;
-              gl.toneMapping = THREE.ACESFilmicToneMapping;
-              gl.toneMappingExposure = 1.5;
-
-              const renderer = gl as THREE.WebGLRenderer;
-              renderer.shadowMap.enabled = true;
-              renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-              const canvas = renderer.getContext().canvas;
-              canvas.addEventListener("webglcontextlost", (e) => {
-                e.preventDefault();
-                console.warn("WebGL context lost.");
-                setHasError(true);
-              });
-
-              canvas.addEventListener("webglcontextrestored", () => {
-                console.log("WebGL context restored.");
-                setHasError(false);
-              });
-            } catch (error) {
-              console.error("Error setting up WebGL renderer:", error);
-              setHasError(true);
-            }
-          }}
         >
-          {/* Lighting setup */}
-          <ambientLight intensity={0.2} />
+          <div className="text-center p-4">
+            <p className="text-gray-700 mb-2">Failed to load 3D model</p>
+            <button
+              onClick={() => setHasError(false)}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-          <directionalLight
-            position={[5, 8, 5]}
-            intensity={1.6}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-          />
-          <directionalLight position={[-5, 3, 5]} intensity={0.6} />
-          <directionalLight
-            position={[0, 5, -6]}
-            intensity={0.8}
-            color={"#fff"}
-          />
+    return (
+      <WebGLErrorBoundary>
+        <div className="relative">
+          {isTextureLoading && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+              <DomSpinner />
+            </div>
+          )}
 
-          {/* Studio HDRI */}
-          <Environment
-            files="/hdri/studio_small_08_4k.hdr"
-            background={false}
-          />
+          <Canvas
+            shadows
+            gl={{
+              antialias: true,
+              outputColorSpace: THREE.SRGBColorSpace,
+              powerPreference: "high-performance",
+              preserveDrawingBuffer: true, // CRITICAL for screenshot
+              failIfMajorPerformanceCaveat: false,
+            }}
+            style={{
+              width: `${memoizedCanvasSize.width}px`,
+              height: `${memoizedCanvasSize.height}px`,
+              maxWidth: "100%",
+            }}
+            camera={{ position: [2.2, 0.25, 0], fov: 50 }}
+            onCreated={({ gl }: { gl: THREE.WebGLRenderer }) => {
+              glRef.current = gl; // Store renderer ref
+              try {
+                gl.outputColorSpace = THREE.SRGBColorSpace;
+                gl.toneMapping = THREE.ACESFilmicToneMapping;
+                gl.toneMappingExposure = 1.5;
 
-          <Suspense fallback={<DomSpinner />}>
-            <Bounds margin={1.1}>
-              <Avatar
-                avatarData={avatarData}
-                objectList={objectList}
-                setObjectList={setObjectList}
-                selectedTextureMap={selectedTextureMap}
-                setIsTextureLoading={setIsTextureLoading}
-              />
-            </Bounds>
-          </Suspense>
+                const renderer = gl as THREE.WebGLRenderer;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-          <OrbitControls
-            enablePan={false}
-            enableZoom
-            minDistance={1.2}
-            maxDistance={5}
-            target={[0, 0.5, 0]}
-            maxPolarAngle={Math.PI}
-          />
-        </Canvas>
-      </div>
-    </WebGLErrorBoundary>
-  );
-};
+                const canvas = renderer.getContext().canvas;
+                canvas.addEventListener("webglcontextlost", (e) => {
+                  e.preventDefault();
+                  console.warn("WebGL context lost.");
+                  setHasError(true);
+                });
+
+                canvas.addEventListener("webglcontextrestored", () => {
+                  console.log("WebGL context restored.");
+                  setHasError(false);
+                });
+              } catch (error) {
+                console.error("Error setting up WebGL renderer:", error);
+                setHasError(true);
+              }
+            }}
+          >
+            {/* Lighting setup */}
+            <ambientLight intensity={0.2} />
+
+            <directionalLight
+              position={[5, 8, 5]}
+              intensity={1.6}
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+            />
+            <directionalLight position={[-5, 3, 5]} intensity={0.6} />
+            <directionalLight
+              position={[0, 5, -6]}
+              intensity={0.8}
+              color={"#fff"}
+            />
+
+            {/* Studio HDRI */}
+            <Environment
+              files="/hdri/studio_small_08_4k.hdr"
+              background={false}
+            />
+
+            <Suspense fallback={<Html center><DomSpinner /></Html>}>
+              <Bounds margin={1.1}>
+                <Avatar
+                  avatarData={avatarData}
+                  objectList={objectList}
+                  setObjectList={setObjectList}
+                  selectedTextureMap={selectedTextureMap}
+                  setIsTextureLoading={setIsTextureLoading}
+                />
+              </Bounds>
+            </Suspense>
+
+            <OrbitControls
+              enablePan={false}
+              enableZoom
+              minDistance={1.2}
+              maxDistance={5}
+              target={[0, 0.5, 0]}
+              maxPolarAngle={Math.PI}
+            />
+          </Canvas>
+        </div>
+      </WebGLErrorBoundary>
+    );
+  }
+);
 
 // Loading spinner
 const DomSpinner: React.FC = () => {
@@ -515,4 +536,6 @@ const DomSpinner: React.FC = () => {
   );
 };
 
-export default ShoeAvatar;
+ShoeAvatar.displayName = "ShoeAvatar";
+
+export default memo(ShoeAvatar);

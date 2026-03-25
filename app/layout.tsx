@@ -3,9 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
 import Script from "next/script";
-
-
+import { getSettings } from "@/lib/settings";
+import { RazorpayMagicCheckout } from "@/components/integrations/RazorpayMagicCheckout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,8 +42,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { getSettings } from "@/app/api/settings/route";
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -62,11 +61,13 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SessionProvider>
-          <div className="min-h-screen flex flex-col">
-            <main className="flex-grow">
-              {children}
-            </main>
-          </div>
+          <CurrencyProvider>
+            <div className="min-h-screen flex flex-col">
+              <main className="flex-grow">
+                {children}
+              </main>
+            </div>
+          </CurrencyProvider>
           {/* 👇 Required for sonner toasts */}
           <Toaster richColors position="top-center" />
 
@@ -94,16 +95,7 @@ export default async function RootLayout({
 
           {/* Razorpay Magic Checkout */}
           {razorpayMagicCheckoutEnabled && (
-            <Script
-              src="https://checkout.razorpay.com/v1/magic-checkout.js"
-              strategy="afterInteractive"
-              onLoad={() => {
-                // Initial configuration if needed
-                (window as any).RazorpayMagicCheckout?.init({
-                  key_id: razorpayKeyId,
-                });
-              }}
-            />
+            <RazorpayMagicCheckout razorpayKeyId={razorpayKeyId} />
           )}
         </SessionProvider>
       </body>

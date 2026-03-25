@@ -2,12 +2,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Menu, X } from 'lucide-react';
+import { User, Menu, X, Globe } from 'lucide-react';
 import AnnouncementBar from './announcementBar';
 import { CartIcon } from '@/components/cart/CartIcon';
+import { useCurrency } from "@/components/providers/CurrencyProvider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const { currency, setCurrency, supportedCountries } = useCurrency();
 
   return (
     <>
@@ -32,7 +41,23 @@ const Header: React.FC = () => {
             </nav>
 
             {/* Desktop Icons */}
-            <div className="hidden lg:flex items-center space-x-2 ml-2">
+            <div className="hidden lg:flex items-center space-x-4 ml-2">
+              <div className="flex items-center gap-1 border-r pr-2">
+                <Globe className="w-4 h-4 text-gray-400" />
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="h-8 border-none bg-transparent focus:ring-0 w-[60px] px-0 shadow-none text-xs font-semibold">
+                    <SelectValue placeholder="INR" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supportedCountries.map((c) => (
+                      <SelectItem key={c.code} value={c.currency} className="text-xs">
+                        {c.currency}
+                      </SelectItem>
+                    ))}
+                    {supportedCountries.length === 0 && <SelectItem value="INR">INR</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
               <button className="text-gray-700 hover:text-gray-900">
                 <User className="w-5 h-5" />
               </button>

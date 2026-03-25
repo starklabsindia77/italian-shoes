@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function ContactForm() {
+export function ContactForm({ data, onChange }: { data: any, onChange: (key: string, value: any) => void }) {
   return (
     <div className="space-y-4">
       <div>
@@ -11,12 +11,18 @@ export function ContactForm() {
           id="email"
           type="email"
           placeholder="Enter your email"
+          value={data.email || ""}
+          onChange={(e) => onChange("email", e.target.value)}
           className="mt-1 bg-background border-border focus:ring-primary focus:border-primary"
         />
       </div>
       
       <div className="flex items-center space-x-2">
-        <Checkbox id="newsletter" />
+        <Checkbox 
+          id="newsletter" 
+          checked={data.newsletter} 
+          onCheckedChange={(checked) => onChange("newsletter", checked)}
+        />
         <Label
           htmlFor="newsletter"
           className="text-sm text-checkout-text-secondary cursor-pointer"

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, RefreshCcw, Save } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Save, Upload } from "lucide-react";
 
 type SoleModelConfig = {
   glbUrl?: string | null;
@@ -51,6 +51,46 @@ export default function SoleEditPage() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [sole, setSole] = React.useState<SoleItem | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: "GLB" | "thumbnail" = "GLB") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/assets/upload?folder=${folder}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      if (sole) {
+        if (folder === "GLB") {
+          setSole({
+            ...sole,
+            modelConfig: { ...(sole.modelConfig ?? {}), glbUrl: data.url },
+          });
+        } else {
+          setSole({
+            ...sole,
+            imageUrl: data.url,
+          });
+        }
+      }
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -58,6 +98,11 @@ export default function SoleEditPage() {
       const r = await fetch(`/api/soles/${id}`, { cache: "no-store" });
       if (!r.ok) throw new Error();
       const data = await r.json();
+      data.modelConfig = {
+        glbUrl: data.glbUrl,
+        lighting: data.lighting,
+        environment: data.environment,
+      }
       setSole(data ?? FALLBACK_SOLE);
     } catch {
       setSole(FALLBACK_SOLE);
@@ -99,7 +144,12 @@ export default function SoleEditPage() {
     const run = async () => {
       const res = await fetch(`/api/soles/${sole.id}`, {
         method: "PUT",
-        body: JSON.stringify({ modelConfig: sole.modelConfig ?? {} }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          glbUrl: sole.modelConfig?.glbUrl ?? null,
+          lighting: sole.modelConfig?.lighting ?? null,
+          environment: sole.modelConfig?.environment ?? null,
+        }),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
@@ -169,7 +219,28 @@ export default function SoleEditPage() {
                 </Field>
               </div>
               <Field label="Preview Image URL">
-                <Input value={sole.imageUrl ?? ""} onChange={(e) => setSole({ ...sole, imageUrl: e.target.value })} />
+                <div className="flex gap-2">
+                  <Input value={sole.imageUrl ?? ""} onChange={(e) => setSole({ ...sole, imageUrl: e.target.value })} />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                      onChange={(e) => handleFileUpload(e, "thumbnail")}
+                      disabled={uploading}
+                    />
+                    <Button type="button" variant="outline" disabled={uploading}>
+                      {uploading ? (
+                        <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <>
+                          <Upload className="mr-2 size-4" />
+                          Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </Field>
               <div className="md:col-span-2 flex items-center justify-between rounded-lg border p-3">
                 <div>
@@ -191,15 +262,36 @@ export default function SoleEditPage() {
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-3">
               <Field label="GLB URL">
-                <Input
-                  value={sole.modelConfig?.glbUrl ?? ""}
-                  onChange={(e) =>
-                    setSole({
-                      ...sole,
-                      modelConfig: { ...(sole.modelConfig ?? {}), glbUrl: e.target.value },
-                    })
-                  }
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={sole.modelConfig?.glbUrl ?? ""}
+                    onChange={(e) =>
+                      setSole({
+                        ...sole,
+                        modelConfig: { ...(sole.modelConfig ?? {}), glbUrl: e.target.value },
+                      })
+                    }
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".glb"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                    <Button type="button" variant="outline" disabled={uploading}>
+                      {uploading ? (
+                        <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      ) : (
+                        <>
+                          <Upload className="mr-2 size-4" />
+                          Upload
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </Field>
               <Field label="Lighting">
                 <Input

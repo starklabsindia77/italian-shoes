@@ -16,7 +16,18 @@ import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { RefreshCcw, Edit3, Search } from "lucide-react";
+import { RefreshCcw, Edit3, Search, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Currency = "USD" | "EUR" | "GBP";
 type OrderStatus =
@@ -46,7 +57,7 @@ type OrderLite = {
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   fulfillmentStatus: FulfillmentStatus;
-  total: number;           // cents
+  total: number;
   currency: Currency;
   createdAt?: string;
   updatedAt?: string;
@@ -100,6 +111,17 @@ export default function OrdersListPage() {
       setItems(FALLBACK);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Order deleted");
+      setItems((prev) => prev.filter((o) => o.id !== id));
+    } catch {
+      toast.error("Failed to delete order");
     }
   };
 
@@ -175,10 +197,42 @@ export default function OrdersListPage() {
                     <TableCell>{badgeForFulfillment(o.fulfillmentStatus)}</TableCell>
                     <TableCell>{formatCurrency(o.total, o.currency)}</TableCell>
                     <TableCell className="text-muted-foreground">{o.createdAt?.slice(0, 10) ?? "—"}</TableCell>
-                    <TableCell className="flex justify-end">
-                      <Button size="sm" asChild>
+                    <TableCell className="flex justify-end gap-2 text-right">
+                      <Button size="sm" variant="outline" asChild>
                         <Link href={`/orders/${o.id}`}><Edit3 className="mr-2 size-4" />Open</Link>
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-2xl border-none shadow-2xl bg-white">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-xl font-bold text-slate-900 leading-tight tracking-tight">
+                              Are you absolutely sure?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-600 text-[15px] leading-relaxed mt-2">
+                              This action cannot be undone. This will permanently delete order <span className="font-semibold text-slate-900">#{o.orderNumber}</span> and remove the data from our servers.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="mt-8 gap-3">
+                            <AlertDialogCancel className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 px-6 font-medium transition-all duration-200">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(o.id)}
+                              className="rounded-xl bg-rose-600 text-white hover:bg-rose-700 px-6 font-semibold shadow-lg shadow-rose-200 transition-all duration-200"
+                            >
+                              Delete Order
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -223,10 +277,14 @@ function badgeForFulfillment(s: FulfillmentStatus) {
   return <Badge variant={variant as any}>{label}</Badge>;
 }
 
-function formatCurrency(cents: number, currency: Currency = "USD") {
+function formatCurrency(amount: number, currency: Currency | string = "USD") {
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format((cents ?? 0) / 100);
+    return new Intl.NumberFormat("en-IN", { 
+      style: "currency", 
+      currency, 
+      maximumFractionDigits: 0 
+    }).format(amount ?? 0);
   } catch {
-    return `$${(cents ?? 0) / 100}`;
+    return `${currency} ${amount ?? 0}`;
   }
 }

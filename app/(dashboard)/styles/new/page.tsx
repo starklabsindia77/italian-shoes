@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload } from "lucide-react";
 
 type StyleCreate = {
   name: string;
@@ -38,6 +38,46 @@ export default function StyleCreatePage() {
     modelConfig: { glbUrl: "", lighting: "directional", environment: "studio" },
   });
   const [saving, setSaving] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: "GLB" | "thumbnail" = "GLB") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/assets/upload?folder=${folder}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setForm((f) => {
+        if (folder === "GLB") {
+          return {
+            ...f,
+            modelConfig: { ...(f.modelConfig ?? {}), glbUrl: data.url },
+          };
+        } else {
+          return {
+            ...f,
+            imageUrl: data.url,
+          };
+        }
+      });
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const onSubmit = async () => {
     if (!form.name.trim()) {
@@ -46,9 +86,24 @@ export default function StyleCreatePage() {
     }
     setSaving(true);
     const run = async (): Promise<{ id: string }> => {
+      // Flatten modelConfig for the API if necessary, or just send as is
+      // Based on prisma schema and validators, it seems the style model expects 
+      // direct glbUrl, lighting, environment fields or a modelConfig JSON.
+      // Let's check the StyleCreateSchema in lib/validators.ts again if needed.
+      // StyleCreateSchema has: glbUrl, lighting, environment, assets
+
+      const { modelConfig, ...rest } = form;
+      const payload = {
+        ...rest,
+        glbUrl: modelConfig?.glbUrl ?? null,
+        lighting: modelConfig?.lighting ?? null,
+        environment: modelConfig?.environment ?? null,
+      };
+
       const res = await fetch("/api/styles", {
         method: "POST",
-        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
@@ -56,7 +111,7 @@ export default function StyleCreatePage() {
     const p = run();
     toast.promise(p, { loading: "Creating…", success: "Style created", error: "Failed to create" });
     try {
-      const created = await p;
+      await p;
       router.push(`/styles`);
     } finally {
       setSaving(false);
@@ -96,7 +151,28 @@ export default function StyleCreatePage() {
             </Field>
           </div>
           <Field label="Preview Image URL">
-            <Input placeholder="/images/style/style-01.png" value={form.imageUrl ?? ""} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} />
+            <div className="flex gap-2">
+              <Input placeholder="/images/style/style-01.png" value={form.imageUrl ?? ""} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} />
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                  onChange={(e) => handleFileUpload(e, "thumbnail")}
+                  disabled={uploading}
+                />
+                <Button type="button" variant="outline" disabled={uploading}>
+                  {uploading ? (
+                    <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <>
+                      <Upload className="mr-2 size-4" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </Field>
           <div className="md:col-span-2 flex items-center justify-between rounded-lg border p-3">
             <div>
@@ -115,7 +191,36 @@ export default function StyleCreatePage() {
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-3">
           <Field label="GLB URL">
-            <Input value={form.modelConfig?.glbUrl ?? ""} onChange={(e) => setForm((f) => ({ ...f, modelConfig: { ...(f.modelConfig ?? {}), glbUrl: e.target.value } }))} />
+            <div className="flex gap-2">
+              <Input
+                value={form.modelConfig?.glbUrl ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    modelConfig: { ...(f.modelConfig ?? {}), glbUrl: e.target.value },
+                  }))
+                }
+              />
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".glb"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                />
+                <Button type="button" variant="outline" disabled={uploading}>
+                  {uploading ? (
+                    <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <>
+                      <Upload className="mr-2 size-4" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </Field>
           <Field label="Lighting">
             <Input value={form.modelConfig?.lighting ?? ""} onChange={(e) => setForm((f) => ({ ...f, modelConfig: { ...(f.modelConfig ?? {}), lighting: e.target.value } }))} />

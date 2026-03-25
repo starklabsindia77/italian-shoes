@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Plus, X, PaintBucket } from "lucide-react";
+import { getAssetUrl } from "@/lib/utils";
 
 export interface MaterialColor {
   id: string;
@@ -41,11 +42,11 @@ interface MaterialSelectionProps {
   loading?: boolean;
 }
 
-export function MaterialSelection({ 
-  materials, 
-  selectedMaterials, 
-  onSelectionChange, 
-  loading = false 
+export function MaterialSelection({
+  materials,
+  selectedMaterials,
+  onSelectionChange,
+  loading = false
 }: MaterialSelectionProps) {
   const [expandedMaterials, setExpandedMaterials] = React.useState<Set<string>>(new Set());
 
@@ -64,7 +65,7 @@ export function MaterialSelection({
 
   const toggleMaterialSelection = (material: Material) => {
     const isSelected = selectedMaterials.some(sm => sm.materialId === material.id);
-    
+
     if (isSelected) {
       // Remove material
       onSelectionChange(selectedMaterials.filter(sm => sm.materialId !== material.id));
@@ -92,7 +93,7 @@ export function MaterialSelection({
     const isColorSelected = material.selectedColorIds.includes(colorId);
     let newSelectedColorIds: string[];
     let newSelectedColor: MaterialColor[];
-    
+
     if (isColorSelected) {
       newSelectedColorIds = material.selectedColorIds.filter(id => id !== colorId);
       newSelectedColor = material.selectedColor?.filter(c => c.id !== colorId);
@@ -107,7 +108,7 @@ export function MaterialSelection({
       selectedColor: newSelectedColor,
       selectAllColors: newSelectedColorIds.length === materialData.colors.filter(c => c.isActive).length
     };
-    
+
 
     onSelectionChange(
       selectedMaterials.map(sm => sm.materialId === materialId ? updatedMaterial : sm)
@@ -121,7 +122,7 @@ export function MaterialSelection({
 
     const activeColors = materialData.colors.filter(c => c.isActive);
     const newSelectAllColors = !material.selectAllColors;
-    
+
     const updatedMaterial: SelectedMaterial = {
       ...material,
       selectedColorIds: newSelectAllColors ? activeColors.map(c => c.id) : [],
@@ -129,7 +130,7 @@ export function MaterialSelection({
       selectAllColors: newSelectAllColors
     };
 
- 
+
 
     onSelectionChange(
       selectedMaterials.map(sm => sm.materialId === materialId ? updatedMaterial : sm)
@@ -167,7 +168,7 @@ export function MaterialSelection({
       <CardHeader className="pb-3">
         <CardTitle>Material Selection</CardTitle>
         <CardDescription>
-          Select materials and their available colors for this product. 
+          Select materials and their available colors for this product.
           You can choose all colors or specific ones for each material.
         </CardDescription>
       </CardHeader>
@@ -237,23 +238,23 @@ export function MaterialSelection({
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {activeColors.map((color) => {
                           const isColorSelected = selectedMaterial?.selectedColorIds.includes(color.id) || false;
-                          
+
                           return (
                             <div
                               key={color.id}
-                              className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                                isColorSelected ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'
-                              }`}
+                              className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${isColorSelected ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'
+                                }`}
                             >
                               <Checkbox
                                 checked={isColorSelected}
                                 onCheckedChange={() => toggleColorSelection(material.id, color.id)}
                               />
                               <div className="flex-1 flex items-center space-x-2">
-                                {color.hexCode && (
-                                  <div
-                                    className="w-4 h-4 rounded border"
-                                    style={{ backgroundColor: color.hexCode }}
+                                {color.imageUrl && (
+                                  <img
+                                    src={getAssetUrl(color.imageUrl)}
+                                    alt={color.name}
+                                    className="w-4 h-4 rounded border object-cover"
                                   />
                                 )}
                                 <span className="text-sm">{color.name}</span>

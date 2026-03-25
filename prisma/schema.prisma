@@ -1,20 +1,300 @@
-// prisma/schema.prisma
-// PostgreSQL + Prisma 5/6
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+/// *
+/// * ============================
+/// * Auth (NextAuth-compatible)
+/// * ============================
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String?     @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role        @default(USER)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  customerId    String?     @unique
+  firstName     String?
+  lastName      String?
+  phone         String?
+  isActive      Boolean     @default(true)
+  customRoleId  String?
+  accounts      Account[]
+  orders        Order[]     @relation("UserOrders")
+  sessions      Session[]
+  customRole    CustomRole? @relation(fields: [customRoleId], references: [id])
 }
 
-/**
- * ============================
- * Enums
- * ============================
- */
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model CustomRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+/// *
+/// * ============================
+/// * Master Data
+/// * ============================
+model Material {
+  id          String          @id @unique @default(cuid())
+  name        String
+  description String?
+  category    String
+  isActive    Boolean         @default(true)
+  extId       Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  colors      MaterialColor[]
+}
+
+model MaterialColor {
+  id         String   @id @default(cuid())
+  materialId String
+  name       String
+  colorCode  String?
+  family     String?
+  hexCode    String?
+  imageUrl   String?
+  isActive   Boolean  @default(true)
+  extId      Int?
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@index([name])
+}
+
+model Style {
+  id          String      @id @unique @default(cuid())
+  name        String
+  description String?
+  category    String?
+  isActive    Boolean     @default(true)
+  imageUrl    String?
+  glbUrl      String?
+  lighting    Json?
+  environment Json?
+  assets      Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[] @relation("OrderItemStyle")
+}
+
+model Sole {
+  id          String      @id @unique @default(cuid())
+  name        String
+  description String?
+  category    String?
+  isActive    Boolean     @default(true)
+  imageUrl    String?
+  glbUrl      String?
+  lighting    Json?
+  environment Json?
+  assets      Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[] @relation("OrderItemSole")
+}
+
+model Size {
+  id           String      @id @unique @default(cuid())
+  name         String
+  region       Region
+  value        Float
+  euEquivalent String?
+  ukEquivalent String?
+  isActive     Boolean     @default(true)
+  sortOrder    Int         @default(0)
+  extId        Int?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  orderItems   OrderItem[] @relation("OrderItemSize")
+}
+
+model Panel {
+  id        String      @id @default(cuid())
+  panelId   String      @unique
+  name      String
+  group     PanelGroup?
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+/// *
+/// * ============================
+/// * Product Catalog
+/// * ============================
+model Product {
+  id                String   @id @default(cuid())
+  productId         String   @unique
+  title             String
+  vendor            String?
+  description       String?
+  metaTitle         String?
+  metaDescription   String?
+  metaKeywords      String?
+  price             Int
+  currency          Currency @default(INR)
+  compareAtPrice    Int?
+  assets            Json?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  selectedMaterials Json?
+  selectedSoles     Json?
+  selectedStyles    Json?
+
+  @@index([title])
+  @@index([productId])
+}
+
+/// *
+/// * ============================
+/// * Orders (MTO)
+/// * ============================
+model Order {
+  id                      String            @id @default(cuid())
+  orderId                 String            @unique
+  orderNumber             String
+  customerId              String?
+  customerEmail           String
+  customerFirstName       String?
+  customerLastName        String?
+  customerPhone           String?
+  isGuest                 Boolean           @default(false)
+  shippingAddress         Json
+  billingAddress          Json
+  subtotal                Int
+  tax                     Int
+  shippingAmount          Int
+  discount                Int
+  total                   Int
+  currency                Currency          @default(USD)
+  status                  OrderStatus       @default(DESIGN_RECEIVED)
+  paymentStatus           PaymentStatus     @default(PENDING)
+  fulfillmentStatus       FulfillmentStatus @default(UNFULFILLED)
+  estimatedProductionTime Int               @default(0)
+  actualProductionTime    Int?
+  productionStartDate     DateTime?
+  productionEndDate       DateTime?
+  qualityCheckDate        DateTime?
+  manufacturingNotes      String?
+  designReceivedAt        DateTime          @default(now())
+  productionStartedAt     DateTime?
+  productionCompletedAt   DateTime?
+  shippedAt               DateTime?
+  deliveredAt             DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  shippingMethodId        String?
+  shippingMethodName      String?
+  customer                User?             @relation("UserOrders", fields: [customerId], references: [id])
+  items                   OrderItem[]
+  shipment                OrderShipment?
+
+  @@index([customerEmail])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id                 String  @id @default(cuid())
+  orderId            String
+  productId          String?
+  productTitle       String
+  sku                String?
+  quantity           Int
+  price              Int
+  totalPrice         Int
+  productVariantId   String?
+  styleId            String?
+  soleId             String?
+  sizeId             String?
+  panelCustomization Json
+  designGlbUrl       String?
+  designThumbnail    String?
+  designConfig       Json?
+  order              Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  size               Size?   @relation("OrderItemSize", fields: [sizeId], references: [id])
+  sole               Sole?   @relation("OrderItemSole", fields: [soleId], references: [id])
+  style              Style?  @relation("OrderItemStyle", fields: [styleId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([productVariantId])
+}
+
+model OrderShipment {
+  id                String         @id @default(cuid())
+  orderId           String         @unique
+  provider          String         @default("shiprocket")
+  providerOrderId   String?
+  awbNumber         String?
+  courierName       String?
+  courierId         String?
+  trackingUrl       String?
+  labelUrl          String?
+  status            ShipmentStatus @default(PENDING)
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+  order             Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// *
+/// * ============================
+/// * Enums
+/// * ============================
 enum Role {
   USER
   ADMIN
@@ -91,354 +371,4 @@ enum OptionType {
   COLOR
   MATERIAL
   CUSTOM
-}
-
-/**
- * ============================
- * Auth (NextAuth-compatible)
- * ============================
- */
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-
-  role Role @default(USER)
-
-  accounts Account[]
-  sessions Session[]
-  orders   Order[]   @relation("UserOrders")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-/**
- * ============================
- * Master Data
- * ============================
- */
-model Material {
-  id          String  @id @default(cuid()) @unique
-  name        String
-  description String?
-  category    String // leather | suede | fabric | etc.
-  isActive    Boolean @default(true)
-  extId       Int?
-
-  colors MaterialColor[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model MaterialColor {
-  id         String  @id @default(cuid())
-  materialId String
-  name       String // e.g., "White Oxford"
-  colorCode  String?
-  family     String? // e.g., "White" / "Black"
-  hexCode    String?
-  imageUrl   String?
-  isActive   Boolean @default(true)
-  extId      Int?
-
-  material    Material            @relation(fields: [materialId], references: [id], onDelete: Cascade)
-
-
-  // back-rel for ProductPanel.defaultMaterialColor
-
-
-  @@index([materialId])
-  @@index([name])
-}
-
-model Style {
-  id          String  @id @default(cuid()) @unique
-  name        String
-  description String?
-  category    String?
-  isActive    Boolean @default(true)
-  imageUrl    String?
-
-  glbUrl      String?
-  lighting    Json?
-  environment Json?
-  assets      Json?
-
- 
-
-  // back-rel for OrderItem.style
-  orderItems OrderItem[] @relation("OrderItemStyle")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Sole {
-  id          String  @id @default(cuid()) @unique  
-  name        String
-  description String?
-  category    String?
-  isActive    Boolean @default(true)
-  imageUrl    String?
-
-  glbUrl      String?
-  lighting    Json?
-  environment Json?
-  assets      Json?
-
-  
-
-  // back-rel for OrderItem.sole
-  orderItems OrderItem[] @relation("OrderItemSole")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Size {
-  id           String  @id @default(cuid()) @unique
-  name         String // display "8"
-  region       Region
-  value        Float
-  euEquivalent String?
-  ukEquivalent String?
-  isActive     Boolean @default(true)
-  sortOrder    Int     @default(0)
-  extId        Int?
-
-
-  // back-rel for OrderItem.size
-  orderItems OrderItem[] @relation("OrderItemSize")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Panel {
-  id        String      @id @default(cuid()) 
-  panelId   String      @unique // e.g., "toe-cap"
-  name      String
-  group     PanelGroup?
-  sortOrder Int         @default(0)
-  isActive  Boolean     @default(true)
-
-
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-/**
- * ============================
- * Product Catalog
- * ============================
- */
-model Product {
-  id String @id @default(cuid())
-
-  // slug/key from JSON
-  productId String @unique
-
-  title       String
-  vendor      String?
-  description String? // HTML ok
-
-  // SEO (meta_*)
-  metaTitle            String?
-  metaDescription      String?
-  metaKeywords         String?
-
-  // Pricing
-  price          Int
-  currency       Currency @default(INR)
-  compareAtPrice Int?
-
-  // Assets (JSON: { glb: { url, lighting, environment } })
-  assets Json?
-
-  
-
-  // Selected materials with colors (JSON array)
-  selectedMaterials Json?
-
-  // Selected styles (JSON array)
-  selectedStyles Json?
-
-  // Selected soles (JSON array)
-  selectedSoles Json?
-
-  isActive Boolean @default(true)
-
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([title])
-  @@index([productId])
-}
-
-
-
-
-
-/**
- * ============================
- * Orders (MTO)
- * ============================
- */
-model Order {
-  id          String @id @default(cuid())
-  orderId     String @unique
-  orderNumber String
-
-  // customer snapshot + optional link
-  customerId        String?
-  customerEmail     String
-  customerFirstName String?
-  customerLastName  String?
-  customerPhone     String?
-  isGuest           Boolean @default(false)
-
-  customer User? @relation("UserOrders", fields: [customerId], references: [id], onDelete: SetNull)
-
-  // addresses
-  shippingAddress Json
-  billingAddress  Json
-
-  // pricing (cents)
-  subtotal       Int
-  tax            Int
-  shippingAmount Int
-  discount       Int
-  total          Int
-  currency       Currency @default(USD)
-
-  // statuses
-  status            OrderStatus       @default(DESIGN_RECEIVED)
-  paymentStatus     PaymentStatus     @default(PENDING)
-  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
-
-  // manufacturing
-  estimatedProductionTime Int       @default(0)
-  actualProductionTime    Int?
-  productionStartDate     DateTime?
-  productionEndDate       DateTime?
-  qualityCheckDate        DateTime?
-  manufacturingNotes      String?
-
-  // timeline
-  designReceivedAt      DateTime  @default(now())
-  productionStartedAt   DateTime?
-  productionCompletedAt DateTime?
-  shippedAt             DateTime?
-  deliveredAt           DateTime?
-
-  items    OrderItem[]
-  shipment OrderShipment?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([customerEmail])
-  @@index([status, createdAt])
-}
-
-model OrderItem {
-  id      String @id @default(cuid())
-  orderId String
-
-  productId    String?
-  productTitle String
-  sku          String?
-  quantity     Int
-
-  price      Int
-  totalPrice Int
-
-  // variant linkage
-  productVariantId String?
- 
-
-  // optional high-level pointers
-  styleId String?
-  style   Style?  @relation("OrderItemStyle", fields: [styleId], references: [id], onDelete: SetNull)
-  soleId  String?
-  sole    Sole?   @relation("OrderItemSole", fields: [soleId], references: [id], onDelete: SetNull)
-  sizeId  String?
-  size    Size?   @relation("OrderItemSize", fields: [sizeId], references: [id], onDelete: SetNull)
-
-  // product link for reporting
-  
-
-  // panel-level customization snapshot
-  panelCustomization Json
-
-  // design snapshot
-  designGlbUrl    String?
-  designThumbnail String?
-  designConfig    Json?
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  @@index([orderId])
-  @@index([productId])
-  @@index([productVariantId])
-}
-
-model OrderShipment {
-  id                String         @id @default(cuid())
-  orderId           String         @unique
-  provider          String         @default("shiprocket")
-  providerOrderId   String?
-  awbNumber         String?
-  courierName       String?
-  courierId         String?
-  trackingUrl       String?
-  labelUrl          String?
-  status            ShipmentStatus @default(PENDING)
-  estimatedDelivery DateTime?
-  actualDelivery    DateTime?
-
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

@@ -5,6 +5,7 @@ import { ArrowUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types/product_type";
 import { getAssetUrl } from "@/lib/utils";
+import { Price } from "@/components/providers/CurrencyProvider";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -172,14 +173,6 @@ const ProductsPage = () => {
     setProducts([]);
   };
 
-  // Function to format price
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(price);
-  };
 
   // Product Card Component
   const ProductCard = ({ product, isLast }: { product: Product, isLast: boolean }) => {
@@ -224,11 +217,11 @@ const ProductsPage = () => {
               {product.price && product.price.length > 0 ? (
                 <>
                   <span className="font-bold text-red-500">
-                    {formatPrice(Math.min(...product.price))}
+                    <Price amount={Math.min(...product.price)} />
                   </span>
                   {product.price.length > 1 && product.price[0] !== Math.max(...product.price) && (
                     <span className="text-xs text-gray-500 ml-1">
-                      - {formatPrice(Math.max(...product.price))}
+                      - <Price amount={Math.max(...product.price)} />
                     </span>
                   )}
                 </>

@@ -1,7 +1,11 @@
+import { Price } from "@/components/providers/CurrencyProvider";
+
 interface OrderSummaryProps {
   subtotal: number;
   shipping: number;
   taxes: number;
+  total?: number;
+  isTaxInclusive?: boolean;
   discount?: number;
 }
 
@@ -9,9 +13,11 @@ export const OrderSummary = ({
   subtotal,
   shipping,
   taxes,
+  total: providedTotal,
+  isTaxInclusive = false,
   discount = 0,
 }: OrderSummaryProps) => {
-  const total = subtotal + shipping + taxes - discount;
+  const total = providedTotal ?? (subtotal + shipping + taxes - discount);
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -20,25 +26,25 @@ export const OrderSummary = ({
       <div className="space-y-3">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+          <span className="font-medium"><Price amount={subtotal} /></span>
         </div>
         
         <div className="flex justify-between">
           <span className="text-muted-foreground">Shipping</span>
           <span className="font-medium">
-            {shipping === 0 ? 'Free' : `₹${shipping.toFixed(2)}`}
+            {shipping === 0 ? 'Free' : <Price amount={shipping} />}
           </span>
         </div>
         
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Taxes</span>
-          <span className="font-medium">₹{taxes.toFixed(2)}</span>
+          <span className="text-muted-foreground">Taxes {isTaxInclusive && '(Included)'}</span>
+          <span className="font-medium"><Price amount={taxes} /></span>
         </div>
         
         {discount > 0 && (
           <div className="flex justify-between text-success">
             <span>Discount</span>
-            <span className="font-medium">-₹{discount.toFixed(2)}</span>
+            <span className="font-medium">-<Price amount={discount} /></span>
           </div>
         )}
         
@@ -46,7 +52,7 @@ export const OrderSummary = ({
         
         <div className="flex justify-between text-lg font-semibold">
           <span>Total</span>
-          <span>₹{total.toFixed(2)}</span>
+          <span><Price amount={total} /></span>
         </div>
       </div>
     </div>

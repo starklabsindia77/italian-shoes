@@ -28,14 +28,20 @@ export const ProductCreateSchema = z.object({
     name: z.string(),
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
-    imageUrl: z.string().nullable().optional()
+    imageUrl: z.string().nullable().optional(),
+    glbUrl: z.string().nullable().optional(),
+    lighting: z.any().nullable().optional(),
+    environment: z.any().nullable().optional()
   })).optional(),
   selectedSoles: z.array(z.object({
     id: z.string(),
     name: z.string(),
     description: z.string().nullable().optional(),
     category: z.string().nullable().optional(),
-    imageUrl: z.string().nullable().optional()
+    imageUrl: z.string().nullable().optional(),
+    glbUrl: z.string().nullable().optional(),
+    lighting: z.any().nullable().optional(),
+    environment: z.any().nullable().optional()
   })).optional()
 });
 export const ProductUpdateSchema = ProductCreateSchema.partial();
@@ -161,28 +167,91 @@ export const OrderCreateSchema = z.object({
   subtotal: z.number().int(),
   tax: z.number().int(),
   shippingAmount: z.number().int(),
+  shippingMethodId: z.string().optional(),
+  shippingMethodName: z.string().optional(),
   discount: z.number().int(),
   total: z.number().int(),
   currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("INR"),
   items: z.array(z.object({
-    productId: z.string().optional(),
+    productId: z.string().nullable().optional(),
     productTitle: z.string(),
-    sku: z.string().optional(),
+    sku: z.string().nullable().optional(),
     quantity: z.number().int().min(1),
     price: z.number().int(),
     totalPrice: z.number().int(),
-    productVariantId: z.string().optional(),
-    styleId: z.string().optional(),
-    soleId: z.string().optional(),
-    sizeId: z.string().optional(),
+    productVariantId: z.string().nullable().optional(),
+    styleId: z.string().nullable().optional(),
+    soleId: z.string().nullable().optional(),
+    sizeId: z.string().nullable().optional(),
     panelCustomization: z.any(),
-    designGlbUrl: z.string().optional(),
-    designThumbnail: z.string().optional(),
-    designConfig: z.any().optional()
+    designGlbUrl: z.string().nullable().optional(),
+    designThumbnail: z.string().nullable().optional(),
+    designConfig: z.any().nullable().optional()
   })).min(1)
 });
 export const OrderUpdateStatusSchema = z.object({
-  status: z.enum(["DESIGN_RECEIVED", "IN_PRODUCTION", "QUALITY_CHECK", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "CANCELLED"]).optional(),
-  paymentStatus: z.enum(["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"]).optional(),
-  fulfillmentStatus: z.enum(["UNFULFILLED", "IN_PRODUCTION", "READY_TO_SHIP", "SHIPPED", "DELIVERED"]).optional(),
+  status: z.string().optional(),
+  paymentStatus: z.string().optional(),
+  fulfillmentStatus: z.string().optional(),
+  manufacturing: z.object({
+    estimatedProductionTime: z.number().optional(),
+    actualProductionTime: z.number().nullable().optional(),
+    productionStartDate: z.string().nullable().optional(),
+    productionEndDate: z.string().nullable().optional(),
+    qualityCheckDate: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+  }).optional(),
+  shiprocket: z.object({
+    awbNumber: z.string().nullable().optional(),
+    courierName: z.string().nullable().optional(),
+    status: z.string().optional(),
+    trackingUrl: z.string().nullable().optional(),
+    labelUrl: z.string().nullable().optional(),
+    estimatedDelivery: z.string().nullable().optional(),
+    actualDelivery: z.string().nullable().optional(),
+  }).optional(),
+});
+
+// Customers
+export const CustomerUpdateSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  isGuest: z.boolean().optional(),
+});
+export const AdminProfileUpdateSchema = z.object({
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal('')),
+}).refine((data) => {
+  if (data.newPassword && data.newPassword.length > 0 && !data.currentPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Current password is required to set a new password",
+  path: ["currentPassword"],
+});
+
+export const UserCreateSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  role: z.enum(["ADMIN", "USER"]).default("USER"),
+  customRoleId: z.string().nullable().optional(),
+});
+
+export const UserUpdateSchema = z.object({
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  password: z.string().min(6).optional().or(z.literal('')),
+  role: z.enum(["ADMIN", "USER"]).optional(),
+  customRoleId: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
 });

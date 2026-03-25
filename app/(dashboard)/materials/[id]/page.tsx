@@ -35,8 +35,10 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  Upload,
 } from "lucide-react";
 import { ColorsCard } from "./colors-card";
+import { getAssetUrl } from "@/lib/utils";
 
 type Material = {
   id: string;
@@ -342,9 +344,36 @@ function ColorsTab({
 }) {
   const [name, setName] = React.useState("");
   const [type, setType] = React.useState("");
-  const [hex, setHex] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [active, setActive] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/assets/upload?folder=colors`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setImageUrl(data.url);
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) return toast.error("Color name is required");
@@ -352,7 +381,6 @@ function ColorsTab({
     await onCreate({
       name: name.trim(),
       family: type || undefined, // optional field
-      colorCode: hex || undefined, // optional field
       imageUrl: imageUrl || undefined, // optional field
       isActive: active, // boolean
     });
@@ -360,7 +388,6 @@ function ColorsTab({
     // Clear inputs
     setName("");
     setType("");
-    setHex("");
     setImageUrl("");
     setActive(true);
   };
@@ -386,19 +413,33 @@ function ColorsTab({
               onChange={(e) => setType(e.target.value)}
             />
           </Field>
-          <Field label="Hex code">
-            <Input
-              placeholder="#000000"
-              value={hex}
-              onChange={(e) => setHex(e.target.value)}
-            />
-          </Field>
-          <Field label="Image URL">
-            <Input
-              placeholder="/images/colors/white.png"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
+          <Field label="Image">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Upload image..."
+                value={imageUrl}
+                readOnly
+              />
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                />
+                <Button type="button" variant="outline" disabled={uploading}>
+                  {uploading ? (
+                    <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <>
+                      <Upload className="mr-2 size-4" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </Field>
           <div className="flex items-end">
             <Button onClick={handleCreate}>
@@ -416,7 +457,6 @@ function ColorsTab({
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Hex</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-0"></TableHead>
@@ -437,19 +477,11 @@ function ColorsTab({
                       onChange={(v) => onPatch(c, { family: v || undefined })}
                     />
                   </TableCell>
-                  <TableCell>
-                    <InlineEdit
-                      value={c.colorCode ?? ""}
-                      onChange={(v) =>
-                        onPatch(c, { colorCode: v || undefined })
-                      }
-                    />
-                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {/* {c.imageUrl ?? "—"} */}
                     {c.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.imageUrl ?? ""} alt={c.name} width={32} height={32} />
+                      <img src={getAssetUrl(c.imageUrl)} alt={c.name} width={32} height={32} />
                     ) : "—"}
                   </TableCell>
                   <TableCell>

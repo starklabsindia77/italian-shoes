@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Minus, Plus, X, Heart } from "lucide-react";
 import { useCartStore, useWishlistStore } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
+import { Price } from "@/components/providers/CurrencyProvider";
 
 interface CartItemProps {
   id: string;
@@ -179,11 +180,11 @@ export const CartItem = ({
           <div className="text-right">
             {originalPrice && originalPrice > price && (
               <p className="text-muted-foreground text-sm line-through">
-                ₹{originalPrice.toFixed(2)}
+                <Price amount={originalPrice} />
               </p>
             )}
             <p className="font-semibold text-cart-price">
-              ₹{(price * quantity).toFixed(2)}
+              <Price amount={price * quantity} />
             </p>
           </div>
         </div>

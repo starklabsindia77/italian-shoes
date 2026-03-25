@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, PaintBucket } from "lucide-react";
+import { Plus, Trash2, PaintBucket, Upload } from "lucide-react";
+import { getAssetUrl } from "@/lib/utils";
 
 type MaterialColor = {
   id: string;
   name: string;
-  hexCode?: string | null;
   imageUrl?: string | null;
   isActive: boolean;
   sortOrder?: number | null;
@@ -22,9 +22,9 @@ type MaterialColor = {
 export function ColorsCard({ materialId }: { materialId: string }) {
   const [items, setItems] = React.useState<MaterialColor[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [uploading, setUploading] = React.useState(false);
 
   const [name, setName] = React.useState("");
-  const [hex, setHex] = React.useState("#000000");
   const [imageUrl, setImageUrl] = React.useState("");
   const [active, setActive] = React.useState(true);
 
@@ -43,11 +43,37 @@ export function ColorsCard({ materialId }: { materialId: string }) {
 
   React.useEffect(() => { load(); /* eslint-disable-next-line */ }, [materialId]);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/assets/upload?folder=colors`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setImageUrl(data.url);
+      toast.success("File uploaded successfully");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload file");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const add = async () => {
     if (!name.trim()) return toast.error("Color name is required");
     const body = {
       name: name.trim(),
-      hexCode: hex || null,
       imageUrl: imageUrl || null,
       isActive: active,
     };
@@ -59,7 +85,7 @@ export function ColorsCard({ materialId }: { materialId: string }) {
     const created = await toast.promise(run(), { loading: "Adding color…", success: "Color added", error: "Failed to add" });
     // Fix: Ensure created is of type MaterialColor by asserting unknown first
     setItems((x) => [...x, created as unknown as MaterialColor]);
-    setName(""); setImageUrl(""); // keep hex/active as-is for quick adding
+    setName(""); setImageUrl(""); // keep active as-is for quick adding
   };
 
   const toggleActive = async (row: MaterialColor, next: boolean) => {
@@ -99,16 +125,31 @@ export function ColorsCard({ materialId }: { materialId: string }) {
             <Label>Name</Label>
             <Input placeholder="e.g., White Oxford" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
+
           <div className="grid gap-2">
-            <Label>Hex</Label>
+            <Label>Image</Label>
             <div className="flex gap-2">
-              <Input type="color" className="w-12 p-1" value={hex} onChange={(e) => setHex(e.target.value)} />
-              <Input placeholder="#FFFFFF" value={hex} onChange={(e) => setHex(e.target.value)} />
+              <Input placeholder="Upload image..." value={imageUrl} readOnly />
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-[100px]"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                />
+                <Button type="button" variant="outline" disabled={uploading}>
+                  {uploading ? (
+                    <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <>
+                      <Upload className="mr-2 size-4" />
+                      Upload
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="grid gap-2">
-            <Label>Image URL (optional)</Label>
-            <Input placeholder="/images/colors/white.png" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label>Active</Label>
@@ -129,9 +170,7 @@ export function ColorsCard({ materialId }: { materialId: string }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Preview</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Hex</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-0"></TableHead>
@@ -140,17 +179,10 @@ export function ColorsCard({ materialId }: { materialId: string }) {
             <TableBody>
               {items.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell>
-                    {c.hexCode ? (
-                      <div className="h-6 w-6 rounded-md border" style={{ backgroundColor: c.hexCode }} />
-                    ) : (
-                      <div className="h-6 w-6 rounded-md border bg-muted" />
-                    )}
-                  </TableCell>
                   <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.hexCode ?? "—"}</TableCell>
+
                   <TableCell className="text-muted-foreground">
-                    {c.imageUrl ? <a href={c.imageUrl} target="_blank" className="underline" rel="noreferrer">Open</a> : "—"}
+                    {c.imageUrl ? <a href={getAssetUrl(c.imageUrl)} target="_blank" className="underline" rel="noreferrer">Open</a> : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-between rounded-md border p-1 pl-2">

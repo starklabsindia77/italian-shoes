@@ -14,6 +14,7 @@ import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { WishlistButton } from "@/components/wishlist/WishlistButton";
 import { getAssetUrl } from "@/lib/utils";
 import { ShoeAvatarRef } from "@/components/shoe-avatar/ShoeAvatar";
+import { Price } from "@/components/providers/CurrencyProvider";
 
 const ShoeAvatar = dynamic(
   () => import("@/components/shoe-avatar/ShoeAvatar"),
@@ -138,10 +139,14 @@ export default function DerbyBuilderClean() {
     setSelectedPanelName(e.target.value);
   };
 
-  const handleTextureChange = (panelId: string, textureUrl: string) => {
+  const handleTextureChange = (panelId: string, textureUrl: string, materialName?: string, colorName?: string) => {
     setSelectedTextureMap((prev) => ({
       ...prev,
-      [panelId]: { colorUrl: textureUrl },
+      [panelId]: { 
+        colorUrl: textureUrl,
+        materialName: materialName || "N/A",
+        colorName: colorName || "N/A"
+      },
     }));
   };
 
@@ -214,10 +219,22 @@ export default function DerbyBuilderClean() {
     return cfg.sizes?.find((s: any) => s.id === selectedSize);
   }, [cfg.sizes, selectedSize]);
 
-  const avatarData = useMemo(
-    () => getAssetUrl(cfg.assets?.glb?.url),
-    [cfg.assets?.glb?.url]
-  );
+  const avatarData = useMemo(() => {
+    // If a sole is selected, check if it has a glbUrl
+    const selectedSoleObj = (productData?.selectedSoles || []).find(
+      (so: any) => (so.id || so.name) === selectedSole
+    );
+
+    const selectedStyleObj = (productData?.selectedStyles || []).find(
+      (so: any) => (so.id || so.name) === selectedStyle
+    );
+
+    console.log("selectedSoleObj", selectedSoleObj);
+    console.log("selectedStyleObj", selectedStyleObj);
+
+    const glbUrl = selectedSoleObj?.glbUrl || selectedStyleObj?.glbUrl || cfg.assets?.glb?.url;
+    return getAssetUrl(glbUrl);
+  }, [productData?.selectedSoles, selectedSole, productData?.selectedStyles, selectedStyle, cfg.assets?.glb?.url]);
 
   // Helper functions to get filtered materials and colors
   const getAvailableMaterials = () => {
@@ -344,6 +361,12 @@ export default function DerbyBuilderClean() {
     Record<string, any>
   >({});
 
+  useEffect(() => {
+    if (!selectedPanelName && objectList?.length > 0) {
+      setSelectedPanelName(objectList[0].name);
+    }
+  }, [objectList, selectedPanelName]);
+
   const handleBeforeAdd = async () => {
     if (shoeAvatarRef.current) {
       const screenshot = shoeAvatarRef.current.captureScreenshot();
@@ -406,13 +429,19 @@ export default function DerbyBuilderClean() {
           <div className="space-y-6">
             {/* Main Product Image with Controls */}
             <div className="relative bg-gray-50 rounded-lg overflow-hidden">
-              <ShoeAvatar
-                ref={shoeAvatarRef}
-                avatarData={avatarData}
-                objectList={objectList}
-                setObjectList={setObjectList}
-                selectedTextureMap={selectedTextureMap}
-              />
+              {avatarData ? (
+                <ShoeAvatar
+                  ref={shoeAvatarRef}
+                  avatarData={avatarData}
+                  objectList={objectList}
+                  setObjectList={setObjectList}
+                  selectedTextureMap={selectedTextureMap}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+                </div>
+              )}
             </div>
 
             {/* Thumbnail Gallery */}
@@ -435,10 +464,10 @@ export default function DerbyBuilderClean() {
                 {/* Price Section */}
                 <div className="flex flex-col gap-0.5">
                   <div className="text-lg font-normal text-red-600 leading-none">
-                    ${cfg.price || 329}
+                    <Price amount={cfg.price || 329} />
                   </div>
                   <div className="text-sm font-bold text-gray-700 line-through leading-none">
-                    ${cfg.compareAtPrice || 519}
+                    <Price amount={cfg.compareAtPrice || 519} />
                   </div>
                 </div>
 
@@ -672,25 +701,28 @@ export default function DerbyBuilderClean() {
                               }
                             }
 
+                            const colorKey = `${material.materialId}-${color.id}`;
                             return (
                               <div
-                                key={color.id}
+                                key={colorKey}
                                 onClick={() => {
-                                  setSelectedColor(color.id);
+                                  setSelectedColor(colorKey);
                                   handleTextureChange(
                                     selectedPanelName,
-                                    color.imageUrl
+                                    color.imageUrl,
+                                    material.materialName,
+                                    color.name
                                   );
                                 }}
-                                className={`rounded-md transition flex-shrink-0 ${selectedColor === color.id
+                                className={`rounded-md overflow-hidden transition flex-shrink-0 ${selectedColor === colorKey
                                   ? "border-red-500 ring-1 ring-red-100"
                                   : "border-gray-200"
                                   }`}
                               >
                                 <img
-                                  src={color.imageUrl}
+                                  src={getAssetUrl(color.imageUrl)}
                                   alt={color.name}
-                                  className="object-contain w-12 h-12"
+                                  className="object-cover w-12 h-12 block"
                                 />
                               </div>
                             );
@@ -709,16 +741,22 @@ export default function DerbyBuilderClean() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {(cfg.selectedStyles || []).map((s: any) => (
                       <button
-                        key={s.id}
-                        onClick={() => setSelectedStyle(s.id)}
-                        className={`p-2 rounded-md border transition ${selectedStyle === s.id
+                        key={s.id || s.name}
+                        onClick={() => {
+                          const newStyle = (s.id || s.name);
+                          setSelectedStyle(prev => prev === newStyle ? null : newStyle);
+                          if (selectedStyle !== newStyle) {
+                            setSelectedSole(null);
+                          }
+                        }}
+                        className={`p-2 rounded-md border transition ${selectedStyle === (s.id || s.name)
                           ? "border-red-500 ring-1 ring-red-100"
                           : "border-gray-200"
                           }`}
                       >
                         <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-1 flex items-center justify-center">
                           <img
-                            src={s.imageUrl}
+                            src={getAssetUrl(s.imageUrl)}
                             alt={s.name}
                             className="object-contain w-full h-full"
                           />
@@ -738,7 +776,13 @@ export default function DerbyBuilderClean() {
                     {(cfg.selectedSoles || []).map((so: any) => (
                       <button
                         key={so.id || so.name}
-                        onClick={() => setSelectedSole(so.id || so.name)}
+                        onClick={() => {
+                          const newSole = (so.id || so.name);
+                          setSelectedSole(prev => prev === newSole ? null : newSole);
+                          if (selectedSole !== newSole) {
+                            setSelectedStyle(null);
+                          }
+                        }}
                         className={`p-2 rounded-md border transition ${selectedSole === (so.id || so.name)
                           ? "border-red-500 ring-1 ring-red-100"
                           : "border-gray-200"
@@ -746,7 +790,7 @@ export default function DerbyBuilderClean() {
                       >
                         <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
                           <img
-                            src={so.imageUrl}
+                            src={getAssetUrl(so.imageUrl)}
                             alt={so.name}
                             className="object-contain w-full h-full"
                           />

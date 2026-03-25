@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
+import { ok, bad, server, pagination, getSearchParams, requireAdmin, requirePermission } from "@/lib/api-helpers";
 import { ProductCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
   try {
+    await requirePermission("products.manage");
     const sp = getSearchParams(req);
     const q = sp.get("q")?.trim();
     const { skip, limit } = pagination(req);
@@ -24,8 +25,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     // Require admin authentication
-    const admin = await requireAdmin();
-    if (!admin) return bad("Unauthorized", 401);
+    await requirePermission("products.manage");
 
     const body = await req.json();
     console.log("Creating product with data:", body);

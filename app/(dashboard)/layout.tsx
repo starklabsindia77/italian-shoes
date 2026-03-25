@@ -36,6 +36,7 @@ import {
   Menu,
   Layers,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils"; // if you don’t have this helper, see inline fallback below
@@ -71,20 +72,41 @@ type NavItem = {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  roles?: string[]; 
+  permission?: string;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Products", href: "/products", icon: Package },
-  { label: "Orders", href: "/orders", icon: ShoppingCart },
-  { label: "Materials", href: "/materials", icon: Palette },
-  { label: "Styles", href: "/styles", icon: Sparkles },
-  { label: "Soles", href: "/soles", icon: Layers },
-  { label: "Sizes", href: "/sizes", icon: Ruler },
-  { label: "Panels", href: "/panels", icon: PanelsTopLeft },
-  { label: "Customers", href: "/customers", icon: Users },
-  // { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Overview", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard.view" },
+  { label: "Products", href: "/products", icon: Package, permission: "products.manage" },
+  { label: "Orders", href: "/orders", icon: ShoppingCart, permission: "orders.view" },
+  { label: "Materials", href: "/materials", icon: Palette, permission: "products.manage" },
+  { label: "Styles", href: "/styles", icon: Sparkles, permission: "products.manage" },
+  { label: "Soles", href: "/soles", icon: Layers, permission: "products.manage" },
+  { label: "Sizes", href: "/sizes", icon: Ruler, permission: "products.manage" },
+  { label: "Panels", href: "/panels", icon: PanelsTopLeft, permission: "products.manage" },
+  { label: "Customers", href: "/customers", icon: Users, permission: "customers.manage" },
+  { 
+    label: "Settings", 
+    href: "/settings", 
+    icon: Settings,
+    roles: ["ADMIN"],
+    permission: "settings.manage"
+  },
+  {
+    label: "Users",
+    href: "/settings/users",
+    icon: Users,
+    roles: ["ADMIN"],
+    permission: "users.manage"
+  },
+  {
+    label: "Roles",
+    href: "/settings/roles",
+    icon: ShieldCheck,
+    roles: ["ADMIN"],
+    permission: "users.manage"
+  }
 ];
 
 function ClientShell({ children }: { children: React.ReactNode }) {
@@ -92,9 +114,32 @@ function ClientShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "USER";
+  const userPermissions = (session?.user as any)?.permissions || [];
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
+  const allowedNavItems = useMemo(() => {
+    return NAV_ITEMS.filter(item => {
+      // Admin always has access
+      if (userRole === "ADMIN") return true;
+
+      // Check permission first
+      if (item.permission && userPermissions.includes(item.permission)) {
+          return true;
+      }
+
+      // Fallback to role check
+      if (item.roles && item.roles.includes(userRole)) {
+          return true;
+      }
+
+      // If no permission/roles required, allow all
+      if (!item.permission && !item.roles) return true;
+
+      return false;
+    });
+  }, [userRole, userPermissions]);
+
+  const isActive = (href: string) => pathname === href;
 
   const sidebarWidth = collapsed ? 72 : 272; // px
 
@@ -132,7 +177,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
             <ScrollArea className="flex-1">
               <nav className="py-3">
                 <ul className="grid gap-1 px-2">
-                  {NAV_ITEMS.map((item) => {
+                  {allowedNavItems.map((item) => {
                     const Icon = item.icon;
                     const active = isActive(item.href);
                     return (
@@ -195,7 +240,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
               <ScrollArea className="h-[calc(100dvh-4rem)]">
                 <nav className="py-3">
                   <ul className="grid gap-1 px-2">
-                    {NAV_ITEMS.map((item) => {
+                    {allowedNavItems.map((item) => {
                       const Icon = item.icon;
                       const active = isActive(item.href);
                       return (
@@ -305,7 +350,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
               {/* Footer */}
               <footer className="border-t bg-background">
                 <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 py-4 text-xs text-muted-foreground">
-                  <span>© {new Date().getFullYear()} Italian Shoes — Admin</span>
+                  <span suppressHydrationWarning>© {new Date().getFullYear()} Italian Shoes — Admin</span>
                   <span>
                     <Link href="/health" className="hover:underline">
                       System Health
@@ -330,11 +375,13 @@ function ClientShell({ children }: { children: React.ReactNode }) {
    - If you already use next-themes / ThemeProvider, replace this with your component.
 ===================================================================================== */
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState<boolean>(() =>
-    typeof document !== "undefined"
-      ? document.documentElement.classList.contains("dark")
-      : false
-  );
+  const [mounted, setMounted] = React.useState(false);
+  const [isDark, setIsDark] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+    setIsDark(document.documentElement.classList.contains("dark"));
+  }, []);
 
   // Flip the 'dark' class on <html>
   const toggle = () => {
@@ -347,6 +394,14 @@ function ThemeToggle() {
       localStorage.setItem("theme", next ? "dark" : "light");
     } catch { }
   };
+
+  if (!mounted) {
+    return (
+      <Button variant="outline" size="sm" className="h-8 opacity-0">
+        Theme
+      </Button>
+    );
+  }
 
   return (
     <Button variant="outline" size="sm" onClick={toggle} className="h-8">

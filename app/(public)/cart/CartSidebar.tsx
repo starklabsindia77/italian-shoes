@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { Price } from "@/components/providers/CurrencyProvider";
 
 /**
  * CartUI.tsx
@@ -387,8 +388,8 @@ function CartDrawer({ initialOpen = false }: { initialOpen?: boolean }) {
                       {item.meta?.size && <div className="text-xs text-gray-500">Size: {item.meta.size}</div>}
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">₹{formatMoney(item.unitAmount)}</div>
-                      <div className="text-xs text-gray-500">₹{formatMoney(item.unitAmount * item.quantity)}</div>
+                      <div className="font-medium"><Price amount={item.unitAmount / 100} /></div>
+                      <div className="text-xs text-gray-500"><Price amount={(item.unitAmount * item.quantity) / 100} /></div>
                     </div>
                   </div>
 
@@ -424,7 +425,7 @@ function CartDrawer({ initialOpen = false }: { initialOpen?: boolean }) {
       <div className="p-4 border-t">
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">Subtotal ({itemCount} items)</div>
-          <div className="text-lg font-semibold">₹{formatMoney(subtotal)}</div>
+          <div className="text-lg font-semibold"><Price amount={subtotal / 100} /></div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button
@@ -453,17 +454,6 @@ function CartDrawer({ initialOpen = false }: { initialOpen?: boolean }) {
                 className="w-full flex justify-center items-center px-4 py-3 bg-[#6328ff] text-white rounded font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
               >
                 🚀 Faster Checkout
-              </button>
-            </div>
-          )}
-
-          {settings?.integrations?.razorpayMagicCheckoutEnabled && (
-            <div className="mt-3">
-              <button
-                id="razorpay-magic-checkout-button"
-                className="w-full flex justify-center items-center px-4 py-3 bg-[#2463eb] text-white rounded font-bold uppercase tracking-wider shadow-lg hover:shadow-xl transition-all"
-              >
-                ✨ Magic Checkout
               </button>
             </div>
           )}
@@ -504,7 +494,7 @@ export function MiniCartInline() {
   return (
     <div className="inline-flex items-center gap-2">
       <div className="font-medium">{itemCount} items</div>
-      <div className="text-sm">₹{formatMoney(subtotal)}</div>
+      <div className="text-sm"><Price amount={subtotal / 100} /></div>
     </div>
   );
 }

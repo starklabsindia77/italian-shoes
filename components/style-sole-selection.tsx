@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Plus, X, Image as ImageIcon } from "lucide-react";
+import { getAssetUrl } from "@/lib/utils";
 
 export interface Style {
   id: string;
@@ -15,6 +16,9 @@ export interface Style {
   category?: string | null;
   isActive: boolean;
   imageUrl?: string | null;
+  glbUrl?: string | null;
+  lighting?: string | null;
+  environment?: string | null;
 }
 
 export interface Sole {
@@ -24,6 +28,9 @@ export interface Sole {
   category?: string | null;
   isActive: boolean;
   imageUrl?: string | null;
+  glbUrl?: string | null;
+  lighting?: string | null;
+  environment?: string | null;
 }
 
 export interface SelectedItem {
@@ -32,6 +39,9 @@ export interface SelectedItem {
   description?: string | null;
   category?: string | null;
   imageUrl?: string | null;
+  glbUrl?: string | null;
+  lighting?: string | null;
+  environment?: string | null;
 }
 
 interface StyleSoleSelectionProps {
@@ -44,10 +54,10 @@ interface StyleSoleSelectionProps {
   emptyMessage: string;
 }
 
-export function StyleSoleSelection({ 
-  items, 
-  selectedItems, 
-  onSelectionChange, 
+export function StyleSoleSelection({
+  items,
+  selectedItems,
+  onSelectionChange,
   loading = false,
   title,
   description,
@@ -69,7 +79,7 @@ export function StyleSoleSelection({
 
   const toggleItemSelection = (item: Style | Sole) => {
     const isSelected = selectedItems.some(si => si.id === item.id);
-    
+
     if (isSelected) {
       // Remove item
       onSelectionChange(selectedItems.filter(si => si.id !== item.id));
@@ -80,7 +90,10 @@ export function StyleSoleSelection({
         name: item.name,
         description: item.description,
         category: item.category,
-        imageUrl: item.imageUrl
+        imageUrl: item.imageUrl,
+        glbUrl: item.glbUrl,
+        lighting: item.lighting,
+        environment: item.environment
       };
       onSelectionChange([...selectedItems, newSelection]);
     }
@@ -131,9 +144,8 @@ export function StyleSoleSelection({
               const isExpanded = expandedItems.has(item.id);
 
               return (
-                <div key={item.id} className={`border rounded-lg p-4 space-y-3 transition-colors ${
-                  isSelected ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'
-                }`}>
+                <div key={item.id} className={`border rounded-lg p-4 space-y-3 transition-colors ${isSelected ? 'bg-primary/5 border-primary' : 'hover:bg-muted/50'
+                  }`}>
                   {/* Item Header */}
                   <div className="flex items-start space-x-3">
                     <Checkbox
@@ -144,8 +156,8 @@ export function StyleSoleSelection({
                       <div className="flex items-center space-x-2">
                         {item.imageUrl && (
                           <div className="w-8 h-8 rounded border overflow-hidden flex-shrink-0">
-                            <img 
-                              src={item.imageUrl} 
+                            <img
+                              src={getAssetUrl(item.imageUrl)}
                               alt={item.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -208,8 +220,8 @@ export function StyleSoleSelection({
                           <div className="text-sm">
                             <span className="font-medium">Image:</span>
                             <div className="mt-1">
-                              <img 
-                                src={item.imageUrl} 
+                              <img
+                                src={item.imageUrl}
                                 alt={item.name}
                                 className="w-20 h-20 rounded border object-cover"
                                 onError={(e) => {

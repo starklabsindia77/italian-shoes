@@ -9,7 +9,6 @@ export function CheckoutProgress({ currentStep }: CheckoutProgressProps) {
   const steps = [
     { number: 1, title: "Information", completed: currentStep > 1 },
     { number: 2, title: "Shipping", completed: currentStep > 2 },
-    { number: 3, title: "Payment", completed: currentStep > 3 },
   ];
 
   return (
@@ -24,8 +23,8 @@ export function CheckoutProgress({ currentStep }: CheckoutProgressProps) {
                   step.completed
                     ? "bg-checkout-success border-checkout-success text-white"
                     : currentStep === step.number
-                    ? "bg-primary border-primary text-white"
-                    : "bg-checkout-card border-checkout-section-border text-checkout-text-secondary"
+                      ? "bg-primary border-primary text-white"
+                      : "bg-checkout-card border-checkout-section-border text-checkout-text-secondary"
                 )}
               >
                 {step.completed ? (

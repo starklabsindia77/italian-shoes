@@ -80,7 +80,12 @@ const Avatar: React.FC<AvatarProps> = ({
   selectedTextureMap = {},
   setIsTextureLoading,
 }) => {
-  const { scene, gl } = useGLTF(avatarData) as any;
+  // Guard against empty avatarData
+  if (!avatarData) {
+    return null;
+  }
+
+  const { scene } = useGLTF(avatarData) as any;
   const meshRef = useRef<THREE.Group>(null);
   const prevTextureMapRef = useRef<string>("");
   const isMountedRef = useRef(true);
@@ -102,6 +107,7 @@ const Avatar: React.FC<AvatarProps> = ({
 
   // Cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       // Clean up textures
@@ -138,7 +144,7 @@ const Avatar: React.FC<AvatarProps> = ({
     } catch (error) {
       console.error("Error setting ground position:", error);
     }
-  }, []);
+  }, [scene]); // Added scene as dependency to re-calculate on new model load
 
   // --- Material Enhancements ---
   useLayoutEffect(() => {
@@ -150,10 +156,15 @@ const Avatar: React.FC<AvatarProps> = ({
           const mat = o.material as THREE.MeshStandardMaterial;
 
           // Leather-like tuning
-          mat.envMapIntensity = 1.2;
-          mat.roughness = 0.45;
-          mat.metalness = 0.1;
-          mat.needsUpdate = true;
+          mat.metalness = 0;
+mat.roughness = 0.3;        // leather shine balance
+mat.envMapIntensity = 2.6;   // reflection strength
+(mat as any).reflectivity = 0.6;
+// subtle premium leather layer
+(mat as any).clearcoat = 0.55;
+(mat as any).clearcoatRoughness = 0.32;
+
+mat.needsUpdate = true;
 
           const texConfig = selectedTextureMap?.[o.name];
           if (texConfig?.normalUrl) {
@@ -246,6 +257,7 @@ const Avatar: React.FC<AvatarProps> = ({
         );
         tex.flipY = false;
         tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 16;
         tex.wrapS = THREE.RepeatWrapping;
         tex.wrapT = THREE.RepeatWrapping;
         cache.set(url, tex);
@@ -343,10 +355,12 @@ export interface ShoeAvatarRef {
 const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
   ({ avatarData, objectList, setObjectList, selectedTextureMap }, ref) => {
     const [canvasSize, setCanvasSize] = useState({
-      width: typeof window !== "undefined" ? window.innerWidth : 800,
-      height: typeof window !== "undefined" ? window.innerHeight : 600,
+      width: 0,
+      height: 0,
     });
-    const [hasMounted, setHasMounted] = useState(false);
+    const [isReady, setIsReady] = useState(false);
+    const [isEnvReady, setIsEnvReady] = useState(false);
+    const [autoRetryCount, setAutoRetryCount] = useState(0);
     const [isTextureLoading, setIsTextureLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
     const glRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -361,33 +375,14 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
       },
     }));
 
-    // Memoize canvas size calculation
-    const memoizedCanvasSize = useMemo(
-      () => ({
-        width: Math.min(canvasSize.width, 800),
-        height: Math.min(canvasSize.height * 0.8, 600),
-      }),
-      [canvasSize.width, canvasSize.height]
-    );
-
-    // Preload the model with error handling
+    // We removed redundant useGLTF.preload to prevent resource competition during initial mount
     useEffect(() => {
       if (!avatarData || avatarData === "") {
-        setHasError(false); // Reset error if URL is empty (waiting for data)
-        return;
-      }
-
-      try {
-        // Clear previous error when starting a new load
         setHasError(false);
-        useGLTF.preload(avatarData);
-      } catch (error) {
-        console.error("Error preloading model:", error);
       }
     }, [avatarData]);
 
     useEffect(() => {
-      setHasMounted(true);
       const resize = () => {
         setCanvasSize({
           width: window.innerWidth,
@@ -395,26 +390,60 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
         });
       };
       resize();
+
+      // High delay to ensure browser and Next.js hydration are completely finished
+      const timer1 = setTimeout(() => {
+        setIsReady(true);
+      }, 1200);
+
+      // Very high delay for Environment to ensure model is already rendered
+      const timer2 = setTimeout(() => {
+        setIsEnvReady(true);
+      }, 3500);
+
       window.addEventListener("resize", resize);
-      return () => window.removeEventListener("resize", resize);
+      return () => {
+        window.removeEventListener("resize", resize);
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }, []);
 
-    if (!hasMounted) return null;
+    // Memoize canvas style to avoid unnecessary re-renders
+    const canvasStyle = useMemo(() => {
+      const width = Math.min(canvasSize.width > 0 ? canvasSize.width : (typeof window !== 'undefined' ? window.innerWidth : 800), 800);
+      const height = Math.min((canvasSize.height > 0 ? canvasSize.height : (typeof window !== 'undefined' ? window.innerHeight : 600)) * 0.8, 600);
+
+      return {
+        width: `${width}px`,
+        height: `${height}px`,
+        maxWidth: "100%",
+        display: isReady ? 'block' : 'none',
+      };
+    }, [canvasSize, isReady]);
+
+    if (!isReady) {
+      return (
+        <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        </div>
+      );
+    }
 
     if (hasError) {
       return (
         <div
           className="flex flex-col items-center justify-center w-full bg-blue-100 rounded-lg"
-          style={{
-            width: `${memoizedCanvasSize.width}px`,
-            height: `${memoizedCanvasSize.height}px`,
-            maxWidth: "100%",
-          }}
+          style={canvasStyle}
         >
           <div className="text-center p-4">
             <p className="text-gray-700 mb-2">Failed to load 3D model</p>
             <button
-              onClick={() => setHasError(false)}
+              onClick={() => {
+                setHasError(false);
+                // Force a reload of the component state if needed
+                window.dispatchEvent(new Event('resize'));
+              }}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
             >
               Retry
@@ -436,24 +465,19 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
           <Canvas
             shadows
             gl={{
-              antialias: true,
-              outputColorSpace: THREE.SRGBColorSpace,
-              powerPreference: "high-performance",
-              preserveDrawingBuffer: true, // CRITICAL for screenshot
+              antialias: false, // Turn off antialias for initial stability
+              powerPreference: "default", // Lower power preference for stability
+              preserveDrawingBuffer: true,
               failIfMajorPerformanceCaveat: false,
             }}
-            style={{
-              width: `${memoizedCanvasSize.width}px`,
-              height: `${memoizedCanvasSize.height}px`,
-              maxWidth: "100%",
-            }}
+            style={canvasStyle}
             camera={{ position: [2.2, 0.25, 0], fov: 50 }}
             onCreated={({ gl }: { gl: THREE.WebGLRenderer }) => {
-              glRef.current = gl; // Store renderer ref
+              glRef.current = gl;
               try {
                 gl.outputColorSpace = THREE.SRGBColorSpace;
                 gl.toneMapping = THREE.ACESFilmicToneMapping;
-                gl.toneMappingExposure = 1.5;
+                gl.toneMappingExposure = 1.15;
 
                 const renderer = gl as THREE.WebGLRenderer;
                 renderer.shadowMap.enabled = true;
@@ -462,8 +486,19 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
                 const canvas = renderer.getContext().canvas;
                 canvas.addEventListener("webglcontextlost", (e) => {
                   e.preventDefault();
-                  console.warn("WebGL context lost.");
-                  setHasError(true);
+                  console.warn("WebGL context lost. Attempting auto-recovery...");
+
+                  if (autoRetryCount < 1) {
+                    setAutoRetryCount(prev => prev + 1);
+                    setIsReady(false);
+                    setIsEnvReady(false);
+                    // Silent retry after a short delay
+                    setTimeout(() => {
+                      setIsReady(true);
+                    }, 500);
+                  } else {
+                    setHasError(true);
+                  }
                 });
 
                 canvas.addEventListener("webglcontextrestored", () => {
@@ -476,11 +511,9 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
               }
             }}
           >
-            {/* Lighting setup */}
-            <ambientLight intensity={0.2} />
-
+            <ambientLight intensity={0.3} />
             <directionalLight
-              position={[5, 8, 5]}
+              position={[2, 6, 5]}
               intensity={1.6}
               castShadow
               shadow-mapSize-width={2048}
@@ -493,13 +526,14 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
               color={"#fff"}
             />
 
-            {/* Studio HDRI */}
-            <Environment
-              files="/hdri/studio_small_08_4k.hdr"
-              background={false}
-            />
+            {isEnvReady && (
+              <Environment
+                files="/hdri/studio_small_08_4k.hdr"
+                background={false}
+              />
+            )}
 
-            <Suspense fallback={<Html center><DomSpinner /></Html>}>
+            <Suspense fallback={null}>
               <Bounds margin={1.1}>
                 <Avatar
                   avatarData={avatarData}

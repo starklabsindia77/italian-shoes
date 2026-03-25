@@ -24,6 +24,7 @@ import {
   DollarSign,
   Plus,
   Truck,
+  Users,
 } from "lucide-react";
 
 function formatCurrency(cents: number, currency = "USD") {
@@ -31,80 +32,57 @@ function formatCurrency(cents: number, currency = "USD") {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(cents ?? 0);
 }
 
+import { getDashboardMetrics } from "@/lib/dashboard-service";
+
 export default async function DashboardPage() {
-  // You can replace these with real queries
+  const data = await getDashboardMetrics();
+
+  const thirtyDayGrossSales = data?.kpis?.thirtyDayGrossSales || 0;
+  const thirtyDayOrderCount = data?.kpis?.thirtyDayOrderCount || 0;
+  const inProductionCount = data?.kpis?.inProductionCount || 0;
+  const inQcCount = data?.kpis?.inQcCount || 0;
+  const customerCount = data?.kpis?.customerCount || 0;
+
+  const recent = data?.recent || [];
+
+  const boardMap = data?.board || {};
+  const board = {
+    DESIGN_RECEIVED: boardMap["DESIGN_RECEIVED"] || 0,
+    IN_PRODUCTION: boardMap["IN_PRODUCTION"] || 0,
+    QUALITY_CHECK: boardMap["QUALITY_CHECK"] || 0,
+    READY_TO_SHIP: boardMap["READY_TO_SHIP"] || 0,
+    SHIPPED: boardMap["SHIPPED"] || 0,
+  };
+
   const kpis = [
     {
       label: "Gross Sales (30d)",
-      value: formatCurrency(238400, "USD"),
+      value: formatCurrency(thirtyDayGrossSales, "INR"),
       icon: DollarSign,
-      sub: "+12% vs prev.",
+      sub: "Total non-cancelled",
     },
     {
       label: "Orders (30d)",
-      value: "184",
+      value: String(thirtyDayOrderCount),
       icon: ShoppingCart,
-      sub: "+8 new today",
+      sub: "New orders this month",
     },
     {
       label: "In Production",
-      value: "23",
+      value: String(inProductionCount),
       icon: Factory,
-      sub: "7 in QC",
+      sub: `${inQcCount} in QC`,
     },
     {
-      label: "Low Stock Variants",
-      value: "9",
-      icon: Package,
-      sub: "Reorder soon",
+      label: "Total Customers",
+      value: String(customerCount),
+      icon: Users,
+      sub: "Registered users",
     },
   ];
-
-  const recent = [
-    {
-      id: "ord_10234",
-      number: "MTO-10234",
-      customer: "A. Romano",
-      total: 18999,
-      currency: "USD",
-      status: "IN_PRODUCTION",
-    },
-    {
-      id: "ord_10233",
-      number: "MTO-10233",
-      customer: "S. Marino",
-      total: 14999,
-      currency: "USD",
-      status: "QUALITY_CHECK",
-    },
-    {
-      id: "ord_10232",
-      number: "MTO-10232",
-      customer: "P. Bianchi",
-      total: 21999,
-      currency: "USD",
-      status: "READY_TO_SHIP",
-    },
-    {
-      id: "ord_10231",
-      number: "MTO-10231",
-      customer: "M. Conti",
-      total: 16999,
-      currency: "USD",
-      status: "DESIGN_RECEIVED",
-    },
-  ] as const;
-
-  const board = {
-    DESIGN_RECEIVED: 6,
-    IN_PRODUCTION: 23,
-    QUALITY_CHECK: 7,
-    READY_TO_SHIP: 5,
-    SHIPPED: 41,
-  };
 
   return (
     <div className="space-y-6">
@@ -165,7 +143,7 @@ export default async function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recent.map((o) => (
+                  {recent.map((o: any) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-medium">{o.number}</TableCell>
                       <TableCell>{o.customer}</TableCell>

@@ -8,6 +8,8 @@ import { useToast } from "@/components/hooks/use-toast";
 import { useCartStore } from "@/lib/stores";
 import { useRouter } from "next/navigation";
 
+import { Price } from "@/components/providers/CurrencyProvider";
+
 const Cart = () => {
   const { toast } = useToast();
   const router = useRouter();
@@ -31,8 +33,31 @@ const Cart = () => {
   }, [settings]);
 
   const subtotal = getTotalPrice();
-  const shipping = subtotal > 100 ? 0 : 9.99;
-  const taxes = subtotal * 0.08;
+  
+  // Tax calculation based on settings
+  const isTaxEnabled = settings?.taxes?.enabled ?? true;
+  const isTaxInclusive = settings?.taxes?.taxInclusive ?? false;
+  const taxRate = isTaxEnabled ? (settings?.taxes?.defaultRate ?? 0) / 100 : 0;
+  
+  let taxes = 0;
+  let total = subtotal;
+
+  if (isTaxEnabled) {
+    if (isTaxInclusive) {
+      // If inclusive, tax is already in subtotal
+      // Formula: tax = subtotal - (subtotal / (1 + rate))
+      taxes = subtotal - (subtotal / (1 + taxRate));
+      total = subtotal;
+    } else {
+      // If exclusive, add tax to subtotal
+      taxes = subtotal * taxRate;
+      total = subtotal + taxes;
+    }
+  }
+
+  // Shipping calculation (can also be made dynamic later if needed, but keeping existing logic for now)
+  const shipping = subtotal > 10000 ? 0 : 499; // Using a more realistic RS value or keeping it simple
+  total += shipping;
 
   const handleCheckout = () => {
     if (cartItems.length === 0) {
@@ -105,7 +130,13 @@ const Cart = () => {
 
         {/* Order Summary */}
         <div className="lg:w-96 flex-shrink-0">
-          <OrderSummary subtotal={subtotal} shipping={shipping} taxes={taxes} />
+          <OrderSummary 
+            subtotal={subtotal} 
+            shipping={shipping} 
+            taxes={taxes} 
+            total={total} 
+            isTaxInclusive={isTaxInclusive}
+          />
 
           <Button
             size="lg"
@@ -118,24 +149,11 @@ const Cart = () => {
           {subtotal < 10000 && (
             <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mt-3">
               <p className="text-sm text-warning-foreground">
-                <strong>Free shipping</strong> on orders over ₹10000. Add ₹{(100 - subtotal).toFixed(2)} more to qualify!
+                <strong>Free shipping</strong> on orders over <Price amount={10000} />. Add <Price amount={10000 - subtotal} /> more to qualify!
               </p>
             </div>
           )}
 
-          {settings?.integrations?.razorpayMagicCheckoutEnabled && (
-            <div className="mt-4">
-              <button
-                id="razorpay-magic-checkout-button"
-                className="w-full flex justify-center items-center px-4 py-3 bg-[#2463eb] text-white rounded-lg font-bold uppercase tracking-wider shadow-md hover:bg-[#1d4ed8] hover:shadow-lg transition-all"
-              >
-                ✨ Magic Checkout
-              </button>
-              <p className="text-center text-[10px] text-muted-foreground mt-2">
-                Fast & Secure 1-click checkout by Razorpay
-              </p>
-            </div>
-          )}
 
           {/* Security badges */}
           <div className="text-center text-sm text-muted-foreground mt-4 space-y-1">

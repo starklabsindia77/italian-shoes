@@ -295,7 +295,10 @@ export default function ProductEditPage() {
             name: style.name || '',
             description: style.description || null,
             category: style.category || null,
-            imageUrl: style.imageUrl || null
+            imageUrl: style.imageUrl || null,
+            glbUrl: style.glbUrl || null,
+            lighting: style.lighting || null,
+            environment: style.environment || null
           });
         }
       });
@@ -311,7 +314,10 @@ export default function ProductEditPage() {
             name: sole.name || '',
             description: sole.description || null,
             category: sole.category || null,
-            imageUrl: sole.imageUrl || null
+            imageUrl: sole.imageUrl || null,
+            glbUrl: sole.glbUrl || null,
+            lighting: sole.lighting || null,
+            environment: sole.environment || null
           });
         }
       });

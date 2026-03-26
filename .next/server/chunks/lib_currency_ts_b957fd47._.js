@@ -1,3 +1,0 @@
-module.exports=[56066,r=>{"use strict";async function e(r="INR"){try{let e=await fetch(`https://open.er-api.com/v6/latest/${r}`,{next:{revalidate:3600}});if(!e.ok)throw Error("Failed to fetch rates");return(await e.json()).rates}catch(r){return console.error("Currency conversion error:",r),{USD:.012,EUR:.011,GBP:.0094,INR:1}}}function t(r,e,t,o){return e===t?r:"INR"===e?r*(o[t]||1):"INR"===t?r/(o[e]||1):r/(o[e]||1)*(o[t]||1)}r.s(["convertPrice",()=>t,"fetchExchangeRates",()=>e])}];
-
-//# sourceMappingURL=lib_currency_ts_b957fd47._.js.map

@@ -41,7 +41,7 @@ export function ColorsCard({ materialId }: { materialId: string }) {
     }
   };
 
-  React.useEffect(() => { load(); /* eslint-disable-next-line */ }, [materialId]);
+  React.useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -63,7 +63,7 @@ export default function CustomerEditPage() {
   const [customer, setCustomer] = React.useState<CustomerItem | null>(null);
   const [orders, setOrders] = React.useState<OrderLite[]>([]);
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true);
     try {
       const r = await fetch(`/api/customers/${id}`, { cache: "no-store" });
@@ -88,9 +88,9 @@ export default function CustomerEditPage() {
     }
 
     setLoading(false);
-  };
+  }, [id]);
 
-  React.useEffect(() => { if (id) load(); /* eslint-disable-next-line */ }, [id]);
+  React.useEffect(() => { if (id) load(); }, [id, load]);
 
   const save = async () => {
     if (!customer) return;
@@ -115,6 +115,11 @@ export default function CustomerEditPage() {
     setSaving(false);
   };
 
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <RefreshCcw className="size-8 animate-spin text-muted-foreground" />
+    </div>
+  );
   if (!customer) return null;
 
   const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(" ") || "—";

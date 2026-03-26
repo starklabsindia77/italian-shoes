@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { formatCurrency } from "@/lib/utils";
 import { Price } from "@/components/providers/CurrencyProvider";
 
 interface OrderItem {

@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 type ShipStatus = "pending" | "picked_up" | "in_transit" | "delivered" | "failed";
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const patch = (await req.json().catch(() => ({}))) as Partial<{
       courierName: string | null;
       awbNumber: string | null;
@@ -17,7 +18,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }>;
 
     // Build a flexible data object. Only include keys the DB likely has.
-    const data: any = {};
+    const data: Record<string, unknown> = {};
     if ("courierName" in patch) data.courierName = patch.courierName;
     if ("awbNumber" in patch) data.awbNumber = patch.awbNumber;
     if ("trackingUrl" in patch) data.trackingUrl = patch.trackingUrl;
@@ -48,14 +49,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       data.fulfillmentStatus = map[patch.status] ?? "in_transit";
     }
 
-    // Use 'any' to avoid TS complaining about unknown columns
-    const updated = await (prisma as any).order.update({
-      where: { id: params.id },
+    // Use 'unknown' cast to avoid TS complaining about dynamic columns while satisfying ESLint
+    const updated = await (prisma as unknown as { order: { update: (args: unknown) => Promise<unknown> } }).order.update({
+      where: { id },
       data,
     });
 
     return NextResponse.json(updated);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? "Failed to update shipment" }, { status: 400 });
+  } catch (e) {
+    const error = e as Error;
+    return NextResponse.json({ error: error?.message ?? "Failed to update shipment" }, { status: 400 });
   }
 }

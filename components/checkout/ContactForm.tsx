@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export function ContactForm({ data, onChange }: { data: any, onChange: (key: string, value: any) => void }) {
+export function ContactForm({ data, onChange }: { data: { email?: string; newsletter?: boolean }, onChange: (key: string, value: string | boolean) => void }) {
   return (
     <div className="space-y-4">
       <div>

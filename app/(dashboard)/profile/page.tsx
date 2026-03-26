@@ -95,9 +95,10 @@ export default function AdminProfilePage() {
       // Clear password fields on success
       form.setValue("currentPassword", "");
       form.setValue("newPassword", "");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { message?: string };
       console.error(err);
-      toast.error(err.message || "Failed to update profile");
+      toast.error(error.message || "Failed to update profile");
     } finally {
       setSaving(false);
     }

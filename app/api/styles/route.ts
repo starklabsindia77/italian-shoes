@@ -9,7 +9,10 @@ export async function GET(req: Request) {
     const { skip, limit } = pagination(req);
 
     const where = q
-      ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { styleId: { contains: q, mode: "insensitive" } }] }
+      ? { OR: [
+          { name: { contains: q, mode: "insensitive" as const } }, 
+          { styleId: { contains: q, mode: "insensitive" as const } }
+        ] }
       : {};
 
     const [items, total] = await Promise.all([

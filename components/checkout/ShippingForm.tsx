@@ -4,21 +4,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { INDIAN_STATES } from "@/lib/constants";
 import { useEffect, useState } from "react";
 
-export function ShippingForm({ data, onChange }: { data: any, onChange: (key: string, value: any) => void }) {
-  const [countries, setCountries] = useState<any[]>([]);
+export function ShippingForm({ data, onChange }: { data: Record<string, string>, onChange: (key: string, value: string) => void }) {
+  const [countries, setCountries] = useState<{ code: string; name: string; active?: boolean }[]>([]);
 
   useEffect(() => {
     fetch("/api/settings")
       .then(res => res.json())
       .then(settings => {
-        const active = settings?.localization?.supportedCountries?.filter((c: any) => c.active) || [];
+        const active = settings?.localization?.supportedCountries?.filter((c: { active: boolean }) => c.active) || [];
         setCountries(active);
         // Default to India if it's the only one or if nothing selected
-        if (!data.country && active.some((c: any) => c.code === "in")) {
+        if (!data.country && active.some((c: { code: string }) => c.code === "in")) {
           onChange("country", "in");
         }
       });
-  }, []);
+  }, [data.country, onChange]);
 
   return (
     <div className="space-y-4">

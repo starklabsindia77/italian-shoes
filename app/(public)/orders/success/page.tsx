@@ -37,7 +37,7 @@ export default function OrderSuccessPage() {
             Order Placed Successfully!
           </h1>
           <p className="text-lg text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
-            Thank you for your purchase. We've received your order and are getting it ready for shipment.
+            Thank you for your purchase. We&apos;ve received your order and are getting it ready for shipment.
           </p>
         </motion.div>
 
@@ -74,7 +74,7 @@ export default function OrderSuccessPage() {
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">Shipping</h3>
             <p className="text-sm text-gray-500">
-              We'll notify you as soon as your order is on its way.
+              We&apos;ll notify you as soon as your order is on its way.
             </p>
           </div>
         </motion.div>

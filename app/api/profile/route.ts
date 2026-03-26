@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin, server } from "@/lib/api-helpers";
 import { AdminProfileUpdateSchema } from "@/lib/validators";
 import bcrypt from "bcryptjs";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -15,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const user = (await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
         id: true,
@@ -23,8 +21,8 @@ export async function GET() {
         firstName: true,
         lastName: true,
         phone: true,
-      } as any,
-    })) as any;
+      },
+    });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -64,7 +62,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       firstName: firstName || null,
       lastName: lastName || null,
       phone: phone || null,
@@ -88,7 +86,7 @@ export async function PUT(req: Request) {
       updateData.passwordHash = await bcrypt.hash(newPassword, 10);
     }
 
-    const updatedUser = (await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: updateData,
       select: {
@@ -97,8 +95,8 @@ export async function PUT(req: Request) {
         firstName: true,
         lastName: true,
         phone: true,
-      } as any,
-    })) as any;
+      },
+    });
 
     return NextResponse.json(updatedUser);
   } catch (e) {

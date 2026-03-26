@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, X, Heart } from "lucide-react";
-import { useCartStore, useWishlistStore } from "@/lib/stores";
+import { Minus, Plus, X } from "lucide-react";
+import { useCartStore } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { Price } from "@/components/providers/CurrencyProvider";
 
@@ -14,7 +14,7 @@ interface CartItemProps {
   originalPrice?: number;
   quantity: number;
   productId: string;
-  size?: any;
+  size?: unknown;
   material?: {
     id: string;
     name: string;
@@ -38,11 +38,9 @@ export const CartItem = ({
   id,
   image,
   title,
-  variant,
   price,
   originalPrice,
   quantity,
-  productId,
   size,
   material,
   style,
@@ -50,9 +48,7 @@ export const CartItem = ({
 }: CartItemProps) => {
   const [isRemoving, setIsRemoving] = useState(false);
   const { updateQuantity, removeItem } = useCartStore();
-  const { addItem: addToWishlist, isItemInWishlist } = useWishlistStore();
   const { toast } = useToast();
-  console.log(size);
 
   const handleRemove = () => {
     setIsRemoving(true);
@@ -69,26 +65,6 @@ export const CartItem = ({
     }
   };
 
-  const handleMoveToWishlist = () => {
-    addToWishlist({
-      productId,
-      title,
-      price,
-      originalPrice,
-      image,
-      variant,
-      size,
-      material,
-      style,
-      sole,
-    });
-    removeItem(id);
-    toast({
-      title: "Moved to wishlist",
-      description: "The item has been moved to your wishlist.",
-    });
-  };
-
   return (
     <div
       className={`flex gap-4 p-4 bg-cart-item border border-cart-border rounded-lg transition-all duration-150 ${isRemoving ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
@@ -97,6 +73,7 @@ export const CartItem = ({
       {/* Product Image */}
       {image && (
         <div className="flex-shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={image}
             alt={title}
@@ -115,9 +92,9 @@ export const CartItem = ({
             {/* <p className="text-muted-foreground text-sm mt-1">{variant}</p> */}
             {/* Display customization options */}
             <div className="text-xs text-muted-foreground mt-1 space-y-1">
-              {size && (
+              {!!size && (
                 <p>
-                  Size: {typeof size === 'string' ? size : (size.label || `${size.value || ''} ${size.region ? `(${size.region})` : ''}`)}
+                  Size: {(typeof size === 'string' ? size : (((size as Record<string, unknown>)?.label as string) || `${((size as Record<string, unknown>)?.value as string) || ''} ${((size as Record<string, unknown>)?.region as string) ? `(${((size as Record<string, unknown>)?.region as string)})` : ''}`)) as React.ReactNode}
                 </p>
               )}
               {material && (

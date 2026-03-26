@@ -129,7 +129,7 @@ export default function SolesListPage() {
       const res = await fetch(`/api/soles/${s.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Sole deleted successfully");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete sole");
       // Revert UI if deletion fails
       setItems((prev) => [...prev, s]);

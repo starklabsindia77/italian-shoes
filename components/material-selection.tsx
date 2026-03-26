@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import * as React from "react";
@@ -6,15 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, PaintBucket } from "lucide-react";
+import { PaintBucket } from "lucide-react";
 import { getAssetUrl } from "@/lib/utils";
 
 export interface MaterialColor {
   id: string;
   name: string;
-  hexCode?: any;
-  imageUrl?: any;
-  family?: any;
+  hexCode?: string;
+  imageUrl?: string;
+  family?: string;
   isActive: boolean;
 }
 

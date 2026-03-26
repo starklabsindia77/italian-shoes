@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, RefreshCcw, Save, Upload } from "lucide-react";
 
 type StyleModelConfig = {
@@ -52,6 +51,7 @@ const FALLBACK_STYLE: StyleItem = {
 export default function StyleEditPage() {
   const { id } = useParams<{ id: string }>();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
@@ -76,7 +76,7 @@ export default function StyleEditPage() {
     }
   };
 
-  React.useEffect(() => { if (id) load(); /* eslint-disable-next-line */ }, [id]);
+  React.useEffect(() => { if (id) load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: "GLB" | "thumbnail" = "GLB") => {
     const file = e.target.files?.[0];

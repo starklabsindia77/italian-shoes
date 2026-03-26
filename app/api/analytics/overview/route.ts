@@ -51,50 +51,51 @@ export async function GET(req: Request) {
       where: { createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: 500,
-    })) as any[];
+    })) as Record<string, unknown>[];
 
     if (!orders || orders.length === 0) {
       return NextResponse.json(FALLBACK);
     }
 
     // Helpers to read schema-agnostic values
-    const getTotal = (o: any) =>
+    const getTotal = (o: Record<string, unknown>) =>
       Number(
         o.total ??
           o.totalAmount ??
           o.totalCents ??
           o.grandTotal ??
-          (o.pricing && o.pricing.total) ??
+          ((o.pricing as Record<string, unknown>)?.total) ??
           0
       );
 
-    const getCurrency = (o: any): Currency =>
-      (o.currency ??
-        o.currencyCode ??
-        (o.pricing && o.pricing.currency) ??
-        "USD") as Currency;
+    const getCurrency = (o: Record<string, unknown>): Currency =>
+      ((o.currency as Currency) ??
+        (o.currencyCode as Currency) ??
+        ((o.pricing as Record<string, unknown>)?.currency as Currency) ??
+        "USD");
 
-    const getCustomerName = (o: any) => {
+    const getCustomerName = (o: Record<string, unknown>) => {
+      const customer = o.customer as Record<string, unknown> | undefined;
       const first =
         o.customerFirstName ??
         o.customer_first_name ??
         o.firstName ??
-        o.customer?.firstName ??
+        customer?.firstName ??
         null;
       const last =
         o.customerLastName ??
         o.customer_last_name ??
         o.lastName ??
-        o.customer?.lastName ??
+        customer?.lastName ??
         null;
       const email =
         o.customerEmail ??
         o.customer_email ??
         o.email ??
-        o.customer?.email ??
+        customer?.email ??
         null;
       const name = [first, last].filter(Boolean).join(" ");
-      return name || email || "Guest";
+      return (name as string) || (email as string) || "Guest";
     };
 
     // Aggregate KPIs
@@ -107,7 +108,7 @@ export async function GET(req: Request) {
     // Daily series
     const byDay = new Map<string, { revenue: number; orders: number }>();
     for (const o of orders) {
-      const createdAt: Date = o.createdAt ? new Date(o.createdAt) : new Date();
+      const createdAt: Date = o.createdAt ? new Date(o.createdAt as string) : new Date();
       const key = createdAt.toISOString().slice(0, 10);
       const cur = byDay.get(key) ?? { revenue: 0, orders: 0 };
       cur.revenue += getTotal(o);
@@ -127,15 +128,15 @@ export async function GET(req: Request) {
     // Recent orders
     const recentOrders = orders.slice(0, 10).map((o) => ({
       id: o.id,
-      orderNumber: o.orderNumber ?? o.order_id ?? o.id?.slice?.(-6) ?? "",
+      orderNumber: (o.orderNumber as string) ?? (o.order_id as string) ?? (o.id as string)?.slice?.(-6) ?? "",
       customer: getCustomerName(o),
       total: getTotal(o),
       currency: getCurrency(o),
-      status: o.status ?? "design_received",
+      status: (o.status as string) ?? "design_received",
     }));
 
     // Top products (optional — left empty unless you aggregate OrderItems)
-    const topProducts: any[] = [];
+    const topProducts: { id: string; title: string; revenue: number; orders: number }[] = [];
 
     return NextResponse.json({
       currency,

@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -46,7 +45,6 @@ export default function MaterialsListPage() {
   const [items, setItems] = React.useState<Material[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [query, setQuery] = React.useState("");
-  const router = useRouter();
 
   const load = async () => {
     setLoading(true);
@@ -61,7 +59,7 @@ export default function MaterialsListPage() {
     }
   };
 
-  React.useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  React.useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleActive = async (m: Material) => {
     setItems(prev => prev.map(x => x.id === m.id ? { ...x, isActive: !x.isActive } : x));
@@ -84,7 +82,7 @@ export default function MaterialsListPage() {
       const res = await fetch(`/api/materials/${m.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Material deleted successfully");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete material");
       // Revert UI if deletion fails
       setItems(prev => [...prev, m]);

@@ -3,7 +3,6 @@
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface UserProfileProps {
   showRole?: boolean;
@@ -40,9 +39,9 @@ export function UserProfile({ showRole = true, className }: UserProfileProps) {
       <div className="flex flex-col">
         <span className="text-sm font-medium">{user.name || "User"}</span>
         <span className="text-xs text-muted-foreground">{user.email}</span>
-        {showRole && (user as any).role && (
+        {showRole && (user as { role?: string }).role && (
           <Badge variant="secondary" className="w-fit text-xs">
-            {(user as any).role}
+            {(user as { role?: string }).role}
           </Badge>
         )}
       </div>

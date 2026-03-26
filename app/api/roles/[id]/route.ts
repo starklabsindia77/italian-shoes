@@ -24,7 +24,8 @@ export async function PATCH(
 
     const { name, permissions } = parsed.data;
 
-    const role = await (prisma as any).customRole.update({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const role = await (prisma as unknown as Record<string, any>).customRole.update({
       where: { id },
       data: {
         name: name !== undefined ? name : undefined,
@@ -47,7 +48,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if users are using this role
-    const usersCount = await (prisma.user as any).count({
+    const usersCount = await prisma.user.count({
       where: { customRoleId: id },
     });
 
@@ -57,7 +58,8 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    await (prisma as any).customRole.delete({ where: { id } });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (prisma as unknown as Record<string, any>).customRole.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (e) {
     return server(e);

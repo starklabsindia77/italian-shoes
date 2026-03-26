@@ -24,7 +24,7 @@ const Wishlist = () => {
           <Heart className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h1 className="text-2xl font-bold mb-2">Your wishlist is empty</h1>
           <p className="text-muted-foreground mb-6">
-            Save items you love to your wishlist and they'll appear here.
+            Save items you love to your wishlist and they&apos;ll appear here.
           </p>
           <Button size="lg" className="w-full" onClick={handleContinueShopping}>
             Start Shopping

@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -16,21 +17,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { Label } from "@/components/ui/label";
 import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import {
-  ArrowLeft, Check, CircleOff, Factory, Loader2, Plus, RefreshCw, Save, Sparkles, Trash2, Upload,
+  ArrowLeft, Loader2, RefreshCw, Save, Sparkles, Upload,
 } from "lucide-react";
 import { MaterialSelection, Material, SelectedMaterial } from "@/components/material-selection";
 import { StyleSoleSelection, Style, Sole, SelectedItem } from "@/components/style-sole-selection";
@@ -38,7 +33,6 @@ import { ProductCreateSchema as ServerProductCreateSchema } from "@/lib/validato
 
 /* ---------------- types ---------------- */
 type Currency = "USD" | "EUR" | "GBP" | "INR";
-type OptionType = "SIZE" | "WIDTH" | "STYLE" | "SOLE" | "COLOR" | "MATERIAL" | "CUSTOM";
 
 /** -------- Local UI schema (compatible with server) -------- */
 const ProductEditSchema = ServerProductCreateSchema.extend({
@@ -74,36 +68,6 @@ type Product = {
   updatedAt?: string;
 };
 
-type ProductOptionValue = {
-  id: string;
-  value: string;
-  label: string;
-  position: number;
-  isActive: boolean;
-};
-
-type ProductOption = {
-  id: string;
-  code: string;
-  name: string;
-  type: OptionType;
-  position: number;
-  isActive: boolean;
-  values: ProductOptionValue[];
-};
-
-type Variant = {
-  id: string;
-  sku: string;
-  price: number;
-  isActive: boolean;
-};
-
-type Size = { id: string; sizeId: string; name: string; region: "US" | "EU" | "UK"; value: number };
-type ProductSize = { id: string; sizeId: string; width: "STANDARD" | "WIDE" | "EXTRA_WIDE" | "NARROW" };
-
-type Panel = { id: string; panelId: string; name: string; group?: string | null };
-type ProductPanel = { id: string; panelId: string; panel?: Panel; isCustomizable: boolean };
 
 /* ---------------- fallback (if API fails) ---------------- */
 const FALLBACK_PRODUCT: Product = {
@@ -127,8 +91,8 @@ const FALLBACK_PRODUCT: Product = {
 
 export default function ProductEditPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 

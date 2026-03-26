@@ -2,11 +2,18 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
+interface Country {
+  code: string;
+  name: string;
+  currency: string;
+  active: boolean;
+}
+
 interface CurrencyContextType {
   currency: string;
   setCurrency: (currency: string) => void;
   rates: Record<string, number>;
-  supportedCountries: any[];
+  supportedCountries: Country[];
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
@@ -14,7 +21,7 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrency] = useState("INR");
   const [rates, setRates] = useState<Record<string, number>>({ "INR": 1 });
-  const [supportedCountries, setSupportedCountries] = useState<any[]>([]);
+  const [supportedCountries, setSupportedCountries] = useState<Country[]>([]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -24,7 +31,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         const localization = settings?.localization;
         if (localization) {
           setRates(localization.rates || { "INR": 1 });
-          const active = localization.supportedCountries?.filter((c: any) => c.active) || [];
+          const active = (localization.supportedCountries as Country[])?.filter((c) => c.active) || [];
           setSupportedCountries(active);
           
           // Load preferred currency from localStorage or default to INR

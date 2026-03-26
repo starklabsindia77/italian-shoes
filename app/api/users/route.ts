@@ -7,11 +7,11 @@ import bcrypt from "bcryptjs";
 export async function GET() {
   try {
     await requireAdmin();
-    const users = await (prisma.user as any).findMany({
+    const users = await prisma.user.findMany({
       where: {
         OR: [
-          { role: "ADMIN" as any },
-          { customRoleId: { not: null } as any }
+          { role: "ADMIN" },
+          { customRoleId: { not: null } }
         ]
       },
       select: {
@@ -25,7 +25,7 @@ export async function GET() {
         customRoleId: true,
         customRole: { select: { name: true } },
         createdAt: true,
-      } as any,
+      },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(users);
@@ -66,10 +66,11 @@ export async function POST(req: Request) {
         passwordHash,
         role,
         customRoleId,
-      } as any,
+      },
     });
 
-    const { passwordHash: _, ...userWithoutPassword } = user as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash: _hash, ...userWithoutPassword } = user as { passwordHash: string };
     return NextResponse.json(userWithoutPassword, { status: 201 });
   } catch (e) {
     return server(e);

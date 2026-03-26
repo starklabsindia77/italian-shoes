@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-export function ok(data: any, init?: number | ResponseInit) {
+export function ok(data: unknown, init?: number | ResponseInit) {
   return NextResponse.json(data, typeof init === "number" ? { status: init } : init);
 }
 export function bad(message = "Bad Request", status = 400) {
@@ -9,14 +9,11 @@ export function bad(message = "Bad Request", status = 400) {
 }
 export function notFound(message = "Not Found") { return bad(message, 404); }
 export function forbidden(message = "Forbidden") { return bad(message, 403); }
-export function server(e: any) {
+export function server(e: unknown) {
   console.error(e);
-  try {
-    const fs = require('fs');
-    fs.appendFileSync('/tmp/api-error.log', `[${new Date().toISOString()}] ERROR: ${e?.message}\n${e?.stack}\n\n`);
-  } catch (err) {}
-  const status = e?.code && typeof e.code === "number" ? e.code : 500;
-  return NextResponse.json({ error: e?.message ?? "Server Error" }, { status });
+  const err = e as { message?: string; code?: number; stack?: string };
+  const status = err?.code && typeof err.code === "number" ? err.code : 500;
+  return NextResponse.json({ error: err?.message ?? "Server Error" }, { status });
 }
 
 export async function requireAuth() {
@@ -26,17 +23,18 @@ export async function requireAuth() {
 }
 export async function requireAdmin() {
   const session = await requireAuth();
-  if ((session.user as any).role !== "ADMIN") throw Object.assign(new Error("Forbidden"), { code: 403 });
+  if ((session.user as { role?: string }).role !== "ADMIN") throw Object.assign(new Error("Forbidden"), { code: 403 });
   return session;
 }
 export async function requireAnyRole(roles: string[]) {
   const session = await requireAuth();
-  if (!roles.includes((session.user as any).role)) throw Object.assign(new Error("Forbidden"), { code: 403 });
+  const role = (session.user as { role?: string }).role;
+  if (!role || !roles.includes(role)) throw Object.assign(new Error("Forbidden"), { code: 403 });
   return session;
 }
 export async function requirePermission(perm: string) {
   const session = await requireAuth();
-  const u = session.user as any;
+  const u = session.user as { role?: string; permissions?: string[] };
   if (u.role === "ADMIN") return session;
   if (u.permissions?.includes(perm)) return session;
   throw Object.assign(new Error("Forbidden"), { code: 403 });

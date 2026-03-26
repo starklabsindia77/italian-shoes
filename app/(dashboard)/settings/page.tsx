@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Save, Plus, Trash2, Truck, RefreshCcw, Mail } from "lucide-react";
+import { Save, Plus, Trash2, Truck, RefreshCcw } from "lucide-react";
 
 type Currency = "USD" | "EUR" | "GBP";
 
@@ -127,6 +127,7 @@ const FALLBACK: Settings = {
 
 export default function SettingsPage() {
   const [data, setData] = React.useState<Settings>(FALLBACK);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
 
   const load = async () => {
@@ -135,7 +136,7 @@ export default function SettingsPage() {
       const r = await fetch("/api/settings", { cache: "no-store" });
       if (!r.ok) throw new Error();
       const d = await r.json();
-      setData({ ...(FALLBACK as any), ...(d ?? {}) });
+      setData((prev) => ({ ...FALLBACK, ...prev, ...(d ?? {}) } as Settings));
     } catch {
       setData(FALLBACK);
     } finally {
@@ -543,7 +544,7 @@ export default function SettingsPage() {
                 <Field label="Email Provider">
                   <Select
                     value={data.email.provider}
-                    onValueChange={(v: any) => setData(d => ({ ...d, email: { ...d.email, provider: v } }))}
+                    onValueChange={(v: "resend" | "smtp" | "none") => setData(d => ({ ...d, email: { ...d.email, provider: v } }))}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>

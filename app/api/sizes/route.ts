@@ -7,8 +7,8 @@ import { unstable_cache, revalidateTag } from "next/cache";
 const getCachedSizes = (q?: string, region?: string, skip?: number, limit?: number) =>
   unstable_cache(
     async () => {
-      const where: any = {};
-      if (q) where.OR = [{ name: { contains: q, mode: "insensitive" as any } }, { sizeId: { contains: q, mode: "insensitive" as any } }];
+      const where: Record<string, unknown> = {};
+      if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { sizeId: { contains: q, mode: "insensitive" } }];
       if (region) where.region = region;
 
       const [items, total] = await Promise.all([
@@ -26,12 +26,12 @@ const getCachedSizes = (q?: string, region?: string, skip?: number, limit?: numb
     { revalidate: 3600, tags: ["sizes"] }
   )();
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
-    const sp = getSearchParams(req);
+    const sp = getSearchParams(_req);
     const q = sp.get("q")?.trim();
     const region = sp.get("region") as "US" | "EU" | "UK" | null;
-    const { skip, limit } = pagination(req);
+    const { skip, limit } = pagination(_req);
 
     const data = await getCachedSizes(q ?? undefined, region ?? undefined, skip, limit);
 

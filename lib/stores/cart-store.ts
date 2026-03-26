@@ -11,7 +11,7 @@ export interface CartItem {
   quantity: number;
   image?: string;
   // Product customization options
-  size?: any;
+  size?: unknown;
   material?: {
     id: string;
     name: string;
@@ -30,7 +30,7 @@ export interface CartItem {
     name: string;
   };
   notes?: string;
-  config?: any;
+  config?: unknown;
   // Additional metadata
   addedAt: Date;
 }

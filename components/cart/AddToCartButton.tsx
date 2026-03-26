@@ -13,7 +13,7 @@ interface AddToCartButtonProps {
   image?: string;
   variant?: string;
   quantity?: number;
-  size?: any;
+  size?: unknown;
   material?: {
     id: string;
     name: string;
@@ -36,7 +36,7 @@ interface AddToCartButtonProps {
   className?: string;
   showIcon?: boolean;
   notes?: string;
-  config?: any;
+  config?: unknown;
   onBeforeAdd?: () => Promise<{ image?: string } | void>;
 }
 

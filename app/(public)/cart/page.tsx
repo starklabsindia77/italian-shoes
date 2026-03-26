@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,19 @@ import { Price } from "@/components/providers/CurrencyProvider";
 const Cart = () => {
   const { toast } = useToast();
   const router = useRouter();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { items: cartItems, getTotalPrice, clearCart } = useCartStore();
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<{
+    integrations?: {
+      razorpayMagicCheckoutEnabled?: boolean;
+      razorpayKeyId?: string;
+    };
+    taxes?: {
+      enabled?: boolean;
+      taxInclusive?: boolean;
+      defaultRate?: number;
+    };
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -87,7 +99,7 @@ const Cart = () => {
           <ShoppingBag className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
           <p className="text-muted-foreground mb-6">
-            Looks like you haven't added anything to your cart yet.
+            Looks like you haven&apos;t added anything to your cart yet.
           </p>
           <Button size="lg" className="w-full" onClick={handleContinueShopping}>
             Continue Shopping

@@ -125,7 +125,7 @@ const DemoPage = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
           <h2 className="text-lg font-semibold text-blue-900 mb-2">How to Test</h2>
           <ul className="text-blue-800 space-y-1">
-            <li>• Click "Add to Cart" to add items to your cart</li>
+            <li>• Click &quot;Add to Cart&quot; to add items to your cart</li>
             <li>• Click the heart icon to add items to your wishlist</li>
             <li>• Use the cart and wishlist icons in the header to view your items</li>
             <li>• Try moving items between cart and wishlist</li>

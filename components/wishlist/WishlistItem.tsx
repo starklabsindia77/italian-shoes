@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Heart, ShoppingCart, Eye } from "lucide-react";
+import { X, ShoppingCart, Eye } from "lucide-react";
 import { useWishlistStore, useCartStore } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { useRouter } from "next/navigation";

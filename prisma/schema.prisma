@@ -109,7 +109,8 @@ model MaterialColor {
 }
 
 model Style {
-  id          String      @id @unique @default(cuid())
+  id          String      @id @default(cuid())
+  styleId     String      @unique
   name        String
   description String?
   category    String?
@@ -125,7 +126,8 @@ model Style {
 }
 
 model Sole {
-  id          String      @id @unique @default(cuid())
+  id          String      @id @default(cuid())
+  soleId      String      @unique
   name        String
   description String?
   category    String?
@@ -141,7 +143,8 @@ model Sole {
 }
 
 model Size {
-  id           String      @id @unique @default(cuid())
+  id           String      @id @default(cuid())
+  sizeId       String      @unique
   name         String
   region       Region
   value        Float

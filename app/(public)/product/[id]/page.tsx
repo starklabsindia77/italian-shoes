@@ -1,17 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
-  ArrowLeft,
-  Share2,
   Heart,
   MessageCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
-import { WishlistButton } from "@/components/wishlist/WishlistButton";
 import { getAssetUrl } from "@/lib/utils";
 import { ShoeAvatarRef } from "@/components/shoe-avatar/ShoeAvatar";
 import { Price } from "@/components/providers/CurrencyProvider";
@@ -36,12 +34,34 @@ const ShoeAvatar = dynamic(
 
 // Transform API data to match UI expectations
 const transformApiData = (
-  productApiData: any,
-  sizesApiData: any,
-  panelsApiData: any
+  productApiData: {
+    productId?: string;
+    images?: string[];
+    assets?: { thumbnail?: string; glb?: { url: string } };
+    title?: string;
+    price?: number;
+    compareAtPrice?: number;
+    orderStatus?: string;
+    vendor?: string;
+    selectedMaterials?: any[];
+    selectedStyles?: any[];
+    selectedSoles?: any[];
+    description?: string;
+  } | null,
+  sizesApiData: { items?: any[] } | null,
+  panelsApiData: { items?: any[] } | null
 ) => {
   return {
-    ...(productApiData || {}),
+    productId: productApiData?.productId || "",
+    title: productApiData?.title || "",
+    price: productApiData?.price || 0,
+    compareAtPrice: productApiData?.compareAtPrice || 0,
+    description: productApiData?.description || "",
+    orderStatus: productApiData?.orderStatus || "",
+    vendor: productApiData?.vendor || "",
+    selectedStyles: productApiData?.selectedStyles || [],
+    selectedSoles: productApiData?.selectedSoles || [],
+    assets: productApiData?.assets || {},
     // Add default images if not present
     images: productApiData?.images || (
       productApiData?.assets?.thumbnail
@@ -111,13 +131,14 @@ export default function DerbyBuilderClean() {
   // State for API data
   const { id } = useParams<{ id: string }>();
   const [productData, setProductData] = useState<any>(null);
-  const [sizesData, setSizesData] = useState<any>(null);
-  const [panelsData, setPanelsData] = useState<any>(null);
-  const [materialsData, setMaterialsData] = useState<any>(null);
+  const [sizesData, setSizesData] = useState<{ items?: any[] } | null>(null);
+  const [panelsData, setPanelsData] = useState<{ items?: any[] } | null>(null);
+  const [materialsData, setMaterialsData] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // UI-only state
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "Materials" | "Style" | "Soles" | "Colors" | "Inscription"
@@ -224,7 +245,7 @@ export default function DerbyBuilderClean() {
     const selectedSoleObj = (productData?.selectedSoles || []).find(
       (so: any) => (so.id || so.name) === selectedSole
     );
-
+    
     const selectedStyleObj = (productData?.selectedStyles || []).find(
       (so: any) => (so.id || so.name) === selectedStyle
     );
@@ -328,6 +349,7 @@ export default function DerbyBuilderClean() {
 
 
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const actionsCount = useMemo(
     () =>
       [
@@ -344,6 +366,7 @@ export default function DerbyBuilderClean() {
 
 
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearAll = () => {
     if (cfg.panels && cfg.panels.length > 0) {
       setActivePanel(cfg.panels[0].id);
@@ -414,9 +437,9 @@ export default function DerbyBuilderClean() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col justify-center items-center text-sm text-gray-500 w-full">
             <h1 className="text-xl font-semibold text-gray-900">
-              {cfg.title?.replace("`", "'") || "Men's Luxury Dress Shoes"}
+              {cfg.title?.replace("`", "'") || "Men&apos;s Luxury Dress Shoes"}
             </h1>
-            Home {" > "} Create Design {" > "} Create Men's Shoes {" > "} Men's Derby Shoes
+            Home {" > "} Create Design {" > "} Create Men&apos;s Shoes {" > "} Men&apos;s Derby Shoes
           </div>
           {/* Divider */}
           <div className="w-full border-t border-gray-300 mt-4"></div>
@@ -491,9 +514,9 @@ export default function DerbyBuilderClean() {
 
                   {/* Add to Cart Button */}
                   <AddToCartButton
-                    productId={cfg.productId}
-                    title={cfg.title}
-                    price={cfg.price}
+                    productId={cfg.productId || ""}
+                    title={cfg.title || ""}
+                    price={cfg.price || 0}
                     originalPrice={cfg.compareAtPrice}
                     image={getAssetUrl(cfg.assets?.thumbnail || "/ShoeSoleFixed.glb")}
                     size={selectedSizeObject || selectedSize}

@@ -96,7 +96,7 @@ export default function SizesListPage() {
 
   React.useEffect(() => {
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleActive = async (s: SizeItem) => {
     setItems((prev) =>

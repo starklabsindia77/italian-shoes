@@ -2,14 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -74,7 +71,7 @@ export default function DashboardOverviewPage() {
   const [data, setData] = React.useState<Overview | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  const load = async () => {
+  const load = React.useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/analytics/overview?range=${range}`, { cache: "no-store" });
@@ -86,9 +83,9 @@ export default function DashboardOverviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [range]);
 
-  React.useEffect(() => { load(); /* eslint-disable-next-line */ }, [range]);
+  React.useEffect(() => { load(); }, [range, load]);
 
   const d = data ?? FALLBACK;
   const maxRevenue = Math.max(...d.series.map((p) => p.revenue), 1);
@@ -101,7 +98,7 @@ export default function DashboardOverviewPage() {
           <p className="text-sm text-muted-foreground">Sales, orders, and customers at a glance.</p>
         </div>
         <div className="flex gap-2">
-          <Select value={range} onValueChange={(v: any) => setRange(v)}>
+          <Select value={range} onValueChange={(v: OverviewPayload["range"]) => setRange(v)}>
             <SelectTrigger className="w-[140px]"><SelectValue placeholder="Range" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7d">Last 7 days</SelectItem>
@@ -109,7 +106,7 @@ export default function DashboardOverviewPage() {
               <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={load}><RefreshCcw className="mr-2 size-4" />Refresh</Button>
+          <Button variant="outline" onClick={load} disabled={loading}><RefreshCcw className={`mr-2 size-4 ${loading ? 'animate-spin' : ''}`} />Refresh</Button>
         </div>
       </div>
 

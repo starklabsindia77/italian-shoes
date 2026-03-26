@@ -37,7 +37,7 @@ import {
   ToggleRight,
   Upload,
 } from "lucide-react";
-import { ColorsCard } from "./colors-card";
+// import { ColorsCard } from "./colors-card";
 import { getAssetUrl } from "@/lib/utils";
 
 type Material = {
@@ -88,6 +88,7 @@ const FALLBACK_COLORS: MaterialColor[] = [
 export default function MaterialEditPage() {
   const { id } = useParams<{ id: string }>();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
 

@@ -50,7 +50,7 @@ export default function PanelCreatePage() {
     const p = run();
     toast.promise(p, { loading: "Creating…", success: "Panel created", error: "Failed to create" });
     try {
-      const created = await p;
+      await p;
       router.push(`/panels`);
     } finally {
       setSaving(false);

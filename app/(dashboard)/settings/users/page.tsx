@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
@@ -39,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { RefreshCcw, Plus, Edit3, Trash2, UserPlus, ShieldCheck } from "lucide-react";
+import { RefreshCcw, Edit3, Trash2, UserPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 type SubUser = {
@@ -155,7 +156,6 @@ export default function UserManagementPage() {
 
       // If the edited user is the current user, refresh the session
       if (session?.user?.email === editingUser.email) {
-        // @ts-ignore - update is available in next-auth v4+
         await update();
       }
 

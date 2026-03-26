@@ -130,7 +130,7 @@ export default function StylesListPage() {
       const res = await fetch(`/api/styles/${s.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Style deleted successfully");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete style");
       // Revert UI if deletion fails
       setItems((prev) => [...prev, s]);

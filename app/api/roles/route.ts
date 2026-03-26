@@ -13,7 +13,7 @@ export async function GET() {
     await requireAdmin();
     // Return both standard enum roles (formatted as fake custom roles) and real ones?
     // Actually, for the UI, it's better to just manage custom roles here.
-    const customRoles = await (prisma as any).customRole.findMany({
+    const customRoles = await (prisma as unknown as { customRole: { findMany: (args: unknown) => Promise<unknown[]> } }).customRole.findMany({
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(customRoles);
@@ -35,12 +35,12 @@ export async function POST(req: Request) {
     const { name, permissions } = parsed.data;
 
     // name check
-    const existing = await (prisma as any).customRole.findUnique({ where: { name } });
+    const existing = await (prisma as unknown as { customRole: { findUnique: (args: unknown) => Promise<unknown> } }).customRole.findUnique({ where: { name } });
     if (existing) {
       return NextResponse.json({ error: "Role name already exists" }, { status: 400 });
     }
 
-    const role = await (prisma as any).customRole.create({
+    const role = await (prisma as unknown as { customRole: { create: (args: unknown) => Promise<unknown> } }).customRole.create({
       data: {
         name,
         permissions,

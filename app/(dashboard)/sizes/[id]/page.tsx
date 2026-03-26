@@ -41,6 +41,7 @@ const FALLBACK_SIZE: SizeItem = {
 export default function SizeEditPage() {
   const { id } = useParams<{ id: string }>();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [size, setSize] = React.useState<SizeItem | null>(null);
@@ -59,7 +60,7 @@ export default function SizeEditPage() {
     }
   };
 
-  React.useEffect(() => { if (id) load(); /* eslint-disable-next-line */ }, [id]);
+  React.useEffect(() => { if (id) load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     if (!size) return;

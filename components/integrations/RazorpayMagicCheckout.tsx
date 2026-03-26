@@ -12,7 +12,7 @@ export const RazorpayMagicCheckout = ({ razorpayKeyId }: RazorpayMagicCheckoutPr
             src="https://checkout.razorpay.com/v1/magic-checkout.js"
             strategy="afterInteractive"
             onLoad={() => {
-                (window as any).RazorpayMagicCheckout?.init({
+                (window as unknown as { RazorpayMagicCheckout?: { init: (config: { key_id: string }) => void } }).RazorpayMagicCheckout?.init({
                     key_id: razorpayKeyId,
                 });
             }}

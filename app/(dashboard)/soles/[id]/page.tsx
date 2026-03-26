@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, RefreshCcw, Save, Upload } from "lucide-react";
 
 type SoleModelConfig = {
@@ -48,6 +47,7 @@ const FALLBACK_SOLE: SoleItem = {
 export default function SoleEditPage() {
   const { id } = useParams<{ id: string }>();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [sole, setSole] = React.useState<SoleItem | null>(null);

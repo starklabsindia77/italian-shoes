@@ -105,7 +105,7 @@ export default function PanelsListPage() {
       const res = await fetch(`/api/panels/${p.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       toast.success("Panel deleted successfully");
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete panel");
       // Revert UI if deletion fails
       setItems((prev) => [...prev, p]);

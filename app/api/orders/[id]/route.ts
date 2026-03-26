@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
+type ShipmentStatus = "PENDING" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "FAILED";
 import { ok, bad, notFound, server, requireAuth, requireAdmin } from "@/lib/api-helpers";
 import { OrderUpdateStatusSchema } from "@/lib/validators";
 import { EmailService } from "@/lib/email-service";
 
 // Helper to map Prisma Order to frontend OrderFull
-function mapOrderResponse(o: any) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function mapOrderResponse(o: Record<string, any>) {
   return {
     id: o.id,
     orderId: o.orderId,
@@ -18,7 +20,7 @@ function mapOrderResponse(o: any) {
     },
     shipping: o.shippingAddress,
     billing: o.billingAddress,
-    items: o.items?.map((it: any) => ({
+    items: (o.items as Record<string, any>[] | undefined)?.map((it) => ({
       ...it,
       title: it.productTitle, // Ensure compatibility with existing 'title' usages if any
       style: it.style ? { styleId: it.style.id, styleName: it.style.name } : null,
@@ -52,6 +54,7 @@ function mapOrderResponse(o: any) {
     updatedAt: o.updatedAt,
   };
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -80,7 +83,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!parsed.success) return bad(parsed.error.message);
     
     const d = parsed.data;
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     if (d.status) updateData.status = d.status.toUpperCase();
     if (d.paymentStatus) updateData.paymentStatus = d.paymentStatus.toUpperCase();
     if (d.fulfillmentStatus) updateData.fulfillmentStatus = d.fulfillmentStatus.toUpperCase();
@@ -101,7 +104,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           orderId: id,
           awbNumber: d.shiprocket.awbNumber,
           courierName: d.shiprocket.courierName,
-          status: (d.shiprocket.status || "PENDING").toUpperCase() as any,
+          status: (d.shiprocket.status || "PENDING").toUpperCase() as ShipmentStatus,
           trackingUrl: d.shiprocket.trackingUrl,
           labelUrl: d.shiprocket.labelUrl,
           estimatedDelivery: d.shiprocket.estimatedDelivery ? new Date(d.shiprocket.estimatedDelivery) : null,
@@ -110,7 +113,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         update: {
           awbNumber: d.shiprocket.awbNumber,
           courierName: d.shiprocket.courierName,
-          status: d.shiprocket.status ? d.shiprocket.status.toUpperCase() as any : undefined,
+          status: d.shiprocket.status ? d.shiprocket.status.toUpperCase() as ShipmentStatus : undefined,
           trackingUrl: d.shiprocket.trackingUrl,
           labelUrl: d.shiprocket.labelUrl,
           estimatedDelivery: d.shiprocket.estimatedDelivery ? new Date(d.shiprocket.estimatedDelivery) : null,
@@ -133,14 +136,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         customerName: [updated.customerFirstName, updated.customerLastName].filter(Boolean).join(" ") || "Valued Customer",
         status: updated.status,
         total: formatter.format(updated.total),
-        items: (updated as any).items || []
+        items: (updated as unknown as { items: unknown[] }).items || []
       });
     }
 
     return ok(mapOrderResponse(updated));
-  } catch (e: any) {
-    if (e?.code === "P2025") return notFound();
-    if (e?.code === 401 || e?.code === 403) return bad(e.message, e.code);
+  } catch (e) {
+    if ((e as { code?: string })?.code === "P2025") return notFound();
+    if ((e as { code?: number; message?: string })?.code === 401 || (e as { code?: number; message?: string })?.code === 403) return bad((e as Error).message, (e as { code: number }).code);
     return server(e);
   }
 }
@@ -151,9 +154,9 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     await requireAdmin();
     await prisma.order.delete({ where: { id } });
     return ok({ ok: true });
-  } catch (e: any) {
-    if (e?.code === "P2025") return notFound();
-    if (e?.code === 401 || e?.code === 403) return bad(e.message, e.code);
+  } catch (e) {
+    if ((e as { code?: string })?.code === "P2025") return notFound();
+    if ((e as { code?: number; message?: string })?.code === 401 || (e as { code?: number; message?: string })?.code === 403) return bad((e as Error).message, (e as { code: number }).code);
     return server(e);
   }
 }

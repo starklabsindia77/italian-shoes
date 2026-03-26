@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
-  Package,
   ShoppingCart,
   Factory,
   DollarSign,
@@ -143,7 +142,7 @@ export default async function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recent.map((o: any) => (
+                  {recent.map((o: { id: string; number: string; customer: string; total: number; currency: string; status: string }) => (
                     <TableRow key={o.id}>
                       <TableCell className="font-medium">{o.number}</TableCell>
                       <TableCell>{o.customer}</TableCell>

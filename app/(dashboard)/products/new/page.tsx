@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
@@ -12,9 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -238,15 +237,11 @@ export default function ProductNewPage() {
     };
 
     try {
-      const created = await toast.promise(run(), {
+      await toast.promise(run(), {
         loading: "Creating product…",
         success: "Product created",
         error: (e) => (typeof e === "object" && e && "message" in e ? (e as any).message : String(e)) || "Failed to create",
       });
-      // Support both { id } object and string/number id response
-      const id = typeof created === "object" && created !== null && "id" in created
-        ? (created as any).id
-        : created;
       router.push(`/products`);
     } catch {
       // keep on page

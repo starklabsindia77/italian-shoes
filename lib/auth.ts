@@ -37,7 +37,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await (prisma.user as any).findUnique({ 
+        const user = await prisma.user.findUnique({ 
           where: { email },
           include: { customRole: true }
         });
@@ -66,8 +66,8 @@ export const authOptions: NextAuthOptions = {
           name: user.name ?? null,
           email: user.email,
           role: user.role,
-          permissions: (user as any).customRole?.permissions || [],
-        } as any;
+          permissions: (user as { customRole?: { permissions: string[] } }).customRole?.permissions || [],
+        };
       },
     }),
   ],
@@ -75,19 +75,19 @@ export const authOptions: NextAuthOptions = {
     // Runs on initial sign-in (with `user`) and on every subsequent request (without `user`)
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role ?? "USER";
-        token.permissions = (user as any).permissions ?? [];
+        token.role = ((user as unknown as { role?: string }).role ?? "USER") as "USER" | "ADMIN";
+        token.permissions = (user as unknown as { permissions?: string[] }).permissions ?? [];
       } else if (token?.email) {
         // Fetch fresh data from DB on every token check to ensure permissions are up to date
         // This solves the latency issue when an Admin modifies a user's role/permissions
         try {
-          const dbUser = await (prisma.user as any).findUnique({
+          const dbUser = await prisma.user.findUnique({
             where: { email: token.email as string },
             select: { role: true, customRole: { select: { permissions: true } } },
           });
           if (dbUser) {
-            token.role = dbUser.role;
-            token.permissions = (dbUser as any).customRole?.permissions ?? [];
+            token.role = ((dbUser as unknown as { role: string }).role) as "USER" | "ADMIN";
+            token.permissions = (dbUser as unknown as { customRole?: { permissions: string[] } }).customRole?.permissions ?? [];
           }
         } catch (e) {
           console.error("JWT sync error:", e);
@@ -97,9 +97,9 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.sub as string;
-        (session.user as any).role = (token as any).role ?? "USER";
-        (session.user as any).permissions = (token as any).permissions ?? [];
+        (session.user as unknown as { id: string }).id = token.sub as string;
+        (session.user as unknown as { role: string }).role = (token as { role?: string }).role ?? "USER";
+        (session.user as unknown as { permissions: string[] }).permissions = (token as { permissions?: string[] }).permissions ?? [];
       }
       return session;
     },
@@ -119,7 +119,7 @@ export async function requireUser() {
 /** Throw if not ADMIN; returns the session otherwise */
 export async function requireAdmin() {
   const session = await getServerAuthSession();
-  if (!session || (session.user as any).role !== "ADMIN") {
+  if (!session || (session.user as { role?: string }).role !== "ADMIN") {
     throw Object.assign(new Error("Unauthorized"), { code: 401 });
   }
   return session;
@@ -128,7 +128,8 @@ export async function requireAdmin() {
 /** Throw if the user does not have one of the required roles */
 export async function requireAnyRole(roles: string[]) {
   const session = await getServerAuthSession();
-  if (!session || !roles.includes((session.user as any).role)) {
+  const role = (session?.user as { role?: string })?.role;
+  if (!session || !role || !roles.includes(role)) {
     throw Object.assign(new Error("Forbidden"), { code: 403 });
   }
   return session;

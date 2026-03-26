@@ -13,20 +13,34 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           select: { orders: true }
         }
       }
-    }) as any;
+    });
+
     if (!user) return notFound();
 
+    const castedUser = user as { 
+      id: string; 
+      customerId?: string | null; 
+      email: string | null; 
+      firstName: string | null; 
+      lastName: string | null; 
+      phone: string | null; 
+      passwordHash: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      _count: { orders: number } 
+    };
+
     return ok({
-      id: user.id,
-      customerId: user.customerId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phone: user.phone,
-      isGuest: user.passwordHash === null,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      _ordersCount: user._count.orders
+      id: castedUser.id,
+      customerId: castedUser.customerId,
+      email: castedUser.email,
+      firstName: castedUser.firstName,
+      lastName: castedUser.lastName,
+      phone: castedUser.phone,
+      isGuest: castedUser.passwordHash === null,
+      createdAt: castedUser.createdAt,
+      updatedAt: castedUser.updatedAt,
+      _ordersCount: castedUser._count.orders
     });
   } catch (e) { return server(e); }
 }
@@ -46,12 +60,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         firstName: parsed.data.firstName,
         lastName: parsed.data.lastName,
         phone: parsed.data.phone,
-      } as any
+      }
     });
 
     return ok(updated);
-  } catch (e: any) {
-    if (e?.code === "P2025") return notFound();
+  } catch (e) {
+    if ((e as { code?: string })?.code === "P2025") return notFound();
     return server(e);
   }
 }

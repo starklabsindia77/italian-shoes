@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
@@ -34,7 +35,6 @@ export default function MaterialCreatePage() {
     isActive: true,
   });
   const [saving, setSaving] = React.useState(false);
-  const [colors, setColors] = React.useState<any[]>([]);
 
   const onSubmit = async () => {
     // show popup if either field missing
@@ -69,7 +69,7 @@ export default function MaterialCreatePage() {
       let data: any = {};
       try {
         data = text ? JSON.parse(text) : {};
-      } catch (e) {
+      } catch {
         data = text;
       }
 

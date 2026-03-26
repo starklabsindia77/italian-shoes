@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/layout.tsx
 "use client";
 import React from "react";
@@ -26,10 +27,7 @@ import {
   Palette,
   Ruler,
   PanelsTopLeft,
-  Boxes,
-  Truck,
   Users,
-  BarChart3,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -114,10 +112,10 @@ function ClientShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
-  const userRole = (session?.user as any)?.role || "USER";
-  const userPermissions = (session?.user as any)?.permissions || [];
-
   const allowedNavItems = useMemo(() => {
+    const userRole = session?.user?.role || "USER";
+    const userPermissions = (session?.user as any)?.permissions || [];
+
     return NAV_ITEMS.filter(item => {
       // Admin always has access
       if (userRole === "ADMIN") return true;
@@ -137,7 +135,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
 
       return false;
     });
-  }, [userRole, userPermissions]);
+  }, [session]);
 
   const isActive = (href: string) => pathname === href;
 
@@ -316,7 +314,7 @@ function ClientShell({ children }: { children: React.ReactNode }) {
                           </span>
                           {session?.user?.role && (
                             <span className="text-xs text-muted-foreground">
-                              Role: {(session.user as any).role}
+                              Role: {(session.user as { role?: string }).role}
                             </span>
                           )}
                         </div>

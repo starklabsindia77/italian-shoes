@@ -7,7 +7,7 @@ interface OrderStatusEmailProps {
   customerName: string;
   status: string;
   total: string;
-  items: any[];
+  items: unknown[];
 }
 
 export const EmailService = {

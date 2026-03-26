@@ -58,6 +58,7 @@ export const ProductCard = ({
       <CardHeader className="p-0">
         {product.image && (
           <div className="aspect-square overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.image}
               alt={product.title}

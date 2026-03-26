@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import * as React from "react";
@@ -125,7 +126,7 @@ export default function OrdersListPage() {
     }
   };
 
-  React.useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  React.useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-6">

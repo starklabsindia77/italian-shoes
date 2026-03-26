@@ -97,7 +97,7 @@ export default function ShipmentsPage() {
     }
   };
 
-  React.useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  React.useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // PATCH helper
   const patch = async (id: string, body: Partial<Shipment>) => {
@@ -275,7 +275,8 @@ function statusBadge(s: ShipStatus) {
     s === "delivered" ? "default" :
     s === "pending" ? "secondary" :
     s === "failed" ? "secondary" : "outline";
-  return <Badge variant={variant as any}>{label}</Badge>;
+  const typedVariant = variant as "default" | "secondary" | "outline" | "destructive";
+  return <Badge variant={typedVariant}>{label}</Badge>;
 }
 
 function fmtDate(iso?: string | null) {

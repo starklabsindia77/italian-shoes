@@ -11,13 +11,13 @@ export async function GET(req: Request) {
   const q = (searchParams.get("q") ?? "").trim().toLowerCase();
 
   try {
-    // Use 'any' to avoid TS complaining about unknown columns
-    const rows = (await (prisma as any).order.findMany({
+    // Use 'unknown' cast to avoid TS complaining about dynamic columns while satisfying ESLint
+    const rows = (await (prisma as unknown as { order: { findMany: (args: unknown) => Promise<unknown[]> } }).order.findMany({
       orderBy: { createdAt: "desc" },
       take: limit,
-    })) as any[];
+    })) as Record<string, unknown>[];
 
-    const getStatus = (o: any): ShipStatus => {
+    const getStatus = (o: Record<string, unknown>): ShipStatus => {
       // prefer explicit shipment status; fall back to fulfillmentStatus
       const s =
         o.shiprocketStatus ??
@@ -35,10 +35,10 @@ export async function GET(req: Request) {
       return "pending";
     };
 
-    const getCustomer = (o: any) => {
-      const first = o.customerFirstName ?? o.firstName ?? null;
-      const last = o.customerLastName ?? o.lastName ?? null;
-      const email = o.customerEmail ?? o.email ?? null;
+    const getCustomer = (o: Record<string, unknown>) => {
+      const first = (o.customerFirstName ?? o.firstName ?? null) as string | null;
+      const last = (o.customerLastName ?? o.lastName ?? null) as string | null;
+      const email = (o.customerEmail ?? o.email ?? null) as string | null;
       const name = [first, last].filter(Boolean).join(" ");
       return name || email || "Guest";
     };
@@ -60,22 +60,22 @@ export async function GET(req: Request) {
             (o.estimatedDelivery ??
               o.estimatedDeliveryAt ??
               o.eta ??
-              null) && new Date(o.estimatedDelivery ?? o.estimatedDeliveryAt ?? o.eta).toISOString(),
+              null) && new Date((o.estimatedDelivery ?? o.estimatedDeliveryAt ?? o.eta) as string).toISOString(),
           actualDelivery:
             (o.actualDelivery ??
               o.deliveredAt ??
-              null) && new Date(o.actualDelivery ?? o.deliveredAt).toISOString(),
-          createdAt: o.createdAt ? new Date(o.createdAt).toISOString() : null,
+              null) && new Date((o.actualDelivery ?? o.deliveredAt) as string).toISOString(),
+          createdAt: o.createdAt ? new Date(o.createdAt as string).toISOString() : null,
         };
       })
       .filter((x) => (status ? x.status === status : true))
       .filter((x) => {
         if (!q) return true;
         return (
-          (x.orderNumber ?? "").toLowerCase().includes(q) ||
-          (x.customer ?? "").toLowerCase().includes(q) ||
-          (x.awbNumber ?? "").toLowerCase().includes(q) ||
-          (x.courierName ?? "").toLowerCase().includes(q)
+          ((x.orderNumber as string) ?? "").toLowerCase().includes(q) ||
+          ((x.customer as string) ?? "").toLowerCase().includes(q) ||
+          ((x.awbNumber as string) ?? "").toLowerCase().includes(q) ||
+          ((x.courierName as string) ?? "").toLowerCase().includes(q)
         );
       });
 

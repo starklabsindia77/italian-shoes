@@ -8,28 +8,25 @@ export async function GET(req: Request) {
     const q = sp.get("q")?.trim();
     const { skip, limit } = pagination(req);
 
-    const where = q
-      ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { soleId: { contains: q, mode: "insensitive" } }] }
-      : {};
+    const searchFilter = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { soleId: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : undefined;
 
     const [items, total] = await Promise.all([
-      prisma.sole.findMany({ 
-        where: q
-          ? { OR: [
-                { name: { contains: q, mode: "insensitive" as const } }
-              ] }
-          : undefined,
-        skip, 
-        take: limit, 
-        orderBy: { createdAt: "desc" }
+      prisma.sole.findMany({
+        where: searchFilter,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
       }),
       prisma.sole.count({
-        where: q
-          ? { OR: [
-                { name: { contains: q, mode: "insensitive" as const } }
-              ] }
-          : undefined
-      })
+        where: searchFilter,
+      }),
     ]);
     return ok({ items, total, limit });
   } catch (e) { 
@@ -49,7 +46,7 @@ export async function POST(req: Request) {
   
 
 
-    const created = await prisma.sole.create({ data: data as any });
+    const created = await prisma.sole.create({ data: data });
     return ok(created, 201);
   } catch (e) { return server(e); }
 }

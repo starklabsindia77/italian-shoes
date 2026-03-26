@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ok, server } from "@/lib/api-helpers";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const materials = await prisma.material.findMany({
       where: { isActive: true },

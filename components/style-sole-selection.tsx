@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import * as React from "react";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Plus, X, Image as ImageIcon } from "lucide-react";
 import { getAssetUrl } from "@/lib/utils";
 
 export interface Style {
@@ -103,9 +103,6 @@ export function StyleSoleSelection({
     return selectedItems.some(si => si.id === itemId);
   };
 
-  const getSelectedItem = (itemId: string) => {
-    return selectedItems.find(si => si.id === itemId);
-  };
 
   if (loading) {
     return (
@@ -140,7 +137,6 @@ export function StyleSoleSelection({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item) => {
               const isSelected = isItemSelected(item.id);
-              const selectedItem = getSelectedItem(item.id);
               const isExpanded = expandedItems.has(item.id);
 
               return (

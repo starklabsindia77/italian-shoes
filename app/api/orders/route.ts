@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma"; // Refreshing TS context
-import { ok, bad, server, pagination, getSearchParams, requireAuth, requirePermission } from "@/lib/api-helpers";
+import { ok, bad, server, pagination, getSearchParams, requireAuth } from "@/lib/api-helpers";
 import { OrderCreateSchema } from "@/lib/validators";
 import { s3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -35,7 +35,7 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 export async function GET(req: Request) {
   try {
     const session = await requireAuth();
-    const u = session.user as any;
+    const u = session.user as { email: string; role: string; permissions?: string[] };
     const sp = getSearchParams(req);
     const email = sp.get("email") ?? undefined;
 
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     }
     const status = sp.get("status") ?? undefined;
     const { skip, limit } = pagination(req);
-    const where: any = email ? { customerEmail: email } : {};
+    const where: Record<string, unknown> = email ? { customerEmail: email } : {};
     if (status && status !== "all") {
       where.status = status.toUpperCase();
     }
@@ -58,7 +58,8 @@ export async function GET(req: Request) {
       prisma.order.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
       prisma.order.count({ where })
     ]);
-    const mappedItems = items.map(o => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mappedItems = (items as any[]).map(o => ({
       ...o,
       status: o.status.toLowerCase(),
       paymentStatus: o.paymentStatus.toLowerCase(),
@@ -101,14 +102,14 @@ export async function POST(req: Request) {
         firstName: d.customerFirstName || undefined,
         lastName: d.customerLastName || undefined,
         phone: d.customerPhone || undefined,
-      } as any,
+      },
       create: {
         email: d.customerEmail,
         firstName: d.customerFirstName || null,
         lastName: d.customerLastName || null,
         phone: d.customerPhone || null,
         role: "USER",
-      } as any
+      }
     });
 
     // 3. Create order in DB
@@ -129,9 +130,10 @@ export async function POST(req: Request) {
         discount: d.discount, total: d.total,
         currency: d.currency,
         items: {
-          create: itemsWithImages
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          create: itemsWithImages as any
         }
-      } as any
+      }
     });
 
     // 3. Send Confirmation Email (Async, don't block response)
@@ -141,7 +143,7 @@ export async function POST(req: Request) {
       customerName: [created.customerFirstName, created.customerLastName].filter(Boolean).join(" ") || "Valued Customer",
       status: created.status,
       total: formatter.format(created.total),
-      items: (created as any).items || []
+      items: (created as unknown as { items: unknown[] }).items || []
     });
 
     return ok(created, 201);

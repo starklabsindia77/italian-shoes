@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea"; // (optional, not used)
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -80,7 +79,7 @@ export default function SizeCreatePage() {
     });
 
     try {
-      const created = await p;
+      await p;
       router.push(`/sizes`);
     } finally {
       setSaving(false);

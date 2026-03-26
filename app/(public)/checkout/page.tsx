@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,7 +11,6 @@ import { ShippingForm } from "@/components/checkout/ShippingForm";
 import { ContactForm } from "@/components/checkout/ContactForm";
 import { Shield, Lock, ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { formatCurrency } from "@/lib/utils";
 import { Price, useCurrency } from "@/components/providers/CurrencyProvider";
 import Link from "next/link";
 import Script from "next/script";
@@ -20,6 +20,7 @@ const Checkout = () => {
   const { currency: selectedCurrency } = useCurrency();
   const [settings, setSettings] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedShipping, setSelectedShipping] = useState<{ id?: string; name: string; price: number }>({ name: "Standard", price: 0 });
 
@@ -113,8 +114,8 @@ const Checkout = () => {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Fallback if response is not JSON
+        } catch {
+          // Fallback if response is not JSON — keep the default errorMessage
         }
         throw new Error(errorMessage);
       }
@@ -160,7 +161,7 @@ const Checkout = () => {
                 designConfig: it.config || null,
                 styleId: it.style?.id || null,
                 soleId: it.sole?.id || null,
-                sizeId: typeof it.size === "string" ? it.size : it.size?.id || null,
+                sizeId: typeof it.size === "string" ? it.size : (it.size as { id?: string } | undefined)?.id || null,
                 panelCustomization: it.config || {},
               }))
             };
@@ -301,7 +302,7 @@ const Checkout = () => {
 
           <div className="lg:sticky lg:top-8 lg:self-start space-y-4">
             <OrderSummary 
-              items={items} 
+              items={items as any} 
               subtotal={subtotal} 
               shipping={selectedShipping.price} 
               tax={tax} 

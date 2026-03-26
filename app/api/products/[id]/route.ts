@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, requireAdmin } from "@/lib/api-helpers";
 import { ProductCreateSchema } from "@/lib/validators";
@@ -15,7 +16,7 @@ const getCachedProduct = (id: string) =>
     { revalidate: 3600, tags: [`product-${id}`] }
   )();
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
@@ -37,7 +38,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
     const { id } = await params;
@@ -56,7 +57,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return bad("Product not found", 404);
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: any) => {
       // Update the product
       const product = await tx.product.update({
         where: { id },
@@ -88,17 +89,18 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     revalidateTag(`product-${id}`);
 
     return ok(updated);
-  } catch (e: any) {
+  } catch (e) {
     console.error("PUT product error:", e);
-    if (e?.code === 401 || e?.code === 403) return bad(e.message, e.code);
+    const error = e as { code?: number; message?: string };
+    if (error?.code === 401 || error?.code === 403) return bad(error.message || "Unauthorized", error.code);
     return server(e);
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
-    const { id } = params;
+    const { id } = await params;
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -125,9 +127,10 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     revalidateTag(`product-${id}`);
 
     return ok({ message: "Product deleted successfully" });
-  } catch (e: any) {
+  } catch (e) {
     console.error("DELETE product error:", e);
-    if (e?.code === 401 || e?.code === 403) return bad(e.message, e.code);
+    const error = e as { code?: number; message?: string };
+    if (error?.code === 401 || error?.code === 403) return bad(error.message || "Unauthorized", error.code);
     return server(e);
   }
 }

@@ -34,8 +34,8 @@ interface WishlistButtonProps {
     id: string;
     name: string;
   };
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "sm" | "lg";
+  buttonVariant?: "default" | "ghost" | "outline";
+  buttonSize?: "default" | "sm" | "lg";
   className?: string;
 }
 
@@ -50,8 +50,8 @@ export const WishlistButton = ({
   material,
   style,
   sole,
-  variant: buttonVariant = "outline",
-  size: buttonSize = "default",
+  buttonVariant = "outline",
+  buttonSize = "default",
   className,
 }: WishlistButtonProps) => {
   const { addItem, removeItem, isItemInWishlist } = useWishlistStore();
@@ -91,7 +91,7 @@ export const WishlistButton = ({
           description: "The item has been added to your wishlist.",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",

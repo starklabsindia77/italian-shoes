@@ -23,7 +23,7 @@ export async function PATCH(
 
     const { firstName, lastName, phone, password, role, isActive, customRoleId } = parsed.data;
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       firstName: firstName !== undefined ? firstName : undefined,
       lastName: lastName !== undefined ? lastName : undefined,
       phone: phone !== undefined ? phone : undefined,
@@ -48,9 +48,8 @@ export async function PATCH(
         role: true,
         isActive: true,
         customRoleId: true,
-        customRole: { select: { name: true } },
         createdAt: true,
-      } as any,
+      },
     });
 
     return NextResponse.json(user);
@@ -68,8 +67,8 @@ export async function DELETE(
     const { id } = await params;
     
     // Prevent self-deletion
-    const session = await requireAdmin();
-    if ((session.user as any).id === id) {
+    const session = await requireAdmin() as { user: { id: string } };
+    if (session.user.id === id) {
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
     }
 

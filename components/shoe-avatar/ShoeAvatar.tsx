@@ -12,7 +12,7 @@ import React, {
   memo,
 } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Environment, Bounds, Html } from "@react-three/drei";
+import { OrbitControls, useGLTF, Environment, Bounds } from "@react-three/drei";
 import * as THREE from "three";
 import { getAssetUrl } from "@/lib/utils";
 
@@ -75,17 +75,15 @@ const textureLoader = new THREE.TextureLoader();
 
 const Avatar: React.FC<AvatarProps> = ({
   avatarData,
-  objectList,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  objectList: _objectList,
   setObjectList,
   selectedTextureMap = {},
   setIsTextureLoading,
 }) => {
-  // Guard against empty avatarData
-  if (!avatarData) {
-    return null;
-  }
+  const gltf = useGLTF(avatarData || "");
+  const { scene } = gltf as { scene: THREE.Group };
 
-  const { scene } = useGLTF(avatarData) as any;
   const meshRef = useRef<THREE.Group>(null);
   const prevTextureMapRef = useRef<string>("");
   const isMountedRef = useRef(true);
@@ -108,13 +106,14 @@ const Avatar: React.FC<AvatarProps> = ({
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
+    const currentCache = textureCacheRef.current;
     return () => {
       isMountedRef.current = false;
       // Clean up textures
-      textureCacheRef.current.forEach((texture) => {
+      currentCache.forEach((texture) => {
         texture.dispose();
       });
-      textureCacheRef.current.clear();
+      currentCache.clear();
     };
   }, []);
 
@@ -159,10 +158,10 @@ const Avatar: React.FC<AvatarProps> = ({
           mat.metalness = 0;
 mat.roughness = 0.3;        // leather shine balance
 mat.envMapIntensity = 2.6;   // reflection strength
-(mat as any).reflectivity = 0.6;
-// subtle premium leather layer
-(mat as any).clearcoat = 0.55;
-(mat as any).clearcoatRoughness = 0.32;
+          (mat as unknown as { reflectivity: number }).reflectivity = 0.6;
+          // subtle premium leather layer
+          (mat as unknown as { clearcoat: number }).clearcoat = 0.55;
+          (mat as unknown as { clearcoatRoughness: number }).clearcoatRoughness = 0.32;
 
 mat.needsUpdate = true;
 
@@ -308,7 +307,7 @@ mat.needsUpdate = true;
           return;
         }
 
-        if ((mat.map as any)?.userData?._appliedUrl === textureUrl) return;
+        if ((mat.map as unknown as { userData?: { _appliedUrl?: string } })?.userData?._appliedUrl === textureUrl) return;
 
         const tex = getTexture(getAssetUrl(textureUrl));
         if (!tex) return;
@@ -320,8 +319,8 @@ mat.needsUpdate = true;
           tex.rotation = prevMap.rotation;
         }
 
-        (tex as any).userData = {
-          ...(tex as any).userData,
+        (tex as unknown as { userData: { _appliedUrl: string } }).userData = {
+          ...(tex as unknown as { userData: Record<string, unknown> }).userData,
           _appliedUrl: textureUrl,
         };
 
@@ -334,6 +333,11 @@ mat.needsUpdate = true;
       console.error("Error swapping textures:", error);
     }
   }, [selectedTextureMap, scene, getTexture]);
+
+  // Guard against empty avatarData AFTER all hooks are declared
+  if (!avatarData || !scene) {
+    return null;
+  }
 
   return (
     <group ref={meshRef}>

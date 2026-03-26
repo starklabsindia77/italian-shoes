@@ -8,7 +8,7 @@ import {
 } from "@/lib/settings";
 import { requirePermission, server } from "@/lib/api-helpers";
 
-let MEMORY_CACHE: any | null = null;
+let MEMORY_CACHE: unknown | null = null;
 
 export async function GET() {
   try {

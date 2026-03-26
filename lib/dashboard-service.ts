@@ -45,7 +45,7 @@ export async function getDashboardMetrics() {
     },
   });
 
-  const recent = recentDbOrders.map((o: any) => ({
+  const recent = recentDbOrders.map((o) => ({
     id: o.id,
     number: o.orderNumber,
     customer: o.customerFirstName ? `${o.customerFirstName} ${o.customerLastName || ""}`.trim() : o.customerEmail,
@@ -60,8 +60,8 @@ export async function getDashboardMetrics() {
     _count: { status: true },
   });
 
-  const boardMap = statusCounts.reduce((acc: any, curr: any) => {
-    acc[curr.status] = curr._count.status;
+  const boardMap = statusCounts.reduce((acc, curr) => {
+    acc[curr.status as string] = curr._count.status;
     return acc;
   }, {} as Record<string, number>);
 

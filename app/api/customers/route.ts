@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ok, bad, server, requireAdmin, requirePermission } from "@/lib/api-helpers";
+import { ok, server, requirePermission } from "@/lib/api-helpers";
 
 export async function GET(req: Request) {
   try {
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const q = searchParams.get("q") || "";
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    const where: any = {
+    const where: { role: string; customRoleId: null; OR?: Record<string, unknown>[] } = {
       role: "USER",
       customRoleId: null,
     };
@@ -21,8 +21,9 @@ export async function GET(req: Request) {
       ];
     }
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const users = await prisma.user.findMany({
-      where,
+      where: where as any,
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
@@ -30,16 +31,17 @@ export async function GET(req: Request) {
           select: { orders: true }
         }
       }
-    }) as any[];
+    });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
-    const items = users.map(u => ({
+    const items = (users as Array<typeof users[number] & { _count: { orders: number } }>).map(u => ({
       id: u.id,
       customerId: u.customerId,
       email: u.email,
       firstName: u.firstName,
       lastName: u.lastName,
       phone: u.phone,
-      isGuest: u.passwordHash === null, // Assumption: guests don't have passwords
+      isGuest: u.passwordHash === null,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
       _ordersCount: u._count.orders

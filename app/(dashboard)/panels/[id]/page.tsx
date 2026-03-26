@@ -39,6 +39,7 @@ const FALLBACK_PANEL: PanelItem = {
 export default function PanelEditPage() {
   const { id } = useParams<{ id: string }>();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [panel, setPanel] = React.useState<PanelItem | null>(null);

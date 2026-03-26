@@ -8,7 +8,7 @@ const getCachedPanels = (q?: string, skip?: number, limit?: number) =>
   unstable_cache(
     async () => {
       const where = q
-        ? { OR: [{ name: { contains: q, mode: "insensitive" as any } }, { panelId: { contains: q, mode: "insensitive" as any } }] }
+        ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { panelId: { contains: q, mode: "insensitive" as const } }] }
         : {};
 
       const [items, total] = await Promise.all([
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     if (!parsed.success) return bad(parsed.error.message);
 
     // Ensure panelId is present in the data, as required by the Prisma schema
-    const { panelId, ...rest } = parsed.data as any;
+    const { panelId, ...rest } = parsed.data;
     if (!panelId) return bad("panelId is required.");
 
     const created = await prisma.panel.create({ data: { panelId, ...rest } });

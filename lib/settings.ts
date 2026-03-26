@@ -50,14 +50,14 @@ export const SETTINGS_DEFAULTS = {
 
 const KEY = "app_settings";
 
-function getKvModel(): any | null {
-  const c = prisma as any;
+function getKvModel(): unknown | null {
+  const c = prisma as unknown as { setting?: unknown; config?: unknown; appSetting?: unknown; systemSetting?: unknown };
   return c?.setting ?? c?.config ?? c?.appSetting ?? c?.systemSetting ?? null;
 }
 
 export async function readSettingsFromDb() {
   try {
-    const kv = getKvModel();
+    const kv = getKvModel() as { findUnique?: (args: { where: { key: string } }) => Promise<{ value: unknown } | null> };
     if (!kv?.findUnique) return null;
     const row = await kv.findUnique({ where: { key: KEY } });
     if (row && row.value) return row.value;
@@ -67,9 +67,9 @@ export async function readSettingsFromDb() {
   return null;
 }
 
-export async function writeSettingsToDb(value: any) {
+export async function writeSettingsToDb(value: unknown) {
   try {
-    const kv = getKvModel();
+    const kv = getKvModel() as { upsert?: (args: { where: { key: string }; create: { key: string; value: unknown }; update: { value: unknown } }) => Promise<unknown> };
     if (!kv?.upsert) return false;
     await kv.upsert({
       where: { key: KEY },

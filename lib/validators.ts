@@ -64,6 +64,7 @@ export const MaterialColorCreateSchema = z.object({
 
 // Style / Sole
 export const StyleCreateSchema = z.object({
+  styleId: z.string().min(1),
   name: z.string(),
   description: z.string().optional(),
   category: z.string().optional(),
@@ -75,6 +76,7 @@ export const StyleCreateSchema = z.object({
   isActive: z.boolean().optional()
 });
 export const SoleCreateSchema = z.object({
+  soleId: z.string().min(1),
   name: z.string(),
   description: z.string().optional(),
   category: z.string().optional(),
@@ -88,6 +90,7 @@ export const SoleCreateSchema = z.object({
 
 // Size
 export const SizeCreateSchema = z.object({
+  sizeId: z.string().min(1),
   name: z.string(),
   region: z.enum(["US", "EU", "UK"]),
   value: z.number(),

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ok, bad, server, pagination, getSearchParams, requireAdmin, requirePermission } from "@/lib/api-helpers";
+import { ok, bad, server, pagination, getSearchParams, requirePermission } from "@/lib/api-helpers";
 import { ProductCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         metaDescription: validatedData.metaDescription ?? "",
         metaKeywords: validatedData.metaKeywords ?? "",
         price: validatedData.price,
-        currency: validatedData.currency as any,
+        currency: validatedData.currency,
         compareAtPrice: validatedData.compareAtPrice,
         assets: validatedData.assets,
         selectedMaterials: validatedData.selectedMaterials ?? undefined,

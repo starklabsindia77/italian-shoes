@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, ShoppingCart, Eye } from "lucide-react";
-import { useWishlistStore, useCartStore } from "@/lib/stores";
+import { useWishlistStore, useCartStore, CartSize } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -14,11 +14,7 @@ interface WishlistItemProps {
   price: number;
   originalPrice?: number;
   variant?: string;
-  size?: {
-    id: string;
-    name: string;
-    region: string;
-  };
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;
@@ -122,7 +118,12 @@ export const WishlistItem = ({
             )}
             {/* Display customization options */}
             <div className="text-xs text-muted-foreground mt-1 space-y-1">
-              {size && <p>Size: {size.name} ({size.region})</p>}
+              {size && (
+                <p>
+                  Size: {typeof size === 'string' ? size : (size.name || size.label || `${size.value || ''}`)} 
+                  {typeof size !== 'string' && size.region ? ` (${size.region})` : ''}
+                </p>
+              )}
               {material && (
                 <p>
                   Material: {material.name}

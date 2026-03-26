@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { s3Client } from "@/lib/s3";
+import { getS3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
         // Create a unique name to avoid collisions
         const uniqueFileName = `${uuidv4()}-${fileName}`;
         const s3Key = `${folder}/${uniqueFileName}`;
+        const s3Client = getS3Client();
 
         await s3Client.send(
             new PutObjectCommand({

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-export default function LoginPage() {
+function LoginFormContent() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -66,5 +67,27 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen grid place-items-center p-6">
+        <Card className="w-full max-w-md rounded-2xl border-dashed">
+          <CardHeader>
+            <CardTitle className="animate-pulse bg-muted h-8 w-1/2 rounded" />
+            <CardDescription className="animate-pulse bg-muted h-4 w-3/4 rounded mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="h-10 bg-muted animate-pulse rounded" />
+            <div className="h-10 bg-muted animate-pulse rounded" />
+            <div className="h-10 bg-muted animate-pulse rounded" />
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <LoginFormContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus } from "lucide-react";
-import { useCartStore } from "@/lib/stores";
+import { useCartStore, CartSize } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { useState } from "react";
 
@@ -13,7 +13,7 @@ interface AddToCartButtonProps {
   image?: string;
   variant?: string;
   quantity?: number;
-  size?: unknown;
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;

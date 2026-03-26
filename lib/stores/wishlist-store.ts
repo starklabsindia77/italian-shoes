@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { CartSize } from './cart-store';
 
 export interface WishlistItem {
   id: string;
@@ -10,11 +11,7 @@ export interface WishlistItem {
   image?: string;
   variant?: string;
   // Product customization options
-  size?: {
-    id: string;
-    name: string;
-    region: string;
-  };
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;

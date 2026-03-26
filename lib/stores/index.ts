@@ -1,7 +1,7 @@
 // Re-export all stores for easy importing
 export { useCartStore } from './cart-store';
 export { useWishlistStore } from './wishlist-store';
-export type { CartItem } from './cart-store';
+export type { CartItem, CartSize } from './cart-store';
 export type { WishlistItem } from './wishlist-store';
 
 // Combined hook for components that need both cart and wishlist

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, X } from "lucide-react";
-import { useCartStore } from "@/lib/stores";
+import { useCartStore, CartSize } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { Price } from "@/components/providers/CurrencyProvider";
 
@@ -14,7 +14,7 @@ interface CartItemProps {
   originalPrice?: number;
   quantity: number;
   productId: string;
-  size?: unknown;
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;
@@ -94,7 +94,7 @@ export const CartItem = ({
             <div className="text-xs text-muted-foreground mt-1 space-y-1">
               {!!size && (
                 <p>
-                  Size: {(typeof size === 'string' ? size : (((size as Record<string, unknown>)?.label as string) || `${((size as Record<string, unknown>)?.value as string) || ''} ${((size as Record<string, unknown>)?.region as string) ? `(${((size as Record<string, unknown>)?.region as string)})` : ''}`)) as React.ReactNode}
+                  Size: {typeof size === 'string' ? size : (size && (size.label || `${size.value || ''} ${size.region ? `(${size.region})` : ''}`))}
                 </p>
               )}
               {material && (

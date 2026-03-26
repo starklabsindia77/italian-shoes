@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -37,33 +37,6 @@ type ApiList<T> = {
   limit: number;
 };
 
-// const FALLBACK: ApiList<Product> = {
-//   items: [
-//     {
-//       id: "fake_1",
-//       productId: "oxford-001",
-//       title: "Premium Oxford Shoes",
-//       vendor: "Italian Shoes Company",
-//       price: 12999,
-//       currency: "USD",
-//       isActive: true,
-//       createdAt: new Date().toISOString(),
-//     },
-//     {
-//       id: "fake_2",
-//       productId: "derby-002",
-//       title: "Classic Derby",
-//       vendor: "Italian Shoes Company",
-//       price: 11999,
-//       currency: "USD",
-//       isActive: true,
-//       createdAt: new Date().toISOString(),
-//     },
-//   ],
-//   total: 2,
-//   limit: 20,
-// };
-
 function formatCurrency(cents: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -72,7 +45,7 @@ function formatCurrency(cents: number, currency = "USD") {
   }).format(cents);
 }
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const router = useRouter();
   const sp = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -99,11 +72,9 @@ export default function ProductsPage() {
       const data = (await res.json()) as ApiList<Product>;
       setList(data);
     } catch (e) {
-      // fall back to static data
       if (process.env.NODE_ENV !== "production") {
         console.warn("Products API failed, using fallback data:", e);
       }
-      // setList(FALLBACK);
     } finally {
       setLoading(false);
     }
@@ -114,7 +85,6 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // keep URL in sync (q + page)
   useEffect(() => {
     const params = new URLSearchParams();
     if (qParam) params.set("q", qParam);
@@ -123,7 +93,6 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qParam, page]);
 
-  // handlers
   const onSearchChange = (v: string) => {
     setQ(v);
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -194,7 +163,6 @@ export default function ProductsPage() {
           <CardDescription>Search & paginate through products</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Filters */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -207,7 +175,6 @@ export default function ProductsPage() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="overflow-hidden rounded-xl border">
             <Table>
               <TableHeader>
@@ -258,7 +225,6 @@ export default function ProductsPage() {
             </Table>
           </div>
 
-          {/* Footer: pagination */}
           <div className="mt-4 flex items-center justify-between text-sm">
             <div className="text-muted-foreground">
               Page <span className="font-medium text-foreground">{page}</span> of{" "}
@@ -284,6 +250,33 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="space-y-2">
+            <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded" />
+          </div>
+        </div>
+        <Card className="rounded-2xl border-dashed">
+          <CardHeader>
+            <div className="h-6 w-32 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-48 bg-muted animate-pulse rounded mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="h-10 w-full bg-muted animate-pulse rounded" />
+            <div className="h-64 w-full bg-muted animate-pulse rounded" />
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
   );
 }
 

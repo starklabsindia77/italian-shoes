@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
-import { useWishlistStore } from "@/lib/stores";
+import { useWishlistStore, CartSize } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
 import { useState } from "react";
 
@@ -12,11 +12,7 @@ interface WishlistButtonProps {
   originalPrice?: number;
   image?: string;
   variant?: string;
-  size?: {
-    id: string;
-    name: string;
-    region: string;
-  };
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;

@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export type CartSize = {
+  id: string;
+  name?: string;
+  label?: string;
+  value?: number | string;
+  region?: string;
+} | string;
+
 export interface CartItem {
   id: string;
   productId: string;
@@ -11,7 +19,7 @@ export interface CartItem {
   quantity: number;
   image?: string;
   // Product customization options
-  size?: unknown;
+  size?: CartSize | null;
   material?: {
     id: string;
     name: string;

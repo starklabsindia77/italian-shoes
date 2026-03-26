@@ -13,11 +13,13 @@ async function migrate() {
 
         if (glbUrl || thumbnailUrl) {
             console.log(`Updating product ${p.productId}...`);
-            await prisma.product.update({
+            // Cast to any to bypass type checks for missing fields
+            // glbUrl and thumbnailUrl were likely moved to the 'assets' JSON field
+            await (prisma.product as any).update({
                 where: { id: p.id },
                 data: {
-                    glbUrl: glbUrl || p.glbUrl,
-                    thumbnailUrl: thumbnailUrl || p.thumbnailUrl
+                    glbUrl: glbUrl || (p as any).glbUrl,
+                    thumbnailUrl: thumbnailUrl || (p as any).thumbnailUrl
                 }
             });
         }

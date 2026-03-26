@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma"; // Refreshing TS context
 import { ok, bad, server, pagination, getSearchParams, requireAuth } from "@/lib/api-helpers";
 import { OrderCreateSchema } from "@/lib/validators";
-import { s3Client } from "@/lib/s3";
+import { getS3Client } from "@/lib/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { EmailService } from "@/lib/email-service";
@@ -15,6 +15,7 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
     const buffer = Buffer.from(data, "base64");
     const fileName = `${uuidv4()}.${extension}`;
     const s3Key = `${folder}/${fileName}`;
+    const s3Client = getS3Client();
 
     await s3Client.send(
       new PutObjectCommand({

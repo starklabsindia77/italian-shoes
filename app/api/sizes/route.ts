@@ -1,44 +1,42 @@
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { SizeCreateSchema } from "@/lib/validators";
-import { unstable_cache, revalidateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
-// Cached function for fetching sizes
-const getCachedSizes = (q?: string, region?: string, skip?: number, limit?: number) =>
-  unstable_cache(
-    async () => {
-      const where: Record<string, unknown> = {};
-      if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { sizeId: { contains: q, mode: "insensitive" } }];
-      if (region) where.region = region;
-
-      const [items, total] = await Promise.all([
-        prisma.size.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: [{ sortOrder: "asc" }, { value: "asc" }]
-        }),
-        prisma.size.count({ where })
-      ]);
-      return { items, total, limit };
-    },
-    [`sizes-${q}-${region}-${skip}-${limit}`],
-    { revalidate: 3600, tags: ["sizes"] }
-  )();
-
-export async function GET(_req: Request) {
+export async function GET(req: Request) {
   try {
-    const sp = getSearchParams(_req);
-    const q = sp.get("q")?.trim();
-    const region = sp.get("region") as "US" | "EU" | "UK" | null;
-    const { skip, limit } = pagination(_req);
+    const sp = getSearchParams(req);
+    const q = sp.get("q")?.trim() || undefined;
+    const regionVal = sp.get("region");
+    const region = (regionVal === "US" || regionVal === "EU" || regionVal === "UK") ? regionVal : undefined;
+    
+    const { skip, limit } = pagination(req);
 
-    const data = await getCachedSizes(q ?? undefined, region ?? undefined, skip, limit);
+    // Bypass Prisma model to avoid missing column error
+    let query = `SELECT id, name, region, value, "euEquivalent", "ukEquivalent", "isActive", "sortOrder", "extId", "createdAt", "updatedAt" FROM "Size" WHERE "isActive" = true`;
+    if (q) {
+      query += ` AND ("name" ILIKE '%${q.replace(/'/g, "''")}%')`;
+    }
+    if (region) {
+      query += ` AND "region" = '${region}'`;
+    }
+    query += ` ORDER BY "sortOrder" ASC, "value" ASC OFFSET ${skip} LIMIT ${limit}`;
+
+    const [items, totalCountResult] = await Promise.all([
+      prisma.$queryRawUnsafe<Record<string, unknown>[]>(query),
+      prisma.$queryRawUnsafe<{ count: bigint }[]>(`SELECT COUNT(*) as count FROM "Size" WHERE "isActive" = true`)
+    ]);
+
+    const total = Number(totalCountResult[0].count);
+    const data = { items, total, limit };
 
     const response = ok(data);
     response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=59');
     return response;
-  } catch (e) { return server(e); }
+  } catch (e) {
+    console.error("GET /api/sizes error:", e);
+    return server(e);
+  }
 }
 
 export async function POST(req: Request) {

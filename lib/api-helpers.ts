@@ -21,6 +21,10 @@ export async function requireAuth() {
   if (!session?.user?.id) throw Object.assign(new Error("Unauthorized"), { code: 401 });
   return session;
 }
+export async function optionalAuth() {
+  const session = await auth();
+  return session?.user?.id ? session : null;
+}
 export async function requireAdmin() {
   const session = await requireAuth();
   if ((session.user as { role?: string }).role !== "ADMIN") throw Object.assign(new Error("Forbidden"), { code: 403 });

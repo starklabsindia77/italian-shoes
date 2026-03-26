@@ -12,11 +12,20 @@ let MEMORY_CACHE: unknown | null = null;
 
 export async function GET() {
   try {
-    await requirePermission("settings.manage");
+    // Note: requirePermission is removed to allow public access to theme/localization settings
     const db = await readSettingsFromDb();
-    if (db) return NextResponse.json({ ...SETTINGS_DEFAULTS, ...db });
-    if (MEMORY_CACHE) return NextResponse.json({ ...SETTINGS_DEFAULTS, ...MEMORY_CACHE });
-    return NextResponse.json(SETTINGS_DEFAULTS);
+    const settings = { ...SETTINGS_DEFAULTS, ...(db as any || {}) };
+
+    // SANITIZATION: Remove sensitive keys before sending to client
+    if (settings.integrations) {
+      delete (settings.integrations as any).razorpayKeySecret;
+    }
+    if (settings.email) {
+      delete (settings.email as any).resendApiKey;
+      delete (settings.email as any).smtpPass;
+    }
+
+    return NextResponse.json(settings);
   } catch (e) {
     return server(e);
   }

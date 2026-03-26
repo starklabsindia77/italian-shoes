@@ -1,19 +1,30 @@
 import { prisma } from "@/lib/prisma";
-import { ok, bad, server, pagination, getSearchParams, requirePermission } from "@/lib/api-helpers";
+import { ok, bad, server, pagination, getSearchParams, requirePermission, optionalAuth } from "@/lib/api-helpers";
 import { ProductCreateSchema } from "@/lib/validators";
 
 export async function GET(req: Request) {
   try {
-    await requirePermission("products.manage");
+    const session = await optionalAuth();
+    const u = session?.user as { role?: string; permissions?: string[] } | null;
+    const isManager = u?.role === "ADMIN" || u?.permissions?.includes("products.manage");
+
     const sp = getSearchParams(req);
     const q = sp.get("q")?.trim();
     const { skip, limit } = pagination(req);
-    const where = q ? { 
-      OR: [
-        { title: { contains: q, mode: "insensitive" as const } }, 
+
+    const where: any = {};
+    if (q) {
+      where.OR = [
+        { title: { contains: q, mode: "insensitive" as const } },
         { productId: { contains: q, mode: "insensitive" as const } }
-      ] 
-    } : {};
+      ];
+    }
+
+    // If not a manager, only show active products
+    if (!isManager) {
+      where.isActive = true;
+    }
+
     const [items, total] = await Promise.all([
       prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
       prisma.product.count({ where })

@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     const q = sp.get("q")?.trim();
     const { skip, limit } = pagination(req);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
     if (q) {
       where.OR = [

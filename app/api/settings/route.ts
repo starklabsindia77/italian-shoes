@@ -14,14 +14,18 @@ export async function GET() {
   try {
     // Note: requirePermission is removed to allow public access to theme/localization settings
     const db = await readSettingsFromDb();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const settings = { ...SETTINGS_DEFAULTS, ...(db as any || {}) };
 
     // SANITIZATION: Remove sensitive keys before sending to client
     if (settings.integrations) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (settings.integrations as any).razorpayKeySecret;
     }
     if (settings.email) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (settings.email as any).resendApiKey;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (settings.email as any).smtpPass;
     }
 

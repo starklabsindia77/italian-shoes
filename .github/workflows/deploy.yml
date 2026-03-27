@@ -1,0 +1,36 @@
+name: Deploy Next.js to Lightsail
+
+on:
+  push:
+    branches: [ main ]  # Runs every time you push to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies & Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/your-repo-name
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart all || pm2 start npm --name "next-app" -- start

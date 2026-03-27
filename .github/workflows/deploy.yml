@@ -31,6 +31,7 @@ jobs:
           script: |
             cd ~/your-repo-name
             git pull origin main
-            npm install
+            npm install --legacy-peer-deps
+            npx prisma generate
             npm run build
             pm2 restart all || pm2 start npm --name "next-app" -- start

@@ -12,7 +12,8 @@ import { prisma } from "@/lib/prisma";
  * - Sign-in page at /login
  */
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET, // ensure set in .env
+  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
+  useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   pages: {
     signIn: "/login",
   },
@@ -102,6 +103,14 @@ export const authOptions: NextAuthOptions = {
         (session.user as unknown as { permissions: string[] }).permissions = (token as { permissions?: string[] }).permissions ?? [];
       }
       return session;
+    },
+  },
+  logger: {
+    error(code, metadata) {
+      console.error("Auth Error:", { code, metadata });
+    },
+    warn(code) {
+      console.warn("Auth Warning:", code);
     },
   },
 };

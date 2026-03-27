@@ -13,7 +13,10 @@ export async function middleware(req: NextRequest) {
   // Protect dashboard pages
   if (pathname.startsWith("/dashboard")) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    console.log("Middleware check:", { pathname, hasToken: !!token });
+    
     if (!token) {
+      console.log("No token, redirecting to login");
       const url = new URL("/login", req.url);
       url.searchParams.set("callbackUrl", req.nextUrl.pathname);
       return NextResponse.redirect(url);

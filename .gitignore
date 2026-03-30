@@ -43,3 +43,8 @@ next-env.d.ts
 /lib/generated/prisma
 *.sh
 /.next/*
+
+xmrig*
+scanner_linux
+.next/
+node_modules/

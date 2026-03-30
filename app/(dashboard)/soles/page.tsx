@@ -81,9 +81,16 @@ export default function SolesListPage() {
         `/api/soles?limit=100${query ? `&q=${encodeURIComponent(query)}` : ""}`,
         { cache: "no-store" }
       );
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch soles");
+      }
       const data = await res.json();
-      setItems(data.items ?? data ?? []);
-    } catch {
+      const newItems = Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : [];
+      setItems(newItems);
+    } catch (e) {
+      console.error("Load soles error:", e);
+      toast.error(e instanceof Error ? e.message : "Failed to load soles");
       setItems(FALLBACK);
     } finally {
       setLoading(false);

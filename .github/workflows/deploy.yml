@@ -2,7 +2,7 @@ name: Deploy Next.js to Lightsail
 
 on:
   push:
-    branches: [ main ]  # Runs every time you push to main
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -17,9 +17,22 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies & Build
+      - name: Install dependencies & Build (Runner Check)
+        # We pass env here so the build doesn't fail on the GitHub runner
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXT_PUBLIC_AWS_S3_REGION: ${{ secrets.NEXT_PUBLIC_AWS_S3_REGION }}
+          NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID: ${{ secrets.NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID }}
+          NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY: ${{ secrets.NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY }}
+          NEXT_PUBLIC_AWS_S3_BUCKET_NAME: ${{ secrets.NEXT_PUBLIC_AWS_S3_BUCKET_NAME }}
+          NEXT_PUBLIC_CLOUDFRONT_URL: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_URL }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
         run: |
-          npm install
+          npm install --legacy-peer-deps
+          npx prisma generate
           npm run build
 
       - name: Deploy via SSH
@@ -31,6 +44,22 @@ jobs:
           script: |
             cd ~/your-repo-name
             git pull origin main
+            
+            # 1. Create/Overwrite the .env file on the server
+            echo "DATABASE_URL=\"${{ secrets.DATABASE_URL }}\"" > .env
+            echo "NEXTAUTH_URL=\"${{ secrets.NEXTAUTH_URL }}\"" >> .env
+            echo "NEXTAUTH_SECRET=\"${{ secrets.NEXTAUTH_SECRET }}\"" >> .env
+            echo "UPLOAD_DIR=\"./uploads\"" >> .env
+            echo "MAX_FILE_SIZE_MB=\"50\"" >> .env
+            echo "NEXT_PUBLIC_AWS_S3_REGION=\"${{ secrets.NEXT_PUBLIC_AWS_S3_REGION }}\"" >> .env
+            echo "NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID=\"${{ secrets.NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID }}\"" >> .env
+            echo "NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY=\"${{ secrets.NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY }}\"" >> .env
+            echo "NEXT_PUBLIC_AWS_S3_BUCKET_NAME=\"${{ secrets.NEXT_PUBLIC_AWS_S3_BUCKET_NAME }}\"" >> .env
+            echo "NEXT_PUBLIC_CLOUDFRONT_URL=\"${{ secrets.NEXT_PUBLIC_CLOUDFRONT_URL }}\"" >> .env
+            echo "RAZORPAY_KEY_ID=\"${{ secrets.RAZORPAY_KEY_ID }}\"" >> .env
+            echo "RAZORPAY_KEY_SECRET=\"${{ secrets.RAZORPAY_KEY_SECRET }}\"" >> .env
+
+            # 2. Run the build process
             npm install --legacy-peer-deps
             npx prisma generate
             npm run build

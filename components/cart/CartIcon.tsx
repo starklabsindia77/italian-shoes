@@ -46,6 +46,7 @@ export const CartIcon = ({
           size={size}
           onClick={handleWishlistClick}
           className="relative"
+          aria-label="Wishlist"
         >
           <Heart className="h-4 w-4" />
           {mounted && wishlistItemCount > 0 && (
@@ -64,6 +65,7 @@ export const CartIcon = ({
         size={size}
         onClick={handleCartClick}
         className="relative"
+        aria-label="Shopping Cart"
       >
         <ShoppingCart className="h-4 w-4" />
         {mounted && cartItemCount > 0 && (

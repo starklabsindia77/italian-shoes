@@ -85,6 +85,7 @@ export interface Product {
   title: string;
   description: string;
   price: number[];
+  compareAtPrice?: number | null;
   variants: ProductVariant[];
   vendor: string;
   productType: string;

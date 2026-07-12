@@ -1,5 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { useWishlistStore, CartSize } from "@/lib/stores";
 import { useToast } from "@/components/hooks/use-toast";
@@ -46,8 +45,6 @@ export const WishlistButton = ({
   material,
   style,
   sole,
-  buttonVariant = "outline",
-  buttonSize = "default",
   className,
 }: WishlistButtonProps) => {
   const { addItem, removeItem, isItemInWishlist } = useWishlistStore();
@@ -99,19 +96,23 @@ export const WishlistButton = ({
   };
 
   return (
-    <Button
-      variant={buttonVariant}
-      size={buttonSize}
+    <button
       onClick={handleToggleWishlist}
       disabled={isLoading}
-      className={`${className} ${isInWishlist ? 'text-red-500 hover:text-red-600' : ''}`}
+      className={`${className ?? ''} flex items-center justify-center gap-2 transition-colors`}
+      title={isInWishlist ? 'Remove from wishlist' : 'Save to wishlist'}
     >
-      <Heart 
-        className={`h-4 w-4 ${isInWishlist ? 'fill-current' : ''}`} 
+      {/* Heart: black outline when NOT saved, solid red when saved */}
+      <Heart
+        className={`w-5 h-5 transition-all duration-200 ${
+          isInWishlist
+            ? 'fill-red-500 text-red-500'        // ♥ solid bright red
+            : 'fill-none text-black stroke-2'    // ♡ black outline
+        }`}
       />
-      <span className="ml-2">
-        {isInWishlist ? 'In Wishlist' : 'Add to Wishlist'}
+      <span className="text-black">
+        {isInWishlist ? 'Saved' : 'Save to wishlist'}
       </span>
-    </Button>
+    </button>
   );
 };

@@ -11,10 +11,11 @@ import React, {
   useMemo,
   memo,
 } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Environment, Bounds } from "@react-three/drei";
 import * as THREE from "three";
 import { getAssetUrl } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface TextureConfig {
   colorUrl?: string;
@@ -71,7 +72,42 @@ class WebGLErrorBoundary extends React.Component<
   }
 }
 
+function getFallbackColor(imageUrl: string | null | undefined): string {
+  if (!imageUrl) return "#cccccc";
+  const urlLower = imageUrl.toLowerCase();
+  if (urlLower.includes("black")) return "#1a1a1a";
+  if (urlLower.includes("brown") || urlLower.includes("coffee")) return "#5c4033";
+  if (urlLower.includes("red") || urlLower.includes("burgundy")) return "#800020";
+  if (urlLower.includes("orange")) return "#e65c00";
+  if (urlLower.includes("white")) return "#f3f3f3";
+  if (urlLower.includes("blue") || urlLower.includes("navy")) return "#000080";
+  if (urlLower.includes("green") || urlLower.includes("olive")) return "#556b2f";
+  if (urlLower.includes("grey") || urlLower.includes("gray")) return "#808080";
+  if (urlLower.includes("pink")) return "#ffc0cb";
+  if (urlLower.includes("yellow")) return "#ffd700";
+  return "#d2b48c"; // tan/leather default
+}
+
 const textureLoader = new THREE.TextureLoader();
+textureLoader.setCrossOrigin("anonymous");
+
+const normalizePanelId = (name: string): string => {
+  if (!name) return "";
+  const lower = name.toLowerCase().trim().replace(/[\s_-]+/g, "");
+  
+  if (lower === "linning" || lower === "lining") return "lining";
+  if (lower === "insole") return "insole";
+  if (lower === "sole") return "sole";
+  if (lower === "upper") return "upper";
+  if (lower === "stretch") return "stretch";
+  if (lower === "tounge" || lower === "tongue") return "tongue";
+  if (lower === "stiches" || lower === "stiching" || lower === "stitching") return "stitching";
+  if (lower === "shoelaces" || lower === "shoelace" || lower.includes("laces") || lower.includes("lace")) return "shoelaces";
+  if (lower.includes("toecap") || lower === "toe" || lower === "front") return "toe";
+  if (lower.includes("backcap") || lower === "back") return "back";
+  
+  return lower;
+};
 
 const Avatar: React.FC<AvatarProps> = ({
   avatarData,
@@ -93,6 +129,23 @@ const Avatar: React.FC<AvatarProps> = ({
     new WeakMap()
   );
   const pendingLoadsRef = useRef(0);
+
+  const getTextureConfig = useCallback(
+    (meshName: string) => {
+      if (!selectedTextureMap) return undefined;
+      const direct = selectedTextureMap[meshName];
+      if (direct) return direct;
+
+      const normalizedMesh = normalizePanelId(meshName);
+      for (const key of Object.keys(selectedTextureMap)) {
+        if (normalizePanelId(key) === normalizedMesh) {
+          return selectedTextureMap[key];
+        }
+      }
+      return undefined;
+    },
+    [selectedTextureMap]
+  );
 
   const setLoading = useCallback(
     (isLoading: boolean) => {
@@ -152,20 +205,31 @@ const Avatar: React.FC<AvatarProps> = ({
     try {
       scene.traverse((o: THREE.Object3D) => {
         if (o instanceof THREE.Mesh && o.material) {
-          const mat = o.material as THREE.MeshStandardMaterial;
+          let mat = o.material as THREE.MeshStandardMaterial;
+
+          // Clone material to isolate this mesh's customisation
+          if (!mat.userData.isCloned) {
+            const originalMat = mat;
+            mat = originalMat.clone();
+            mat.userData.isCloned = true;
+            o.material = mat;
+
+            // Save the original texture map reference
+            originalMapRef.current.set(mat, originalMat.map ?? null);
+          }
 
           // Leather-like tuning
           mat.metalness = 0;
-mat.roughness = 0.3;        // leather shine balance
-mat.envMapIntensity = 2.6;   // reflection strength
+          mat.roughness = 0.3;        // leather shine balance
+          mat.envMapIntensity = 2.6;   // reflection strength
           (mat as unknown as { reflectivity: number }).reflectivity = 0.6;
           // subtle premium leather layer
           (mat as unknown as { clearcoat: number }).clearcoat = 0.55;
           (mat as unknown as { clearcoatRoughness: number }).clearcoatRoughness = 0.32;
 
-mat.needsUpdate = true;
+          mat.needsUpdate = true;
 
-          const texConfig = selectedTextureMap?.[o.name];
+          const texConfig = getTextureConfig(o.name);
           if (texConfig?.normalUrl) {
             try {
               const normalMap = textureLoader.load(getAssetUrl(texConfig.normalUrl));
@@ -192,7 +256,7 @@ mat.needsUpdate = true;
     } catch (error) {
       console.error("Error enhancing materials:", error);
     }
-  }, [scene, selectedTextureMap]);
+  }, [scene, getTextureConfig]);
 
   // --- Collect meshes for UI ---
   useEffect(() => {
@@ -238,20 +302,39 @@ mat.needsUpdate = true;
   }, [setLoading]);
 
   const getTexture = useCallback(
-    (url: string) => {
+    (url: string, onLoad?: () => void, onError?: (error: unknown) => void) => {
       const cache = textureCacheRef.current;
       const cached = cache.get(url);
-      if (cached) return cached;
+      if (cached) {
+        onLoad?.();
+        return cached;
+      }
 
       beginLoad();
       try {
         const tex = textureLoader.load(
           url,
-          () => endLoad(),
-          undefined,
-          (error) => {
-            console.error(`Error loading texture ${url}:`, error);
+          () => {
             endLoad();
+            onLoad?.();
+          },
+          undefined,
+          (error: unknown) => {
+            // Remove from cache so subsequent clicks can retry
+            cache.delete(url);
+
+            let errorMessage = "Unknown error";
+            if (error && typeof error === "object" && "target" in error) {
+              const target = (error as { target: { src?: string } }).target;
+              if (target?.src) {
+                errorMessage = `Failed to load image from source: ${target.src}`;
+              }
+            } else if (error instanceof Error) {
+              errorMessage = error.message;
+            }
+            console.error(`Texture Load Failed for ${url}. Details: ${errorMessage}`, error);
+            endLoad();
+            onError?.(error);
           }
         );
         tex.flipY = false;
@@ -264,6 +347,7 @@ mat.needsUpdate = true;
       } catch (error) {
         console.error(`Error creating texture for ${url}:`, error);
         endLoad();
+        onError?.(error);
         return null;
       }
     },
@@ -273,66 +357,117 @@ mat.needsUpdate = true;
   // --- Texture swapping ---
   useEffect(() => {
     const currentMapStr = JSON.stringify(selectedTextureMap || {});
+    console.log("STEP 3: Texture swapping useEffect triggered. selectedTextureMap:", selectedTextureMap);
     if (
       !scene ||
       currentMapStr === prevTextureMapRef.current ||
       !isMountedRef.current
-    )
+    ) {
+      console.log("STEP 3: Texture swap skipped. Conditions not met:", {
+        hasScene: !!scene,
+        isMounted: isMountedRef.current,
+        isSameMap: currentMapStr === prevTextureMapRef.current
+      });
       return;
+    }
 
     try {
       scene.traverse((child: THREE.Object3D) => {
         if (!(child instanceof THREE.Mesh)) return;
-        const prevMat = child.material as THREE.MeshStandardMaterial;
-
-        if (!originalMapRef.current.has(prevMat)) {
-          originalMapRef.current.set(prevMat, prevMat.map ?? null);
-        }
-
-        const textureUrl: string | undefined =
-          selectedTextureMap?.[child.name]?.colorUrl;
-
-        child.material = prevMat.clone();
         const mat = child.material as THREE.MeshStandardMaterial;
+        if (!mat) return;
 
-        const prevMap =
-          prevMat.map ?? originalMapRef.current.get(prevMat) ?? null;
+        const texConfig = getTextureConfig(child.name);
+        const textureUrl: string | undefined = texConfig?.colorUrl;
+
+        const original = originalMapRef.current.get(mat) ?? null;
+
+        console.log(`STEP 3: Traversed mesh: "${child.name}"`, {
+          textureUrl,
+          hasOriginalTexture: !!original,
+          currentTextureUrl: (mat.map as unknown as { userData?: { _appliedUrl?: string } })?.userData?._appliedUrl || (mat.map ? "Other" : "None"),
+          currentColor: mat.color.getHexString()
+        });
 
         if (!textureUrl) {
-          const original = originalMapRef.current.get(prevMat) ?? null;
           if (mat.map !== original) {
+            console.log(`STEP 3: Restoring original texture for "${child.name}"`);
             mat.map = original;
+            mat.color.set("#ffffff");
             mat.needsUpdate = true;
           }
           return;
         }
 
-        if ((mat.map as unknown as { userData?: { _appliedUrl?: string } })?.userData?._appliedUrl === textureUrl) return;
-
-        const tex = getTexture(getAssetUrl(textureUrl));
-        if (!tex) return;
-
-        if (prevMap) {
-          tex.offset.copy(prevMap.offset);
-          tex.repeat.copy(prevMap.repeat);
-          tex.center.copy(prevMap.center);
-          tex.rotation = prevMap.rotation;
+        if ((mat.map as unknown as { userData?: { _appliedUrl?: string } })?.userData?._appliedUrl === textureUrl) {
+          console.log(`STEP 3: Texture already applied for "${child.name}":`, textureUrl);
+          return;
         }
 
-        (tex as unknown as { userData: { _appliedUrl: string } }).userData = {
-          ...(tex as unknown as { userData: Record<string, unknown> }).userData,
-          _appliedUrl: textureUrl,
-        };
+        console.log(`STEP 3: Applying custom settings to "${child.name}"...`);
+        mat.color.set("#ffffff");
 
-        mat.map = tex;
-        mat.needsUpdate = true;
+        let tex: THREE.Texture | null = null;
+        try {
+          console.log(`STEP 3: Calling getTexture for "${child.name}" with URL:`, getAssetUrl(textureUrl));
+          tex = getTexture(
+            getAssetUrl(textureUrl),
+            () => {
+              console.log(`STEP 3: Successfully loaded texture for "${child.name}"`);
+            },
+            (error) => {
+              console.error(`STEP 3: Failed to load texture for "${child.name}". Error details:`, error);
+              console.log(`STEP 3: Applying solid color fallback for "${child.name}"`);
+              mat.map = null;
+              const fallbackHex = getFallbackColor(textureUrl);
+              console.log(`STEP 3: Setting fallback hex color for "${child.name}":`, fallbackHex);
+              mat.color.set(fallbackHex);
+              mat.needsUpdate = true;
+            }
+          );
+        } catch (e) {
+          console.error(`STEP 3: Error loading texture for "${child.name}":`, e);
+        }
+
+        if (tex) {
+          console.log(`STEP 3: Setting texture map on material for "${child.name}"`);
+          const prevMap = original || mat.map;
+          if (prevMap) {
+            tex.offset.copy(prevMap.offset);
+            tex.repeat.copy(prevMap.repeat);
+            tex.center.copy(prevMap.center);
+            tex.rotation = prevMap.rotation;
+          }
+
+          (tex as unknown as { userData: { _appliedUrl: string } }).userData = {
+            ...(tex as unknown as { userData: Record<string, unknown> }).userData,
+            _appliedUrl: textureUrl,
+          };
+
+          mat.map = tex;
+          mat.needsUpdate = true;
+          console.log(`STEP 3: Set mat.map successfully for "${child.name}"`);
+        } else {
+          console.warn(`STEP 3: getTexture returned null synchronously for "${child.name}". Applying solid color fallback...`);
+          mat.map = null;
+          const fallbackHex = getFallbackColor(textureUrl);
+          mat.color.set(fallbackHex);
+          mat.needsUpdate = true;
+        }
       });
 
       prevTextureMapRef.current = currentMapStr;
     } catch (error) {
-      console.error("Error swapping textures:", error);
+      console.error("STEP 3: Error swapping textures:", error);
     }
-  }, [selectedTextureMap, scene, getTexture]);
+  }, [selectedTextureMap, scene, getTexture, getTextureConfig]);
+
+  // Step 4 log on render/commit
+  useEffect(() => {
+    console.log("STEP 4: R3F Canvas / Avatar render committed to screen.", {
+      selectedTextureMap
+    });
+  });
 
   // Guard against empty avatarData AFTER all hooks are declared
   if (!avatarData || !scene) {
@@ -352,22 +487,129 @@ mat.needsUpdate = true;
   );
 };
 
+const applyViewConstraints = (view: string, controls: any) => {
+  if (view === "side" || view === "oppositeSide" || view === "front" || view === "back") {
+    controls.minPolarAngle = Math.PI / 2.2;
+    controls.maxPolarAngle = Math.PI / 2.2;
+  } else if (view === "top") {
+    controls.minPolarAngle = 0.05;
+    controls.maxPolarAngle = 0.05;
+  } else if (view === "sole") {
+    controls.minPolarAngle = Math.PI - 0.05;
+    controls.maxPolarAngle = Math.PI - 0.05;
+  }
+};
+
+interface CameraControllerProps {
+  activeView: "side" | "oppositeSide" | "top" | "front" | "back" | "sole";
+  isAutoSpinning: boolean;
+  controlsRef: React.RefObject<any>;
+  targetCameraPosRef: React.MutableRefObject<THREE.Vector3 | null>;
+  isAnimatingRef: React.MutableRefObject<boolean>;
+  tempUnlockRef: React.MutableRefObject<boolean>;
+}
+
+const CameraController: React.FC<CameraControllerProps> = ({
+  activeView,
+  isAutoSpinning,
+  controlsRef,
+  targetCameraPosRef,
+  isAnimatingRef,
+  tempUnlockRef,
+}) => {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    if (!controlsRef.current) return;
+    const controls = controlsRef.current;
+
+    let targetPos = new THREE.Vector3();
+    if (activeView === "side") {
+      targetPos.set(2.2, 0.5, 0.001);
+    } else if (activeView === "oppositeSide") {
+      targetPos.set(-2.2, 0.5, 0.001);
+    } else if (activeView === "top") {
+      targetPos.set(0.001, 2.8, 0);
+    } else if (activeView === "front") {
+      targetPos.set(0.001, 0.5, 2.2);
+    } else if (activeView === "back") {
+      targetPos.set(0.001, 0.5, -2.2);
+    } else if (activeView === "sole") {
+      targetPos.set(0.001, -2.8, 0);
+    }
+
+    tempUnlockRef.current = true;
+    targetCameraPosRef.current = targetPos;
+    isAnimatingRef.current = true;
+  }, [activeView, controlsRef, targetCameraPosRef, isAnimatingRef, tempUnlockRef]);
+
+  useFrame((state, delta) => {
+    if (!controlsRef.current) return;
+    const controls = controlsRef.current;
+
+    if (isAutoSpinning) {
+      const target = controls.target;
+      const relativePos = new THREE.Vector3().copy(controls.object.position).sub(target);
+      
+      const angle = delta * 0.4;
+      const axis = new THREE.Vector3(0, 1, 0);
+      relativePos.applyAxisAngle(axis, angle);
+      
+      controls.object.position.copy(target).add(relativePos);
+      controls.update();
+      return;
+    }
+
+    if (isAnimatingRef.current && targetCameraPosRef.current) {
+      const targetPos = targetCameraPosRef.current;
+      const targetLookAt = new THREE.Vector3(0, 0.5, 0);
+
+      controls.minPolarAngle = 0;
+      controls.maxPolarAngle = Math.PI;
+
+      controls.object.position.lerp(targetPos, 0.1);
+      controls.target.lerp(targetLookAt, 0.1);
+      controls.update();
+
+      const dist = controls.object.position.distanceTo(targetPos);
+      if (dist < 0.01) {
+        controls.object.position.copy(targetPos);
+        controls.target.copy(targetLookAt);
+        controls.update();
+
+        isAnimatingRef.current = false;
+        targetCameraPosRef.current = null;
+        tempUnlockRef.current = false;
+
+        applyViewConstraints(activeView, controls);
+      }
+    }
+  });
+
+  return null;
+};
+
 export interface ShoeAvatarRef {
   captureScreenshot: () => string | null;
 }
 
 const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
   ({ avatarData, objectList, setObjectList, selectedTextureMap }, ref) => {
-    const [canvasSize, setCanvasSize] = useState({
-      width: 0,
-      height: 0,
-    });
+
     const [isReady, setIsReady] = useState(false);
     const [isEnvReady, setIsEnvReady] = useState(false);
     const [autoRetryCount, setAutoRetryCount] = useState(0);
     const [isTextureLoading, setIsTextureLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
     const glRef = useRef<THREE.WebGLRenderer | null>(null);
+
+    const [activeView, setActiveView] = useState<"side" | "oppositeSide" | "top" | "front" | "back" | "sole">("side");
+    const [isAutoSpinning, setIsAutoSpinning] = useState(false);
+
+    const controlsRef = useRef<any>(null);
+    const targetCameraPosRef = useRef<THREE.Vector3 | null>(null);
+    const isAnimatingRef = useRef(false);
+    const tempUnlockRef = useRef(false);
 
     // Expose screenshot capture method
     React.useImperativeHandle(ref, () => ({
@@ -387,44 +629,66 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     }, [avatarData]);
 
     useEffect(() => {
-      const resize = () => {
-        setCanvasSize({
-          width: window.innerWidth,
-          height: window.innerHeight,
-        });
-      };
-      resize();
-
-      // High delay to ensure browser and Next.js hydration are completely finished
       const timer1 = setTimeout(() => {
         setIsReady(true);
       }, 1200);
 
-      // Very high delay for Environment to ensure model is already rendered
       const timer2 = setTimeout(() => {
         setIsEnvReady(true);
       }, 3500);
 
-      window.addEventListener("resize", resize);
       return () => {
-        window.removeEventListener("resize", resize);
         clearTimeout(timer1);
         clearTimeout(timer2);
       };
     }, []);
 
-    // Memoize canvas style to avoid unnecessary re-renders
     const canvasStyle = useMemo(() => {
-      const width = Math.min(canvasSize.width > 0 ? canvasSize.width : (typeof window !== 'undefined' ? window.innerWidth : 800), 800);
-      const height = Math.min((canvasSize.height > 0 ? canvasSize.height : (typeof window !== 'undefined' ? window.innerHeight : 600)) * 0.8, 600);
-
       return {
-        width: `${width}px`,
-        height: `${height}px`,
-        maxWidth: "100%",
+        width: "100%",
+        height: "100%",
         display: isReady ? 'block' : 'none',
       };
-    }, [canvasSize, isReady]);
+    }, [isReady]);
+
+    const triggerRotate = (direction: "left" | "right") => {
+      if (!controlsRef.current) return;
+      const controls = controlsRef.current;
+      const camera = controls.object;
+      const target = controls.target;
+      
+      setIsAutoSpinning(false);
+      
+      const relativePos = new THREE.Vector3().copy(camera.position).sub(target);
+      const angle = direction === "left" ? Math.PI / 6 : -Math.PI / 6;
+      const axis = new THREE.Vector3(0, 1, 0);
+      relativePos.applyAxisAngle(axis, angle);
+      
+      const newPos = new THREE.Vector3().copy(target).add(relativePos);
+      
+      tempUnlockRef.current = true;
+      targetCameraPosRef.current = newPos;
+      isAnimatingRef.current = true;
+    };
+
+    const handleStart = () => {
+      setIsAutoSpinning(false);
+      isAnimatingRef.current = false;
+      targetCameraPosRef.current = null;
+      tempUnlockRef.current = false;
+      if (controlsRef.current) {
+        applyViewConstraints(activeView, controlsRef.current);
+      }
+    };
+
+    const views = [
+      { id: "side", label: "Side" },
+      { id: "oppositeSide", label: "Opp. Side" },
+      { id: "top", label: "Top" },
+      { id: "front", label: "Front" },
+      { id: "back", label: "Back" },
+      { id: "sole", label: "Sole" },
+    ] as const;
 
     if (!isReady) {
       return (
@@ -445,7 +709,6 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
             <button
               onClick={() => {
                 setHasError(false);
-                // Force a reload of the component state if needed
                 window.dispatchEvent(new Event('resize'));
               }}
               className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer"
@@ -459,23 +722,26 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
 
     return (
       <WebGLErrorBoundary>
-        <div className="relative">
+        <div className="relative w-full h-[350px] sm:h-[450px] md:h-[550px] lg:h-[600px] select-none group/avatar">
           {isTextureLoading && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-lg">
               <DomSpinner />
             </div>
           )}
 
+
+
+
           <Canvas
             shadows
             gl={{
-              antialias: false, // Turn off antialias for initial stability
-              powerPreference: "default", // Lower power preference for stability
+              antialias: false,
+              powerPreference: "default",
               preserveDrawingBuffer: true,
               failIfMajorPerformanceCaveat: false,
             }}
             style={canvasStyle}
-            camera={{ position: [2.2, 0.25, 0], fov: 50 }}
+            camera={{ position: [2.2, 0.5, 0.001], fov: 50 }}
             onCreated={({ gl }: { gl: THREE.WebGLRenderer }) => {
               glRef.current = gl;
               try {
@@ -496,7 +762,6 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
                     setAutoRetryCount(prev => prev + 1);
                     setIsReady(false);
                     setIsEnvReady(false);
-                    // Silent retry after a short delay
                     setTimeout(() => {
                       setIsReady(true);
                     }, 500);
@@ -549,13 +814,27 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
               </Bounds>
             </Suspense>
 
+            <CameraController
+              activeView={activeView}
+              isAutoSpinning={isAutoSpinning}
+              controlsRef={controlsRef}
+              targetCameraPosRef={targetCameraPosRef}
+              isAnimatingRef={isAnimatingRef}
+              tempUnlockRef={tempUnlockRef}
+            />
+
             <OrbitControls
+              ref={controlsRef}
               enablePan={false}
               enableZoom
               minDistance={1.2}
               maxDistance={5}
               target={[0, 0.5, 0]}
-              maxPolarAngle={Math.PI}
+              enableDamping
+              dampingFactor={0.08}
+              minPolarAngle={Math.PI / 2.2}
+              maxPolarAngle={Math.PI / 2.2}
+              onStart={handleStart}
             />
           </Canvas>
         </div>
@@ -563,6 +842,10 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     );
   }
 );
+
+export interface ShoeAvatarRef {
+  captureScreenshot: () => string | null;
+}
 
 // Loading spinner
 const DomSpinner: React.FC = () => {

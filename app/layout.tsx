@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Montserrat, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -9,9 +8,20 @@ import Script from "next/script";
 import { getSettings } from "@/lib/settings";
 import { RazorpayMagicCheckout } from "@/components/integrations/RazorpayMagicCheckout";
 
-// GeistSans and GeistMono are already configured as variables in the package
-const geistSans = GeistSans;
-const geistMono = GeistMono;
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  weight: ["400", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://italianshoescompany.com"),
@@ -53,12 +63,12 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${montserrat.variable} ${playfairDisplay.variable} antialiased font-sans`}
       >
         <SessionProvider>
           <CurrencyProvider>
             <div className="min-h-screen flex flex-col">
-              <main className="flex-grow">
+              <main className="grow">
                 {children}
               </main>
             </div>

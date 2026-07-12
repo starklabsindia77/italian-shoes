@@ -11,6 +11,8 @@ export async function GET(req: Request) {
     const sp = getSearchParams(req);
     const q = sp.get("q")?.trim();
     const { skip, limit } = pagination(req);
+    const sortBy = sp.get("sortBy") || "createdAt";
+    const sortOrder = sp.get("sortOrder") === "asc" ? "asc" : "desc";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {};
@@ -26,8 +28,18 @@ export async function GET(req: Request) {
       where.isActive = true;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let orderBy: any = { createdAt: "desc" };
+    if (sortBy === "price") {
+      orderBy = { price: sortOrder };
+    } else if (sortBy === "title") {
+      orderBy = { title: sortOrder };
+    } else if (sortBy === "createdAt") {
+      orderBy = { createdAt: sortOrder };
+    }
+
     const [items, total] = await Promise.all([
-      prisma.product.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" } }),
+      prisma.product.findMany({ where, skip, take: limit, orderBy }),
       prisma.product.count({ where })
     ]);
     return ok({ items, total, limit });

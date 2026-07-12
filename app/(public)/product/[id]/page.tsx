@@ -3,13 +3,20 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Heart,
   MessageCircle,
+  ZoomIn,
+  Share2,
+  Undo,
+  Trash2,
+  ChevronLeft,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { WishlistButton } from "@/components/wishlist/WishlistButton";
 import { getAssetUrl } from "@/lib/utils";
 import { ShoeAvatarRef } from "@/components/shoe-avatar/ShoeAvatar";
 import { Price } from "@/components/providers/CurrencyProvider";
@@ -27,6 +34,51 @@ const ShoeAvatar = dynamic(
 );
 
 
+
+const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined): string => {
+  if (!s3Url) return "";
+  
+  const name = colorName.trim().toLowerCase();
+  
+  // Try extraction from colorName first
+  // 1. Numeric check (e.g. "color 1", "swatch 15")
+  const numMatch = name.match(/\b\d+\b/);
+  if (numMatch) {
+    const num = numMatch[0];
+    const numInt = parseInt(num, 10);
+    if (numInt >= 1 && numInt <= 20) {
+      if ([10, 11, 12, 14, 15, 16, 17, 18].includes(numInt)) {
+        return `/leather/${num}.png`;
+      }
+      return `/leather/${num}.jpg`;
+    }
+  }
+  
+  // 2. Keyword matching
+  if (name.includes("dark red") || name.includes("dark-red")) return "/leather/dark-red.png";
+  if (name.includes("mahroon") || name.includes("maroon") || name.includes("burgundy")) return "/leather/mahroon.png";
+  if (name.includes("light brown") || name.includes("light-brown") || name.includes("tan")) return "/leather/light-brown.jpg";
+  if (name.includes("black")) return "/leather/black.jpg";
+  if (name.includes("brown") || name.includes("coffee")) return "/leather/brown.jpg";
+  if (name.includes("red")) return "/leather/red.jpg";
+  if (name.includes("yellow")) return "/leather/yellow.jpg";
+  if (name.includes("orange")) return "/leather/orange.png";
+  if (name.includes("grey") || name.includes("gray")) return "/leather/grey.png";
+  
+  // Try extraction from s3Url
+  const urlLower = s3Url.toLowerCase();
+  if (urlLower.includes("dark-red")) return "/leather/dark-red.png";
+  if (urlLower.includes("mahroon") || urlLower.includes("maroon") || urlLower.includes("burgundy")) return "/leather/mahroon.png";
+  if (urlLower.includes("light-brown") || urlLower.includes("light_brown")) return "/leather/light-brown.jpg";
+  if (urlLower.includes("black")) return "/leather/black.jpg";
+  if (urlLower.includes("brown")) return "/leather/brown.jpg";
+  if (urlLower.includes("red")) return "/leather/red.jpg";
+  if (urlLower.includes("yellow")) return "/leather/yellow.jpg";
+  if (urlLower.includes("orange")) return "/leather/orange.png";
+  if (urlLower.includes("grey") || urlLower.includes("gray")) return "/leather/grey.png";
+  
+  return s3Url;
+};
 
 /* ----------------------
    Main Builder Component
@@ -130,12 +182,14 @@ const transformApiData = (
 export default function DerbyBuilderClean() {
   // State for API data
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [productData, setProductData] = useState<any>(null);
   const [sizesData, setSizesData] = useState<{ items?: any[] } | null>(null);
   const [panelsData, setPanelsData] = useState<{ items?: any[] } | null>(null);
   const [materialsData, setMaterialsData] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, any>[]>([]);
 
   // UI-only state
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -161,14 +215,20 @@ export default function DerbyBuilderClean() {
   };
 
   const handleTextureChange = (panelId: string, textureUrl: string, materialName?: string, colorName?: string) => {
-    setSelectedTextureMap((prev) => ({
-      ...prev,
-      [panelId]: { 
-        colorUrl: textureUrl,
-        materialName: materialName || "N/A",
-        colorName: colorName || "N/A"
-      },
-    }));
+    console.log("STEP 2: State updating. handleTextureChange triggered:", { panelId, textureUrl, materialName, colorName });
+    setSelectedTextureMap((prev) => {
+      setHistory((h) => [...h, prev]);
+      const updated = {
+        ...prev,
+        [panelId]: { 
+          colorUrl: textureUrl,
+          materialName: materialName || "N/A",
+          colorName: colorName || "N/A"
+        },
+      };
+      console.log("STEP 2: State updated. New selectedTextureMap:", updated);
+      return updated;
+    });
   };
 
   // Fetch all data from APIs
@@ -377,6 +437,16 @@ export default function DerbyBuilderClean() {
     if (cfg.sizes && cfg.sizes.length > 0) {
       setSelectedSize(cfg.sizes[0].id);
     }
+    setHistory((h) => [...h, selectedTextureMap]);
+    setSelectedTextureMap({});
+  };
+
+  const handleUndo = () => {
+    if (history.length > 0) {
+      const prev = history[history.length - 1];
+      setHistory((h) => h.slice(0, -1));
+      setSelectedTextureMap(prev);
+    }
   };
 
   const [objectList, setObjectList] = useState<any>();
@@ -431,27 +501,86 @@ export default function DerbyBuilderClean() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800">
-      {/* Header with back button and title */}
-      <header className="bg-white mt-10">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col justify-center items-center text-sm text-gray-500 w-full">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {cfg.title?.replace("`", "'") || "Men&apos;s Luxury Dress Shoes"}
+    <div className="min-h-screen bg-white text-gray-800 relative">
+      {/* Header with breadcrumb navigation and title */}
+      <header className="bg-white">
+        {/* Breadcrumb & Title Container with separation line */}
+        <div className="border-b border-gray-200 pt-1 pb-3.5 mb-2">
+          <div className="max-w-5xl mx-auto px-4 flex flex-col justify-center items-center text-center">
+            <h1 className="text-base md:text-lg font-bold text-gray-950 uppercase tracking-wider mb-1.5 select-none font-sans">
+              {cfg.title?.replace("`", "'") || "Men's Luxury Chelsea Boots"}
             </h1>
-            Home {" > "} Create Design {" > "} Create Men&apos;s Shoes {" > "} Men&apos;s Derby Shoes
+            <nav className="text-[13px] text-gray-500 font-sans select-none flex items-center justify-center gap-1.5 flex-wrap">
+              <Link href="/" className="hover:text-gray-900 transition-colors">Home</Link>
+              <span className="text-gray-300">›</span>
+              <Link href="/collections" className="hover:text-gray-900 transition-colors">Create Design</Link>
+              <span className="text-gray-300">›</span>
+              <Link href="/collections" className="hover:text-gray-900 transition-colors">Create Men's Shoes</Link>
+              <span className="text-gray-300">›</span>
+              <span className="text-gray-900 font-semibold">{cfg.title?.replace("`", "'") || "Men's Luxury Chelsea Boots"}</span>
+            </nav>
           </div>
-          {/* Divider */}
-          <div className="w-full border-t border-gray-300 mt-4"></div>
+        </div>
+
+        {/* Back to list Link */}
+        <div className="max-w-5xl mx-auto px-4 pt-1 pb-2">
+          <Link 
+            href="/collections" 
+            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 font-sans hover:underline transition-all"
+          >
+            <ChevronLeft size={16} />
+            Back to list
+          </Link>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[60%_40%] gap-12">
+      <main className="max-w-5xl mx-auto px-4 pt-2 pb-6 w-full overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 xl:gap-12">
           {/* Left: Enhanced Product Viewer */}
           <div className="space-y-6">
             {/* Main Product Image with Controls */}
             <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+              {/* Zoom, Save, Share Icons on Left Side */}
+              <div className="absolute left-4 top-4 flex flex-col gap-3.5 z-10">
+                <button 
+                  className="bg-white p-2 rounded-full shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center cursor-pointer"
+                  aria-label="Zoom In"
+                >
+                  <ZoomIn className="w-4 h-4 stroke-[1.5]" />
+                </button>
+                <button 
+                  className="bg-white p-2 rounded-full shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center cursor-pointer"
+                  aria-label="Add to Wishlist"
+                >
+                  <Heart className="w-4 h-4 stroke-[1.5]" />
+                </button>
+                <button 
+                  className="bg-white p-2 rounded-full shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center cursor-pointer"
+                  aria-label="Share"
+                >
+                  <Share2 className="w-4 h-4 stroke-[1.5]" />
+                </button>
+              </div>
+
+              {/* Undo & Clear Buttons in Middle Bottom */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3.5 z-10">
+                <button
+                  onClick={handleUndo}
+                  disabled={history.length === 0}
+                  className="flex items-center gap-1.5 bg-white px-4 py-1.5 rounded-full shadow-sm border border-gray-100 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                >
+                  <Undo className="w-3.5 h-3.5" />
+                  <span>Undo</span>
+                </button>
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1.5 bg-white px-4 py-1.5 rounded-full shadow-sm border border-gray-100 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:border-gray-200 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear</span>
+                </button>
+              </div>
+
               {avatarData ? (
                 <ShoeAvatar
                   ref={shoeAvatarRef}
@@ -482,66 +611,78 @@ export default function DerbyBuilderClean() {
           {/* Right: Enhanced Customization Panel */}
           <div className="space-y-8">
             {/* Pricing Section */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center gap-4 mb-6">
+            <div className="mb-6 border-b border-gray-100 pb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3">
                 {/* Price Section */}
                 <div className="flex flex-col gap-0.5">
-                  <div className="text-lg font-normal text-red-600 leading-none">
-                    <Price amount={cfg.price || 329} />
-                  </div>
-                  <div className="text-sm font-bold text-gray-700 line-through leading-none">
-                    <Price amount={cfg.compareAtPrice || 519} />
+                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Price</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-xl font-bold text-red-600">
+                      <Price amount={cfg.price || 329} />
+                    </span>
+                    {cfg.compareAtPrice && cfg.compareAtPrice > 0 ? (
+                      <span className="text-xs text-gray-400 line-through">
+                        <Price amount={cfg.compareAtPrice} />
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Size Selection + Add to Cart */}
-                <div className="flex gap-4 items-center">
-                  {/* Size Dropdown */}
-                  <select
-                    value={selectedSize || ""}
-                    onChange={(e) => setSelectedSize(e.target.value)}
-                    className="w-48 h-10 border border-gray-300 rounded-full px-4 pr-12 py-2 text-sm focus:border-red-500"
-                  >
-                    <option value="" disabled>
-                      Size
-                    </option>
-                    {(cfg.sizes || []).map((s: any) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
+                {/* Size Selection & Add to Cart Container */}
+                <div className="flex items-end gap-2 w-full sm:w-auto">
+                  {/* Size Selection */}
+                  <div className="flex flex-col gap-0.5 flex-1 sm:flex-none">
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Size</span>
+                    <select
+                      value={selectedSize || ""}
+                      onChange={(e) => setSelectedSize(e.target.value)}
+                      className="w-full sm:w-28 h-8 border border-gray-300 rounded-full px-3 py-1 text-xs focus:border-red-500 bg-white"
+                    >
+                      <option value="" disabled>
+                        Size
                       </option>
-                    ))}
-                  </select>
+                      {(cfg.sizes || []).map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* Add to Cart Button */}
-                  <AddToCartButton
-                    productId={cfg.productId || ""}
-                    title={cfg.title || ""}
-                    price={cfg.price || 0}
-                    originalPrice={cfg.compareAtPrice}
-                    image={getAssetUrl(cfg.assets?.thumbnail || "/ShoeSoleFixed.glb")}
-                    size={selectedSizeObject || selectedSize}
-                    variant="Default"
-                    buttonVariant="default"
-                    buttonSize="sm"
-                    config={selectedTextureMap}
-                    onBeforeAdd={handleBeforeAdd}
-                  />
+                  <div className="flex-shrink-0 flex-1 sm:flex-none">
+                    <AddToCartButton
+                      productId={cfg.productId || ""}
+                      title={cfg.title || ""}
+                      price={cfg.price || 0}
+                      originalPrice={cfg.compareAtPrice && cfg.compareAtPrice > 0 ? cfg.compareAtPrice : undefined}
+                      image={getAssetUrl(cfg.assets?.thumbnail || "/ShoeSoleFixed.glb")}
+                      size={selectedSizeObject || selectedSize}
+                      variant="Default"
+                      buttonVariant="default"
+                      buttonSize="default"
+                      className="w-full sm:w-auto h-8 px-5 rounded-full text-xs font-semibold bg-red-500 hover:bg-red-600 text-white transition-all shadow-sm flex items-center justify-center whitespace-nowrap"
+                      config={selectedTextureMap}
+                      onBeforeAdd={handleBeforeAdd}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Customization Tabs */}
             <div>
-              <div className="mb-3">
-                <div className="relative inline-flex bg-gray-200 rounded-full h-8 shadow-sm w-full justify-center items-center">
+              <div className="mb-4">
+                <div className="relative inline-flex bg-gray-100 p-0.5 rounded-full h-8 shadow-sm w-full justify-between items-center">
                   {(["Materials", "Style", "Soles"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setActiveTab(t)}
-                      className={`relative px-6 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center ${activeTab === t
-                        ? "bg-red-500 text-white shadow-sm h-10 -my-1"
-                        : "text-gray-700 hover:text-gray-900 h-8"
-                        }`}
+                      className={`relative px-4 text-xs font-semibold rounded-full transition-all duration-200 flex items-center justify-center flex-1 h-7 ${
+                        activeTab === t
+                          ? "bg-red-500 text-white shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
+                      }`}
                     >
                       {t}
                     </button>
@@ -553,15 +694,15 @@ export default function DerbyBuilderClean() {
               {activeTab === "Materials" && (
                 <>
                   {/* Customization Instruction */}
-                  <p className="text-sm text-gray-600 mb-4 text-center">
+                  <p className="text-xs text-gray-500 mb-3 text-center">
                     Choose a material and color for every part of your shoes
                   </p>
 
                   {/* Panel Selection */}
                   <div className="mb-3">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       {/* Label */}
-                      <label className="text-sm font-light text-gray-400 whitespace-nowrap">
+                      <label className="text-xs font-medium text-gray-400 whitespace-nowrap">
                         Select a panel:
                       </label>
 
@@ -570,7 +711,7 @@ export default function DerbyBuilderClean() {
                         <select
                           value={selectedPanelName || ""}
                           onChange={handlePanelChange}
-                          className="w-full h-8 border border-gray-500 rounded-full px-3 pr-10 focus:ring-red-600 focus:border-red-500 appearance-none bg-white py-1 text-sm"
+                          className="w-full h-8 border border-gray-300 rounded-full px-3 pr-10 focus:ring-red-500 focus:border-red-500 appearance-none bg-white py-1 text-xs"
                         >
                           {/* Placeholder */}
                           <option value="" disabled hidden>
@@ -587,9 +728,9 @@ export default function DerbyBuilderClean() {
 
                         {/* Custom Dropdown Icon */}
                         <div className="absolute inset-y-0 right-0 flex items-center pr-0.5 pt-0.5 pb-0.5 pointer-events-none">
-                          <div className="bg-red-500 h-full w-8 flex items-center justify-center rounded-r-full">
+                          <div className="bg-red-500 h-7 w-7 flex items-center justify-center rounded-r-full">
                             <svg
-                              className="w-4 h-4 text-white"
+                              className="w-3.5 h-3.5 text-white"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -608,9 +749,9 @@ export default function DerbyBuilderClean() {
                   </div>
 
                   {/* Material and Color Filters */}
-                  <div className="flex justify-end gap-4 mb-3">
+                  <div className="flex gap-2 mb-3 w-full">
                     {/* All Materials */}
-                    <div className="w-40 relative">
+                    <div className="flex-1 relative">
                       <select
                         value={selectedMaterialFilter}
                         onChange={(e) => {
@@ -618,7 +759,7 @@ export default function DerbyBuilderClean() {
                           setSelectedColorFilter("all");
                           setSelectedColor(null);
                         }}
-                        className="w-full h-8 border border-gray-300 rounded-full px-3 pr-10 focus:ring-red-500 focus:border-red-500 appearance-none bg-white text-sm py-1"
+                        className="w-full h-8 border border-gray-300 rounded-full px-3 pr-8 focus:ring-red-500 focus:border-red-500 appearance-none bg-white text-xs py-1"
                       >
                         <option value="all">All Materials</option>
                         {getAvailableMaterials().map((material: any) => (
@@ -632,10 +773,10 @@ export default function DerbyBuilderClean() {
                       </select>
 
                       {/* Icon with gray background */}
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-0.5 pt-0.2 pb-0.2 pointer-events-none">
-                        <div className="bg-gray-200 h-6 w-8 flex items-center justify-center rounded-r-full">
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-0.5 pt-0.5 pb-0.5 pointer-events-none">
+                        <div className="bg-gray-150 h-7 w-7 flex items-center justify-center rounded-r-full">
                           <svg
-                            className="w-4 h-4 text-gray-600"
+                            className="w-3 h-3 text-gray-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -652,7 +793,7 @@ export default function DerbyBuilderClean() {
                     </div>
 
                     {/* All Colors */}
-                    <div className="w-40 relative">
+                    <div className="flex-1 relative">
                       <select
                         value={selectedColorFilter}
                         onChange={(e) => {
@@ -660,7 +801,7 @@ export default function DerbyBuilderClean() {
                           setSelectedMaterialFilter("all");
                           setSelectedColor(null);
                         }}
-                        className="w-full h-8 border border-gray-300 rounded-full px-3 pr-10 focus:ring-red-500 focus:border-red-500 appearance-none bg-white text-sm py-1"
+                        className="w-full h-8 border border-gray-300 rounded-full px-3 pr-8 focus:ring-red-500 focus:border-red-500 appearance-none bg-white text-xs py-1"
                       >
                         <option value="all">All Colors</option>
                         {getAvailableColors().map((color: any) => (
@@ -671,10 +812,10 @@ export default function DerbyBuilderClean() {
                       </select>
 
                       {/* Icon with gray background */}
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-0.5 pt-0.2 pb-0.2 pointer-events-none">
-                        <div className="bg-gray-200 h-6 w-8 flex items-center justify-center rounded-r-full">
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-0.5 pt-0.5 pb-0.5 pointer-events-none">
+                        <div className="bg-gray-150 h-7 w-7 flex items-center justify-center rounded-r-full">
                           <svg
-                            className="w-4 h-4 text-gray-600"
+                            className="w-3 h-3 text-gray-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -692,23 +833,23 @@ export default function DerbyBuilderClean() {
                   </div>
 
                   {/* Material Categories with Color Swatches */}
-                  <div className="space-y-6 mt-4 h-80 overflow-y-auto">
+                  <div className="space-y-4 mt-3 h-72 overflow-y-auto pr-1">
                     {getAvailableMaterials().map((material: any) => (
-                      <div key={material.materialId}>
+                      <div key={material.materialId} className="border-b border-gray-50 pb-3 last:border-b-0 last:pb-0">
                         {/* Material Name and Info */}
-                        <div className="flex items-center gap-2 mb-3 justify-end">
-                          <h4 className="text-sm font-normal text-gray-500 italic">
+                        <div className="flex items-center gap-1.5 mb-2 justify-start">
+                          <h4 className="text-xs font-medium text-gray-500 italic">
                             {material.materialName}
                           </h4>
-                          <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">
+                          <div className="w-3.5 h-3.5 bg-red-400 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-500 transition-colors">
+                            <span className="text-white text-[9px] font-bold">
                               ?
                             </span>
                           </div>
                         </div>
 
                         {/* Color Swatches */}
-                        <div className="flex flex-wrap gap-2 w-full justify-end">
+                        <div className="flex flex-wrap gap-1.5 w-full justify-start">
                           {material.selectedColor?.map((color: any) => {
                             // If a color filter is selected, only show colors from that family
                             if (selectedColorFilter !== "all") {
@@ -729,23 +870,33 @@ export default function DerbyBuilderClean() {
                               <div
                                 key={colorKey}
                                 onClick={() => {
+                                  const localUrl = getLocalTextureUrl(color.name, color.imageUrl);
+                                  console.log("STEP 1: Swatch clicked. Details:", {
+                                    colorKey,
+                                    selectedPanelName,
+                                    imageUrl: color.imageUrl,
+                                    localUrl,
+                                    materialName: material.materialName,
+                                    colorName: color.name
+                                  });
                                   setSelectedColor(colorKey);
                                   handleTextureChange(
                                     selectedPanelName,
-                                    color.imageUrl,
+                                    localUrl,
                                     material.materialName,
                                     color.name
                                   );
                                 }}
-                                className={`rounded-md overflow-hidden transition flex-shrink-0 ${selectedColor === colorKey
-                                  ? "border-red-500 ring-1 ring-red-100"
-                                  : "border-gray-200"
-                                  }`}
+                                className={`rounded-md overflow-hidden cursor-pointer transition-all duration-150 flex-shrink-0 ${
+                                  selectedColor === colorKey
+                                    ? "ring-2 ring-red-500 ring-offset-1 scale-95"
+                                    : "border border-gray-200 hover:scale-105"
+                                }`}
                               >
                                 <img
-                                  src={getAssetUrl(color.imageUrl)}
+                                  src={getLocalTextureUrl(color.name, color.imageUrl)}
                                   alt={color.name}
-                                  className="object-cover w-12 h-12 block"
+                                  className="object-cover w-8 h-8 block"
                                 />
                               </div>
                             );
@@ -882,17 +1033,20 @@ export default function DerbyBuilderClean() {
               {/* Buttons */}
               <div className="flex gap-4 justify-center py-1">
                 {/* Save to wishlist */}
-                <button className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors">
-                  <Heart className="w-5 h-5 text-red-600 fill-red-600" />
-                  <span className="underline decoration-gray-300">
-                    Save to wishlist
-                  </span>
-                </button>
+                <WishlistButton
+                  productId={id}
+                  title={productData?.title || ""}
+                  price={productData?.price || 0}
+                  originalPrice={productData?.compareAtPrice || undefined}
+                  image={getAssetUrl(productData?.assets?.thumbnail) || undefined}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors border-0 shadow-none rounded-none text-sm"
+                  buttonVariant="ghost"
+                />
 
                 {/* Send inquiry */}
-                <button className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors">
-                  <MessageCircle className="w-5 h-5 text-red-600 fill-red-600" />
-                  <span className="underline decoration-gray-300">
+                <button className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors border-0 shadow-none rounded-none text-sm text-black cursor-pointer">
+                  <MessageCircle className="w-5 h-5 stroke-2 text-black" />
+                  <span>
                     Send inquiry
                   </span>
                 </button>

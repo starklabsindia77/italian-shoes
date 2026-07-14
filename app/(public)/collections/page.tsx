@@ -338,11 +338,8 @@ const ProductsPage = () => {
     <div className="w-full">
 
       {/* ── Page Title + Breadcrumb (Girotti style) ────────────────── */}
-      <div className="text-center pt-2 pb-4 select-none">
-        <h2 className="text-xl font-serif font-medium tracking-[0.18em] text-gray-900 uppercase">
-          {meta.title}
-        </h2>
-        <nav className="flex items-center justify-center gap-1.5 mt-1.5" aria-label="Breadcrumb">
+      <div className="text-center pt-0 pb-3 select-none">
+        <nav className="flex items-center justify-center gap-1.5" aria-label="Breadcrumb">
           {meta.breadcrumb.map((crumb, i) => (
             <React.Fragment key={crumb.label}>
               {i > 0 && (

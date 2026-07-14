@@ -604,7 +604,7 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     const glRef = useRef<THREE.WebGLRenderer | null>(null);
 
     const [activeView, setActiveView] = useState<"side" | "oppositeSide" | "top" | "front" | "back" | "sole">("side");
-    const [isAutoSpinning, setIsAutoSpinning] = useState(false);
+    const [isAutoSpinning, setIsAutoSpinning] = useState(true);
 
     const controlsRef = useRef<any>(null);
     const targetCameraPosRef = useRef<THREE.Vector3 | null>(null);

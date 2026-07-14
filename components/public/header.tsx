@@ -7,7 +7,7 @@ import { Cormorant_Garamond } from 'next/font/google';
 import AnnouncementBar from './announcementBar';
 import { CartIcon } from '@/components/cart/CartIcon';
 import { useCartStore } from '@/lib/stores';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -69,16 +69,6 @@ const navItems = [
       { label: 'Bespoke Services', href: '/collections?category=bespoke' },
     ],
   },
-  {
-    label: 'About Girotti',
-    href: '/collections',
-    dropdown: [
-      { label: 'Our Story', href: '/collections' },
-      { label: 'Artisan Craftsmanship', href: '/collections' },
-      { label: 'The Workshop', href: '/collections' },
-      { label: 'Contact Us', href: '/collections' },
-    ],
-  },
 ];
 
 interface DropdownItem { label: string; href: string; }
@@ -100,6 +90,7 @@ const NavDropdown: React.FC<{ items: DropdownItem[]; router: ReturnType<typeof u
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { getTotalItems, openCart } = useCartStore();
   const [mounted, setMounted] = useState<boolean>(false);
 
@@ -256,6 +247,21 @@ const Header: React.FC = () => {
               >
                 H a n d c r a f t e d &nbsp; i n &nbsp; I t a l y
               </span>
+              {pathname === '/collections' && (
+                <span
+                  className="select-none font-sans"
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 500,
+                    letterSpacing: '0.18em',
+                    color: '#1a1a1a',
+                    marginTop: 8,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Create Men's Shoes
+                </span>
+              )}
             </div>
 
             {/* Right — Log In + Cart (flush top-right) */}
@@ -300,52 +306,7 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-      {/* LAYER 3 — Navigation Menu Bar */}
-      <div
-        id="nav-bar"
-        style={{
-          width: '100%',
-          backgroundColor: '#ffffff',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* Narrower menu bar centered in the white 1140px container */}
-        <div
-          style={{
-            maxWidth: 900,
-            margin: '0 auto',
-            padding: '12px 0',
-            backgroundColor: '#eeeeee',
-          }}
-        >
-          <nav className="flex items-center justify-center" style={{ gap: 25 }}>
-            {navItems.map((item) => (
-              <div key={item.label} className="relative group">
-                <button
-                  onClick={() => router.push(item.href)}
-                  className="flex items-center gap-1 tracking-wider transition-colors duration-150 cursor-pointer whitespace-nowrap"
-                  style={{ fontSize: 13, fontWeight: 600, color: '#444444', padding: '4px 0', background: 'none', border: 'none' }}
-                >
-                  {item.label === 'Home' ? (
-                    <Home className="w-4 h-4 group-hover:text-gray-900" style={{ color: '#555555' }} aria-label="Home" />
-                  ) : (
-                    item.label
-                  )}
-                  {item.dropdown && (
-                    <span
-                      className="group-hover:text-gray-600 transition-colors pointer-events-none ml-0.5"
-                      style={{ fontSize: 8, color: '#999999' }}
-                    >
-                      ▼
-                    </span>
-                  )}
-                </button>
-                {item.dropdown && <NavDropdown items={item.dropdown} router={router} />}
-              </div>
-            ))}
-          </nav>
-        </div>
-      </div>
+
     </div >
 
       {/* MOBILE HEADER */ }

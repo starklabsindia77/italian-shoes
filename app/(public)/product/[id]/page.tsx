@@ -541,7 +541,7 @@ export default function DerbyBuilderClean() {
             {/* Main Product Image with Controls */}
             <div className="relative bg-gray-50 rounded-lg overflow-hidden">
               {/* Zoom, Save, Share Icons on Left Side */}
-              <div className="absolute left-4 top-4 flex flex-col gap-3.5 z-10">
+              <div className="absolute left-4 top-4 flex flex-row gap-3.5 z-10">
                 <button 
                   className="bg-white p-2 rounded-full shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center cursor-pointer"
                   aria-label="Zoom In"

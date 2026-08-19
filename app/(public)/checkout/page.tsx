@@ -11,13 +11,12 @@ import { ShippingForm } from "@/components/checkout/ShippingForm";
 import { ContactForm } from "@/components/checkout/ContactForm";
 import { Shield, Lock, ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/lib/stores/cart-store";
-import { Price, useCurrency } from "@/components/providers/CurrencyProvider";
+import { Price } from "@/components/providers/CurrencyProvider";
 import Link from "next/link";
 import Script from "next/script";
 import { toast } from "sonner";
 
 const Checkout = () => {
-  const { currency: selectedCurrency } = useCurrency();
   const [settings, setSettings] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -96,16 +95,27 @@ const Checkout = () => {
 
   const handleCompleteOrder = async () => {
     if (isProcessing) return;
+
+    if (!contactData.email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+    if (!shippingData.firstName || !shippingData.address || !shippingData.city || !shippingData.zip) {
+      toast.error("Please complete your shipping address.");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // 1. Create order on server
+      // 1. Ask the server to price the cart and open a Razorpay order. Amounts
+      //    are derived server-side from database prices — never sent from here.
       const response = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: total,
-          currency: selectedCurrency,
+          items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
+          shippingMethodId: selectedShipping.id ?? null,
         }),
       });
 
@@ -124,18 +134,21 @@ const Checkout = () => {
 
       // 2. Open Razorpay Modal
       const options = {
-        key: settings?.integrations?.razorpayKeyId,
+        key: orderData.keyId,
         amount: orderData.amount,
         currency: orderData.currency,
         name: settings?.general?.storeName || "Italian Shoes",
         description: "Order Payment",
-        order_id: orderData.id,
+        order_id: orderData.razorpayOrderId,
         handler: async function (paymentResponse: any) {
           try {
-            // 3. Save order to DB
+            // 3. Hand the signed payment result to the server, which verifies it
+            //    against the Razorpay secret before recording the order.
             const orderPayload = {
-              orderId: paymentResponse.razorpay_order_id,
               orderNumber: "ORD-" + Date.now().toString().slice(-6),
+              razorpayOrderId: paymentResponse.razorpay_order_id,
+              razorpayPaymentId: paymentResponse.razorpay_payment_id,
+              razorpaySignature: paymentResponse.razorpay_signature,
               customerEmail: contactData.email,
               customerFirstName: shippingData.firstName,
               customerLastName: shippingData.lastName,
@@ -143,20 +156,10 @@ const Checkout = () => {
               isGuest: true,
               shippingAddress: shippingData,
               billingAddress: shippingData, // Same as shipping for now
-              subtotal: Math.round(subtotal),
-              tax: Math.round(tax),
-              shippingAmount: Math.round(selectedShipping.price),
-              shippingMethodId: selectedShipping.id || "std",
-              shippingMethodName: selectedShipping.name,
-              discount: 0,
-              total: Math.round(total),
-              currency: selectedCurrency,
+              shippingMethodId: selectedShipping.id ?? null,
               items: items.map(it => ({
                 productId: it.productId,
-                productTitle: it.title,
                 quantity: it.quantity,
-                price: Math.round(it.price),
-                totalPrice: Math.round(it.price * it.quantity),
                 designThumbnail: it.image || null,
                 designConfig: it.config || null,
                 styleId: it.style?.id || null,
@@ -172,7 +175,14 @@ const Checkout = () => {
               body: JSON.stringify(orderPayload),
             });
 
-            if (!saveResponse.ok) throw new Error("Payment succeeded but failed to save order details.");
+            if (!saveResponse.ok) {
+              const body = await saveResponse.json().catch(() => null);
+              throw new Error(
+                body?.error ||
+                  "Your payment went through but the order could not be saved. Please contact support with your payment id: " +
+                    paymentResponse.razorpay_payment_id
+              );
+            }
 
             toast.success("Order placed successfully!");
             clearCart();
@@ -182,9 +192,9 @@ const Checkout = () => {
           }
         },
         prefill: {
-          name: "", // You could get this from your shipping form state
-          email: "", // You could get this from your contact form state
-          contact: "",
+          name: [shippingData.firstName, shippingData.lastName].filter(Boolean).join(" "),
+          email: contactData.email,
+          contact: shippingData.phone,
         },
         theme: {
           color: "#000000",

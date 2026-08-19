@@ -2,8 +2,6 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import Image from "next/image";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Product } from "@/types/product_type";
 import { getAssetUrl } from "@/lib/utils";
@@ -17,8 +15,8 @@ const ProductsPage = () => {
   const [hasMore, setHasMore] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pageSize, setPageSize] = useState(12);
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortBy] = useState("createdAt");
+  const [sortOrder] = useState("desc");
   const [filters, setFilters] = useState({
     vendor: "",
     productType: "",
@@ -33,8 +31,7 @@ const ProductsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
 
   // Custom design states matching the Girotti style
-  const [activeCategory, setActiveCategory] = useState("Create Men's Shoes");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeCategory] = useState("Create Men's Shoes");
   const observer = useRef<IntersectionObserver | null>(null);
   const lastProductRef = useRef<HTMLDivElement | null>(null);
 

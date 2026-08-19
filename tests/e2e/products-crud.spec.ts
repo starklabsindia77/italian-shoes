@@ -14,7 +14,7 @@ test.describe('Products CRUD (smoke)', () => {
       /Pricing/i,
       /Options|Variants/i,
     ]) {
-      await expect(page.getByRole('heading', { name: heading as any })).toBeVisible();
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
     }
   });
 });

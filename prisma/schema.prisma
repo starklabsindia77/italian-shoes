@@ -21,12 +21,12 @@ model User {
   role          Role        @default(USER)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  customRoleId  String?
   customerId    String?     @unique
   firstName     String?
+  isActive      Boolean     @default(true)
   lastName      String?
   phone         String?
-  isActive      Boolean     @default(true)
-  customRoleId  String?
   accounts      Account[]
   orders        Order[]     @relation("UserOrders")
   sessions      Session[]
@@ -110,7 +110,6 @@ model MaterialColor {
 
 model Style {
   id          String      @id @default(cuid())
-  styleId     String      @unique
   name        String
   description String?
   category    String?
@@ -122,12 +121,12 @@ model Style {
   assets      Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  styleId     String      @unique
   orderItems  OrderItem[] @relation("OrderItemStyle")
 }
 
 model Sole {
   id          String      @id @default(cuid())
-  soleId      String      @unique
   name        String
   description String?
   category    String?
@@ -139,12 +138,12 @@ model Sole {
   assets      Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  soleId      String      @unique
   orderItems  OrderItem[] @relation("OrderItemSole")
 }
 
 model Size {
   id           String      @id @default(cuid())
-  sizeId       String      @unique
   name         String
   region       Region
   value        Float
@@ -155,6 +154,7 @@ model Size {
   extId        Int?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  sizeId       String      @unique
   orderItems   OrderItem[] @relation("OrderItemSize")
 }
 

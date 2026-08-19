@@ -33,48 +33,11 @@ type Shipment = {
   createdAt?: string | null;         // ISO date
 };
 
-const FALLBACK: Shipment[] = [
-  {
-    id: "sh_1001",
-    orderId: "ord_1001",
-    orderNumber: "1001",
-    customer: "Maria Rossi",
-    courierName: "DHL",
-    awbNumber: "DHL123456789",
-    trackingUrl: "https://example.com/track/DHL123456789",
-    labelUrl: "#",
-    status: "in_transit",
-    estimatedDelivery: "2025-01-18T12:00:00.000Z",
-    createdAt: "2025-01-12T10:00:00.000Z",
-  },
-  {
-    id: "sh_1002",
-    orderId: "ord_1002",
-    orderNumber: "1002",
-    customer: "Guest",
-    courierName: "UPS",
-    awbNumber: "1Z999AA10123456784",
-    trackingUrl: "https://example.com/track/1Z999AA10123456784",
-    labelUrl: "#",
-    status: "pending",
-    createdAt: "2025-01-13T09:15:00.000Z",
-  },
-  {
-    id: "sh_1003",
-    orderId: "ord_1003",
-    orderNumber: "1003",
-    customer: "Paolo Bianchi",
-    courierName: "FedEx",
-    awbNumber: "1234-5678-9012",
-    status: "delivered",
-    actualDelivery: "2025-01-10T17:35:00.000Z",
-    createdAt: "2025-01-08T14:00:00.000Z",
-  },
-];
 
 export default function ShipmentsPage() {
   const [items, setItems] = React.useState<Shipment[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   // filters
   const [q, setQ] = React.useState("");
@@ -82,16 +45,21 @@ export default function ShipmentsPage() {
 
   const load = async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({ limit: "100" });
       if (q) params.set("q", q);
       if (status !== "all") params.set("status", status);
       const r = await fetch(`/api/shipments?${params.toString()}`, { cache: "no-store" });
-      if (!r.ok) throw new Error();
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        throw new Error(body?.error || `Request failed (${r.status})`);
+      }
       const d = await r.json();
-      setItems((d.items ?? d ?? []) as Shipment[]);
-    } catch {
-      setItems(FALLBACK);
+      setItems((d.items ?? []) as Shipment[]);
+    } catch (e) {
+      setItems([]);
+      setError(e instanceof Error ? e.message : "Failed to load shipments");
     } finally {
       setLoading(false);
     }
@@ -148,10 +116,16 @@ export default function ShipmentsPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={load}><RefreshCcw className="mr-2 size-4" />Refresh</Button>
           <Button asChild variant="secondary">
-            <Link href="/dashboard/orders?status=ready_to_ship"><PackageCheck className="mr-2 size-4" />Create Shipment</Link>
+            <Link href="/orders?status=ready_to_ship"><PackageCheck className="mr-2 size-4" />Create Shipment</Link>
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Could not load shipments: {error}
+        </div>
+      )}
 
       <Card className="rounded-2xl">
         <CardHeader className="pb-3">
@@ -199,7 +173,7 @@ export default function ShipmentsPage() {
                 {items.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">
-                      <Link className="underline underline-offset-2" href={`/dashboard/orders/${s.orderId}`}>
+                      <Link className="underline underline-offset-2" href={`/orders/${s.orderId}`}>
                         {s.orderNumber}
                       </Link>
                     </TableCell>

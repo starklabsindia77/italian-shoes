@@ -157,36 +157,33 @@ export const GenerateVariantsSchema = z.object({
 });
 
 // Orders
+//
+// Monetary fields are deliberately absent: subtotal, tax, shipping, discount and
+// total are recomputed server-side by lib/pricing.ts, and the currency is always
+// the store's base currency. The client supplies only *what* was bought, the
+// customer details, and the Razorpay payment result to verify.
 export const OrderCreateSchema = z.object({
-  orderId: z.string(),
-  orderNumber: z.string(),
+  orderNumber: z.string().min(1),
+  razorpayOrderId: z.string().min(1),
+  razorpayPaymentId: z.string().min(1),
+  razorpaySignature: z.string().min(1),
   customerEmail: z.string().email(),
   customerFirstName: z.string().optional(),
   customerLastName: z.string().optional(),
   customerPhone: z.string().optional(),
   isGuest: z.boolean().default(false),
   shippingAddress: z.any(),
-  billingAddress: z.any(),
-  subtotal: z.number().int(),
-  tax: z.number().int(),
-  shippingAmount: z.number().int(),
-  shippingMethodId: z.string().optional(),
-  shippingMethodName: z.string().optional(),
-  discount: z.number().int(),
-  total: z.number().int(),
-  currency: z.enum(["USD", "EUR", "GBP", "INR"]).default("INR"),
+  billingAddress: z.any().optional(),
+  shippingMethodId: z.string().nullable().optional(),
   items: z.array(z.object({
-    productId: z.string().nullable().optional(),
-    productTitle: z.string(),
-    sku: z.string().nullable().optional(),
+    productId: z.string().min(1),
     quantity: z.number().int().min(1),
-    price: z.number().int(),
-    totalPrice: z.number().int(),
+    sku: z.string().nullable().optional(),
     productVariantId: z.string().nullable().optional(),
     styleId: z.string().nullable().optional(),
     soleId: z.string().nullable().optional(),
     sizeId: z.string().nullable().optional(),
-    panelCustomization: z.any(),
+    panelCustomization: z.any().optional(),
     designGlbUrl: z.string().nullable().optional(),
     designThumbnail: z.string().nullable().optional(),
     designConfig: z.any().nullable().optional()
@@ -213,6 +210,17 @@ export const OrderUpdateStatusSchema = z.object({
     estimatedDelivery: z.string().nullable().optional(),
     actualDelivery: z.string().nullable().optional(),
   }).optional(),
+});
+
+// Shipments
+export const ShipmentUpdateSchema = z.object({
+  courierName: z.string().nullable().optional(),
+  awbNumber: z.string().nullable().optional(),
+  trackingUrl: z.string().nullable().optional(),
+  labelUrl: z.string().nullable().optional(),
+  status: z.enum(["pending", "picked_up", "in_transit", "delivered", "failed"]).optional(),
+  estimatedDelivery: z.string().datetime().nullable().optional(),
+  actualDelivery: z.string().datetime().nullable().optional(),
 });
 
 // Customers

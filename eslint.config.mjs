@@ -20,6 +20,17 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      // `interface X extends Y {}` is the only way to merge into an ambient
+      // interface (see types/global.d.ts augmenting JSX.IntrinsicElements),
+      // so an empty body is meaningful rather than a mistake.
+      "@typescript-eslint/no-empty-object-type": [
+        "error",
+        { allowInterfaces: "with-single-extends" },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

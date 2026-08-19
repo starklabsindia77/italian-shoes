@@ -1,45 +1,93 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getS3Client } from "@/lib/s3";
+import { NextRequest } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
+import { getS3Client } from "@/lib/s3";
+import { ok, bad, server, requirePermission } from "@/lib/api-helpers";
+
+/** `folder` arrives from the client, so it is matched against a fixed set
+ *  rather than interpolated into the S3 key directly. */
+const ALLOWED_FOLDERS = ["GLB", "thumbnail", "colors"] as const;
+type AllowedFolder = (typeof ALLOWED_FOLDERS)[number];
+
+const MODEL_TYPES = ["model/gltf-binary", "application/octet-stream"];
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/avif"];
+
+const ALLOWED_TYPES_BY_FOLDER: Record<AllowedFolder, string[]> = {
+  GLB: MODEL_TYPES,
+  thumbnail: IMAGE_TYPES,
+  colors: IMAGE_TYPES,
+};
+
+const ALLOWED_EXTENSIONS_BY_FOLDER: Record<AllowedFolder, string[]> = {
+  GLB: [".glb", ".gltf"],
+  thumbnail: [".png", ".jpg", ".jpeg", ".webp", ".avif"],
+  colors: [".png", ".jpg", ".jpeg", ".webp", ".avif"],
+};
+
+const MAX_FILE_SIZE_MB = Number(process.env.MAX_FILE_SIZE_MB ?? 50) || 50;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+/** Strip directory components and anything outside a safe character set. */
+function sanitizeFileName(name: string) {
+  const base = name.split(/[\\/]/).pop() ?? "asset";
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-");
+  return cleaned.slice(0, 120) || "asset";
+}
 
 export async function POST(req: NextRequest) {
-    try {
-        const formData = await req.formData();
-        const file = formData.get("file") as File;
+  try {
+    await requirePermission("products.manage");
 
-        // Get folder from query params, default to "GLB"
-        const { searchParams } = new URL(req.url);
-        const folder = searchParams.get("folder") || "GLB";
+    const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME;
+    if (!bucket) return bad("S3 bucket is not configured", 500);
 
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
-        }
-
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const fileName = file.name;
-
-        // Create a unique name to avoid collisions
-        const uniqueFileName = `${uuidv4()}-${fileName}`;
-        const s3Key = `${folder}/${uniqueFileName}`;
-        const s3Client = getS3Client();
-
-        await s3Client.send(
-            new PutObjectCommand({
-                Bucket: process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME,
-                Key: s3Key,
-                Body: buffer,
-                ContentType: file.type || "model/gltf-binary",
-            })
-        );
-
-        // Return the relative path that will be used with getAssetUrl
-        return NextResponse.json({
-            url: `/${s3Key}`,
-            name: fileName
-        });
-    } catch (error) {
-        console.error("S3 Upload Error:", error);
-        return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    const { searchParams } = new URL(req.url);
+    const folderParam = searchParams.get("folder") ?? "GLB";
+    if (!ALLOWED_FOLDERS.includes(folderParam as AllowedFolder)) {
+      return bad(`Invalid folder. Expected one of: ${ALLOWED_FOLDERS.join(", ")}`);
     }
+    const folder = folderParam as AllowedFolder;
+
+    const formData = await req.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) return bad("No file provided");
+
+    if (file.size === 0) return bad("File is empty");
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return bad(`File exceeds the ${MAX_FILE_SIZE_MB}MB limit`, 413);
+    }
+
+    const fileName = sanitizeFileName(file.name);
+    const extension = fileName.includes(".")
+      ? `.${fileName.split(".").pop()!.toLowerCase()}`
+      : "";
+
+    if (!ALLOWED_EXTENSIONS_BY_FOLDER[folder].includes(extension)) {
+      return bad(
+        `Invalid file type for "${folder}". Allowed: ${ALLOWED_EXTENSIONS_BY_FOLDER[folder].join(", ")}`
+      );
+    }
+    // Browsers sometimes send an empty or generic type for .glb, so the
+    // extension check above is the authoritative one.
+    if (file.type && !ALLOWED_TYPES_BY_FOLDER[folder].includes(file.type)) {
+      return bad(`Unexpected content type "${file.type}" for "${folder}"`);
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const s3Key = `${folder}/${uuidv4()}-${fileName}`;
+
+    await getS3Client().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: s3Key,
+        Body: buffer,
+        ContentType: file.type || (folder === "GLB" ? "model/gltf-binary" : "application/octet-stream"),
+      })
+    );
+
+    // Relative path; resolved against CloudFront by getAssetUrl().
+    return ok({ url: `/${s3Key}`, name: fileName });
+  } catch (e) {
+    return server(e);
+  }
 }

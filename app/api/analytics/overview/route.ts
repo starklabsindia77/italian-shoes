@@ -1,160 +1,143 @@
 // app/api/analytics/overview/route.ts
-import { NextResponse } from "next/server";
+import { Currency } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ok, server, requirePermission, getSearchParams } from "@/lib/api-helpers";
 
-type Currency = "USD" | "EUR" | "GBP";
+type Range = "7d" | "30d" | "90d";
 
-const FALLBACK = {
-  currency: "USD" as Currency,
-  kpis: {
-    revenue: 125_500,
-    orders: 48,
-    avgOrderValue: 2615,
-    customers: 36,
-    revenueDelta: 0.18,
-    ordersDelta: 0.06,
-    aovDelta: 0.11,
-    customersDelta: -0.03,
-  },
-  series: [
-    { date: "2025-01-09", revenue: 12000, orders: 5 },
-    { date: "2025-01-10", revenue: 9000, orders: 3 },
-    { date: "2025-01-11", revenue: 16000, orders: 6 },
-    { date: "2025-01-12", revenue: 22000, orders: 8 },
-    { date: "2025-01-13", revenue: 19000, orders: 7 },
-    { date: "2025-01-14", revenue: 32000, orders: 12 },
-    { date: "2025-01-15", revenue: 5500, orders: 2 },
-  ],
-  recentOrders: [
-    { id: "ord_1005", orderNumber: "1005", customer: "Paolo Bianchi", total: 19999, currency: "USD", status: "in_production" },
-    { id: "ord_1004", orderNumber: "1004", customer: "Tom Smith", total: 12999, currency: "USD", status: "ready_to_ship" },
-    { id: "ord_1003", orderNumber: "1003", customer: "Guest", total: 9999, currency: "USD", status: "design_received" },
-  ],
-  topProducts: [
-    { id: "p_oxford", title: "Premium Oxford Shoes", revenue: 79999, orders: 24 },
-    { id: "p_boot", title: "Chelsea Boot", revenue: 30500, orders: 10 },
-    { id: "p_sneaker", title: "Minimal Sneaker", revenue: 15000, orders: 5 },
-  ],
-};
+const DAYS_BY_RANGE: Record<Range, number> = { "7d": 7, "30d": 30, "90d": 90 };
+
+function startOfDayUtc(daysAgo: number) {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - daysAgo);
+  return d;
+}
+
+/** Fractional change vs the previous period; 0 when there is no baseline. */
+function delta(current: number, previous: number) {
+  if (previous === 0) return current === 0 ? 0 : 1;
+  return (current - previous) / previous;
+}
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const range = (searchParams.get("range") ?? "7d") as "7d" | "30d" | "90d";
-  const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
-
   try {
-    const since = new Date();
-    since.setDate(since.getDate() - days);
+    await requirePermission("dashboard.view");
 
-    // Don't select specific fields (schema differs); cast to any[] to safely read
-    const orders = (await prisma.order.findMany({
-      where: { createdAt: { gte: since } },
-      orderBy: { createdAt: "desc" },
-      take: 500,
-    })) as Record<string, unknown>[];
+    const sp = getSearchParams(req);
+    const rangeParam = sp.get("range");
+    const range: Range = rangeParam === "30d" || rangeParam === "90d" ? rangeParam : "7d";
+    const days = DAYS_BY_RANGE[range];
 
-    if (!orders || orders.length === 0) {
-      return NextResponse.json(FALLBACK);
-    }
+    const periodStart = startOfDayUtc(days - 1);
+    const previousStart = startOfDayUtc(days * 2 - 1);
 
-    // Helpers to read schema-agnostic values
-    const getTotal = (o: Record<string, unknown>) =>
-      Number(
-        o.total ??
-          o.totalAmount ??
-          o.totalCents ??
-          o.grandTotal ??
-          ((o.pricing as Record<string, unknown>)?.total) ??
-          0
-      );
+    // Cancelled orders are excluded so revenue matches the dashboard metrics.
+    const notCancelled = { status: { not: "CANCELLED" as const } };
 
-    const getCurrency = (o: Record<string, unknown>): Currency =>
-      ((o.currency as Currency) ??
-        (o.currencyCode as Currency) ??
-        ((o.pricing as Record<string, unknown>)?.currency as Currency) ??
-        "USD");
+    const [current, previous] = await Promise.all([
+      prisma.order.findMany({
+        where: { ...notCancelled, createdAt: { gte: periodStart } },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          orderNumber: true,
+          customerEmail: true,
+          customerFirstName: true,
+          customerLastName: true,
+          total: true,
+          currency: true,
+          status: true,
+          createdAt: true,
+        },
+      }),
+      prisma.order.findMany({
+        where: {
+          ...notCancelled,
+          createdAt: { gte: previousStart, lt: periodStart },
+        },
+        select: { total: true, customerEmail: true },
+      }),
+    ]);
 
-    const getCustomerName = (o: Record<string, unknown>) => {
-      const customer = o.customer as Record<string, unknown> | undefined;
-      const first =
-        o.customerFirstName ??
-        o.customer_first_name ??
-        o.firstName ??
-        customer?.firstName ??
-        null;
-      const last =
-        o.customerLastName ??
-        o.customer_last_name ??
-        o.lastName ??
-        customer?.lastName ??
-        null;
-      const email =
-        o.customerEmail ??
-        o.customer_email ??
-        o.email ??
-        customer?.email ??
-        null;
-      const name = [first, last].filter(Boolean).join(" ");
-      return (name as string) || (email as string) || "Guest";
-    };
-
-    // Aggregate KPIs
-    const totals = orders.map((o) => ({ total: getTotal(o), currency: getCurrency(o) }));
-    const revenue = totals.reduce((s, x) => s + (x.total ?? 0), 0);
-    const currency: Currency = totals[0]?.currency ?? "USD";
-    const ordersCount = orders.length;
+    const revenue = current.reduce((s, o) => s + o.total, 0);
+    const ordersCount = current.length;
     const aov = ordersCount ? Math.round(revenue / ordersCount) : 0;
+    const customers = new Set(current.map((o) => o.customerEmail)).size;
 
-    // Daily series
+    const prevRevenue = previous.reduce((s, o) => s + o.total, 0);
+    const prevOrders = previous.length;
+    const prevAov = prevOrders ? Math.round(prevRevenue / prevOrders) : 0;
+    const prevCustomers = new Set(previous.map((o) => o.customerEmail)).size;
+
+    // Currency is per-order in the schema; report the most common one in range.
+    const currencyCounts = new Map<Currency, number>();
+    for (const o of current) {
+      currencyCounts.set(o.currency, (currencyCounts.get(o.currency) ?? 0) + 1);
+    }
+    const currency: Currency =
+      [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "INR";
+
+    // Daily series, zero-filled across the whole range.
     const byDay = new Map<string, { revenue: number; orders: number }>();
-    for (const o of orders) {
-      const createdAt: Date = o.createdAt ? new Date(o.createdAt as string) : new Date();
-      const key = createdAt.toISOString().slice(0, 10);
+    for (const o of current) {
+      const key = o.createdAt.toISOString().slice(0, 10);
       const cur = byDay.get(key) ?? { revenue: 0, orders: 0 };
-      cur.revenue += getTotal(o);
+      cur.revenue += o.total;
       cur.orders += 1;
       byDay.set(key, cur);
     }
-
-    const series: { date: string; revenue: number; orders: number }[] = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+    const series = Array.from({ length: days }, (_, i) => {
+      const key = startOfDayUtc(days - 1 - i).toISOString().slice(0, 10);
       const cur = byDay.get(key) ?? { revenue: 0, orders: 0 };
-      series.push({ date: key, revenue: cur.revenue, orders: cur.orders });
-    }
+      return { date: key, revenue: cur.revenue, orders: cur.orders };
+    });
 
-    // Recent orders
-    const recentOrders = orders.slice(0, 10).map((o) => ({
+    const recentOrders = current.slice(0, 10).map((o) => ({
       id: o.id,
-      orderNumber: (o.orderNumber as string) ?? (o.order_id as string) ?? (o.id as string)?.slice?.(-6) ?? "",
-      customer: getCustomerName(o),
-      total: getTotal(o),
-      currency: getCurrency(o),
-      status: (o.status as string) ?? "design_received",
+      orderNumber: o.orderNumber,
+      customer:
+        [o.customerFirstName, o.customerLastName].filter(Boolean).join(" ") ||
+        o.customerEmail ||
+        "Guest",
+      total: o.total,
+      currency: o.currency,
+      status: o.status.toLowerCase(),
     }));
 
-    // Top products (optional — left empty unless you aggregate OrderItems)
-    const topProducts: { id: string; title: string; revenue: number; orders: number }[] = [];
+    // Top products by revenue over the range, aggregated from order items.
+    const grouped = await prisma.orderItem.groupBy({
+      by: ["productId", "productTitle"],
+      where: { order: { ...notCancelled, createdAt: { gte: periodStart } } },
+      _sum: { totalPrice: true },
+      _count: { _all: true },
+      orderBy: { _sum: { totalPrice: "desc" } },
+      take: 5,
+    });
+    const topProducts = grouped.map((g) => ({
+      id: g.productId ?? g.productTitle,
+      title: g.productTitle,
+      revenue: g._sum.totalPrice ?? 0,
+      orders: g._count._all,
+    }));
 
-    return NextResponse.json({
+    return ok({
       currency,
       kpis: {
         revenue,
         orders: ordersCount,
         avgOrderValue: aov,
-        customers: 0, // add distinct customer count if needed
-        revenueDelta: 0,
-        ordersDelta: 0,
-        aovDelta: 0,
-        customersDelta: 0,
+        customers,
+        revenueDelta: delta(revenue, prevRevenue),
+        ordersDelta: delta(ordersCount, prevOrders),
+        aovDelta: delta(aov, prevAov),
+        customersDelta: delta(customers, prevCustomers),
       },
       series,
       recentOrders,
       topProducts,
     });
-  } catch {
-    return NextResponse.json(FALLBACK);
+  } catch (e) {
+    return server(e);
   }
 }

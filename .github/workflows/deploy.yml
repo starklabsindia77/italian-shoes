@@ -42,9 +42,12 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd ~/your-repo-name
+            set -euo pipefail
+            # Set the APP_DIR secret to the checkout path on the server. The
+            # fallback matches the root the nginx config serves .next from.
+            cd "${{ secrets.APP_DIR || '/var/www/html' }}"
             git pull origin main
-            
+
             # 1. Create/Overwrite the .env file on the server
             echo "DATABASE_URL=\"${{ secrets.DATABASE_URL }}\"" > .env
             echo "NEXTAUTH_URL=\"${{ secrets.NEXTAUTH_URL }}\"" >> .env
@@ -59,8 +62,29 @@ jobs:
             echo "RAZORPAY_KEY_ID=\"${{ secrets.RAZORPAY_KEY_ID }}\"" >> .env
             echo "RAZORPAY_KEY_SECRET=\"${{ secrets.RAZORPAY_KEY_SECRET }}\"" >> .env
 
-            # 2. Run the build process
+            # 2. Install, apply schema changes, then build
             npm install --legacy-peer-deps
             npx prisma generate
+            # Without this the committed migrations never reach the database.
+            npx prisma migrate deploy
+
+            # A partially written .next makes `next start` 404 every dynamic
+            # route, so build into a clean directory and fail the deploy if the
+            # build did not complete.
+            rm -rf .next
             npm run build
-            pm2 restart all || pm2 start npm --name "next-app" -- start
+            test -f .next/BUILD_ID
+
+            pm2 restart all --update-env || pm2 start npm --name "next-app" -- start
+
+            # 3. Smoke-check that the server came back up
+            for i in $(seq 1 15); do
+              if curl -fsS http://localhost:3000/api/health > /dev/null; then
+                echo "Health check passed"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Health check failed after restart" >&2
+            pm2 logs --nostream --lines 50 || true
+            exit 1

@@ -11,8 +11,25 @@ import { prisma } from "@/lib/prisma";
  * - JWT sessions with role in token & session
  * - Sign-in page at /login
  */
+/**
+ * Sessions are JWTs signed with this secret. A hardcoded fallback would mean a
+ * missing env var in production yields forgeable admin tokens rather than a
+ * loud failure, so refuse to start without it outside development.
+ */
+function requireAuthSecret() {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "NEXTAUTH_SECRET is not set. Generate one with `openssl rand -base64 32` and set it in the environment."
+    );
+  }
+  console.warn("NEXTAUTH_SECRET is not set — using an insecure development-only secret.");
+  return "insecure-development-only-secret";
+}
+
 export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-dev-only",
+  secret: requireAuthSecret(),
   useSecureCookies: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   pages: {
     signIn: "/login",

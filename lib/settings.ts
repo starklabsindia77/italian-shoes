@@ -82,10 +82,57 @@ export async function writeSettingsToDb(value: unknown) {
   }
 }
 
+type PlainObject = Record<string, unknown>;
+
+function isPlainObject(v: unknown): v is PlainObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/**
+ * Settings are stored as a single JSON blob, so a top-level spread means a
+ * patch like `{ integrations: { razorpayKeyId } }` silently deletes every other
+ * key under `integrations`. Merge recursively instead; arrays are replaced
+ * wholesale (shipping methods, supported countries) rather than concatenated.
+ */
+export function deepMerge<T extends PlainObject>(base: T, patch: PlainObject): T {
+  const out: PlainObject = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+    const current = out[key];
+    out[key] = isPlainObject(value) && isPlainObject(current)
+      ? deepMerge(current, value)
+      : value;
+  }
+  return out as T;
+}
+
+/**
+ * GET /api/settings redacts secrets, so a round-tripped form posts them back as
+ * `""`. Treat blank secrets as "unchanged" so saving an unrelated field cannot
+ * erase a stored credential.
+ */
+const SECRET_PATHS: Array<[section: string, key: string]> = [
+  ["integrations", "razorpayKeySecret"],
+  ["email", "resendApiKey"],
+  ["email", "smtpPass"],
+];
+
+export function stripBlankSecrets(patch: PlainObject): PlainObject {
+  const out: PlainObject = { ...patch };
+  for (const [section, key] of SECRET_PATHS) {
+    const value = out[section];
+    if (!isPlainObject(value)) continue;
+    if (value[key] === "" || value[key] === null) {
+      const copy = { ...value };
+      delete copy[key];
+      out[section] = copy;
+    }
+  }
+  return out;
+}
+
 export async function getSettings() {
   const db = await readSettingsFromDb();
-  return {
-    ...SETTINGS_DEFAULTS,
-    ...(db ?? {}),
-  };
+  return deepMerge(SETTINGS_DEFAULTS as unknown as PlainObject, (db as PlainObject) ?? {}) as
+    typeof SETTINGS_DEFAULTS;
 }

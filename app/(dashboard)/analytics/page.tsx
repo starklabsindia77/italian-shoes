@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { RefreshCcw, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
-type Currency = "USD" | "EUR" | "GBP";
+type Currency = "USD" | "EUR" | "GBP" | "INR";
 
 type OverviewPayload = {
   range: "7d" | "30d" | "90d";
@@ -42,44 +42,36 @@ type Overview = {
   topProducts: TopProduct[];
 };
 
-const FALLBACK: Overview = {
-  currency: "USD",
-  kpis: { revenue: 125_500, orders: 48, avgOrderValue: 2615, customers: 36, revenueDelta: 0.18, ordersDelta: 0.06, aovDelta: 0.11, customersDelta: -0.03 },
-  series: [
-    { date: "2025-01-09", revenue: 12000, orders: 5 },
-    { date: "2025-01-10", revenue: 9000, orders: 3 },
-    { date: "2025-01-11", revenue: 16000, orders: 6 },
-    { date: "2025-01-12", revenue: 22000, orders: 8 },
-    { date: "2025-01-13", revenue: 19000, orders: 7 },
-    { date: "2025-01-14", revenue: 32000, orders: 12 },
-    { date: "2025-01-15", revenue: 5500, orders: 2 },
-  ],
-  recentOrders: [
-    { id: "ord_1005", orderNumber: "1005", customer: "Paolo Bianchi", total: 19999, currency: "USD", status: "in_production" },
-    { id: "ord_1004", orderNumber: "1004", customer: "Tom Smith", total: 12999, currency: "USD", status: "ready_to_ship" },
-    { id: "ord_1003", orderNumber: "1003", customer: "Guest", total: 9999, currency: "USD", status: "design_received" },
-  ],
-  topProducts: [
-    { id: "p_oxford", title: "Premium Oxford Shoes", revenue: 79999, orders: 24 },
-    { id: "p_boot", title: "Chelsea Boot", revenue: 30500, orders: 10 },
-    { id: "p_sneaker", title: "Minimal Sneaker", revenue: 15000, orders: 5 },
-  ],
+const EMPTY: Overview = {
+  currency: "INR",
+  kpis: {
+    revenue: 0, orders: 0, avgOrderValue: 0, customers: 0,
+    revenueDelta: 0, ordersDelta: 0, aovDelta: 0, customersDelta: 0,
+  },
+  series: [],
+  recentOrders: [],
+  topProducts: [],
 };
 
 export default function DashboardOverviewPage() {
   const [range, setRange] = React.useState<OverviewPayload["range"]>("7d");
   const [data, setData] = React.useState<Overview | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/analytics/overview?range=${range}`, { cache: "no-store" });
-      if (!res.ok) throw new Error();
-      const d = (await res.json()) as Overview;
-      setData(d ?? FALLBACK);
-    } catch {
-      setData(FALLBACK);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `Request failed (${res.status})`);
+      }
+      setData((await res.json()) as Overview);
+    } catch (e) {
+      setData(null);
+      setError(e instanceof Error ? e.message : "Failed to load analytics");
     } finally {
       setLoading(false);
     }
@@ -87,7 +79,7 @@ export default function DashboardOverviewPage() {
 
   React.useEffect(() => { load(); }, [range, load]);
 
-  const d = data ?? FALLBACK;
+  const d = data ?? EMPTY;
   const maxRevenue = Math.max(...d.series.map((p) => p.revenue), 1);
 
   return (
@@ -110,6 +102,12 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Could not load analytics: {error}. The figures below are not live — retry with Refresh.
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Revenue" value={formatCurrency(d.kpis.revenue, d.currency)} delta={d.kpis.revenueDelta} />
@@ -126,16 +124,29 @@ export default function DashboardOverviewPage() {
             <CardDescription>Daily revenue for the selected range.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-2 md:gap-3 items-end h-48">
-              {d.series.map((p) => {
+            <div className="flex items-end gap-1 sm:gap-2 h-48">
+              {d.series.map((p, i) => {
                 const h = Math.max(6, Math.round((p.revenue / maxRevenue) * 100));
+                // 30d/90d ranges would render an unreadable wall of labels, so
+                // thin them out to roughly seven evenly spaced ticks.
+                const labelEvery = Math.ceil(d.series.length / 7);
+                const showLabel = i % labelEvery === 0 || i === d.series.length - 1;
                 return (
-                  <div key={p.date} className="flex flex-col items-center justify-end gap-2">
+                  <div
+                    key={p.date}
+                    className="flex flex-1 min-w-0 flex-col items-center justify-end gap-2"
+                    title={`${p.date}: ${formatCurrency(p.revenue, d.currency)} (${p.orders} orders)`}
+                  >
                     <div className="w-full rounded-md bg-primary/70" style={{ height: `${h}%` }} />
-                    <div className="text-xs text-muted-foreground">{p.date.slice(5)}</div>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {showLabel ? p.date.slice(5) : " "}
+                    </div>
                   </div>
                 );
               })}
+              {d.series.length === 0 && (
+                <div className="w-full text-center text-sm text-muted-foreground">No data in this range.</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -188,7 +199,7 @@ export default function DashboardOverviewPage() {
                     <TableCell><Badge variant="outline">{o.status.replaceAll("_", " ")}</Badge></TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" asChild>
-                        <Link href={`/dashboard/orders/${o.id}`}>Open</Link>
+                        <Link href={`/orders/${o.id}`}>Open</Link>
                       </Button>
                     </TableCell>
                   </TableRow>

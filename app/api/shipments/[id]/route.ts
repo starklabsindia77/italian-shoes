@@ -1,63 +1,98 @@
 // app/api/shipments/[id]/route.ts
-import { NextResponse } from "next/server";
+// `[id]` is the Order id. OrderShipment is 1:1 with Order and is created on
+// first write, so updates are an upsert keyed on orderId.
+import { FulfillmentStatus, ShipmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ok, bad, notFound, server, requirePermission } from "@/lib/api-helpers";
+import { ShipmentUpdateSchema } from "@/lib/validators";
 
-type ShipStatus = "pending" | "picked_up" | "in_transit" | "delivered" | "failed";
+/** Keep the order's coarse fulfillment state consistent with the shipment. */
+const FULFILLMENT_BY_SHIPMENT: Partial<Record<ShipmentStatus, FulfillmentStatus>> = {
+  PENDING: "READY_TO_SHIP",
+  PICKED_UP: "SHIPPED",
+  IN_TRANSIT: "SHIPPED",
+  DELIVERED: "DELIVERED",
+  // FAILED has no fulfillment equivalent — leave the order's state alone.
+};
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requirePermission("orders.edit");
     const { id } = await params;
-    const patch = (await req.json().catch(() => ({}))) as Partial<{
-      courierName: string | null;
-      awbNumber: string | null;
-      trackingUrl: string | null;
-      labelUrl: string | null;
-      status: ShipStatus;
-      estimatedDelivery: string | null; // ISO
-      actualDelivery: string | null;    // ISO
-    }>;
 
-    // Build a flexible data object. Only include keys the DB likely has.
-    const data: Record<string, unknown> = {};
-    if ("courierName" in patch) data.courierName = patch.courierName;
-    if ("awbNumber" in patch) data.awbNumber = patch.awbNumber;
-    if ("trackingUrl" in patch) data.trackingUrl = patch.trackingUrl;
-    if ("labelUrl" in patch) data.labelUrl = patch.labelUrl;
+    const body = await req.json().catch(() => null);
+    if (!body) return bad("Invalid JSON body");
 
-    if ("estimatedDelivery" in patch) {
-      // Try common column names
-      data.estimatedDelivery = patch.estimatedDelivery ? new Date(patch.estimatedDelivery) : null;
-      data.estimatedDeliveryAt = patch.estimatedDelivery ? new Date(patch.estimatedDelivery) : null;
-      data.eta = patch.estimatedDelivery ? new Date(patch.estimatedDelivery) : null;
-    }
-    if ("actualDelivery" in patch) {
-      data.actualDelivery = patch.actualDelivery ? new Date(patch.actualDelivery) : null;
-      data.deliveredAt = patch.actualDelivery ? new Date(patch.actualDelivery) : null;
-    }
+    const parsed = ShipmentUpdateSchema.safeParse(body);
+    if (!parsed.success) return bad(parsed.error.message);
+    const d = parsed.data;
 
-    if ("status" in patch && patch.status) {
-      // Prefer shipment-specific status column if present; also map fulfillmentStatus if used
-      data.shiprocketStatus = patch.status;
-      // Provide a sensible mapping to fulfillmentStatus as a fallback
-      const map: Record<ShipStatus, string> = {
-        pending: "ready_to_ship",
-        picked_up: "in_transit",
-        in_transit: "in_transit",
-        delivered: "delivered",
-        failed: "failed",
-      };
-      data.fulfillmentStatus = map[patch.status] ?? "in_transit";
-    }
-
-    // Use 'unknown' cast to avoid TS complaining about dynamic columns while satisfying ESLint
-    const updated = await (prisma as unknown as { order: { update: (args: unknown) => Promise<unknown> } }).order.update({
+    const order = await prisma.order.findUnique({
       where: { id },
-      data,
+      select: { id: true, shippedAt: true, deliveredAt: true },
+    });
+    if (!order) return notFound("Order not found");
+
+    const shipmentData: {
+      courierName?: string | null;
+      awbNumber?: string | null;
+      trackingUrl?: string | null;
+      labelUrl?: string | null;
+      status?: ShipmentStatus;
+      estimatedDelivery?: Date | null;
+      actualDelivery?: Date | null;
+    } = {};
+
+    if ("courierName" in d) shipmentData.courierName = d.courierName ?? null;
+    if ("awbNumber" in d) shipmentData.awbNumber = d.awbNumber ?? null;
+    if ("trackingUrl" in d) shipmentData.trackingUrl = d.trackingUrl ?? null;
+    if ("labelUrl" in d) shipmentData.labelUrl = d.labelUrl ?? null;
+    if ("estimatedDelivery" in d) {
+      shipmentData.estimatedDelivery = d.estimatedDelivery ? new Date(d.estimatedDelivery) : null;
+    }
+    if ("actualDelivery" in d) {
+      shipmentData.actualDelivery = d.actualDelivery ? new Date(d.actualDelivery) : null;
+    }
+
+    const nextStatus = d.status ? (d.status.toUpperCase() as ShipmentStatus) : undefined;
+    if (nextStatus) shipmentData.status = nextStatus;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const shipment = await tx.orderShipment.upsert({
+        where: { orderId: id },
+        update: shipmentData,
+        create: { orderId: id, ...shipmentData },
+      });
+
+      if (nextStatus) {
+        const fulfillmentStatus = FULFILLMENT_BY_SHIPMENT[nextStatus];
+        const orderData: {
+          fulfillmentStatus?: FulfillmentStatus;
+          shippedAt?: Date;
+          deliveredAt?: Date;
+        } = {};
+
+        if (fulfillmentStatus) orderData.fulfillmentStatus = fulfillmentStatus;
+        if (
+          (nextStatus === "PICKED_UP" || nextStatus === "IN_TRANSIT") &&
+          !order.shippedAt
+        ) {
+          orderData.shippedAt = new Date();
+        }
+        if (nextStatus === "DELIVERED" && !order.deliveredAt) {
+          orderData.deliveredAt = shipment.actualDelivery ?? new Date();
+        }
+
+        if (Object.keys(orderData).length > 0) {
+          await tx.order.update({ where: { id }, data: orderData });
+        }
+      }
+
+      return shipment;
     });
 
-    return NextResponse.json(updated);
+    return ok(updated);
   } catch (e) {
-    const error = e as Error;
-    return NextResponse.json({ error: error?.message ?? "Failed to update shipment" }, { status: 400 });
+    return server(e);
   }
 }

@@ -50,7 +50,8 @@ export const ProductCard = ({
   const router = useRouter();
 
   const handleViewProduct = () => {
-    router.push(`/product/${product.productId}`);
+    // `/product/[id]` resolves against Product.id (a cuid), not the productId slug.
+    router.push(`/product/${product.id}`);
   };
 
   return (
@@ -121,7 +122,7 @@ export const ProductCard = ({
         
         <div className="flex gap-2 w-full">
           <WishlistButton
-            productId={product.productId}
+            productId={product.id}
             title={product.title}
             price={product.price}
             originalPrice={product.originalPrice}
@@ -137,7 +138,7 @@ export const ProductCard = ({
           />
           
           <AddToCartButton
-            productId={product.productId}
+            productId={product.id}
             title={product.title}
             price={product.price}
             originalPrice={product.originalPrice}

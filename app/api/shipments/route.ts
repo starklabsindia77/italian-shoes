@@ -1,86 +1,99 @@
 // app/api/shipments/route.ts
-import { NextResponse } from "next/server";
+import { Prisma, ShipmentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ok, server, requirePermission, getSearchParams } from "@/lib/api-helpers";
 
 type ShipStatus = "pending" | "picked_up" | "in_transit" | "delivered" | "failed";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const limit = Math.min(Number(searchParams.get("limit") ?? 100), 200);
-  const status = (searchParams.get("status") as ShipStatus | null) ?? null;
-  const q = (searchParams.get("q") ?? "").trim().toLowerCase();
+const SHIP_STATUSES: ShipStatus[] = ["pending", "picked_up", "in_transit", "delivered", "failed"];
 
+/** Orders carry a coarse fulfillment state; use it when no OrderShipment row exists yet. */
+function statusFromFulfillment(fulfillment: string): ShipStatus {
+  switch (fulfillment) {
+    case "SHIPPED":
+      return "in_transit";
+    case "DELIVERED":
+      return "delivered";
+    default:
+      return "pending";
+  }
+}
+
+export async function GET(req: Request) {
   try {
-    // Use 'unknown' cast to avoid TS complaining about dynamic columns while satisfying ESLint
-    const rows = (await (prisma as unknown as { order: { findMany: (args: unknown) => Promise<unknown[]> } }).order.findMany({
+    await requirePermission("orders.view");
+
+    const sp = getSearchParams(req);
+    const limit = Math.min(Number(sp.get("limit") ?? 100) || 100, 200);
+    const statusParam = sp.get("status");
+    const status = SHIP_STATUSES.includes(statusParam as ShipStatus)
+      ? (statusParam as ShipStatus)
+      : null;
+    const q = (sp.get("q") ?? "").trim();
+
+    const where: Prisma.OrderWhereInput = {};
+
+    if (status) {
+      const enumStatus = status.toUpperCase() as ShipmentStatus;
+      if (status === "pending") {
+        // A missing shipment row is implicitly pending.
+        where.OR = [
+          { shipment: { status: enumStatus } },
+          { shipment: { is: null }, fulfillmentStatus: { notIn: ["SHIPPED", "DELIVERED"] } },
+        ];
+      } else {
+        where.shipment = { status: enumStatus };
+      }
+    }
+
+    if (q) {
+      const contains = { contains: q, mode: "insensitive" as const };
+      where.AND = [
+        {
+          OR: [
+            { orderNumber: contains },
+            { customerEmail: contains },
+            { customerFirstName: contains },
+            { customerLastName: contains },
+            { shipment: { awbNumber: contains } },
+            { shipment: { courierName: contains } },
+          ],
+        },
+      ];
+    }
+
+    const orders = await prisma.order.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       take: limit,
-    })) as Record<string, unknown>[];
+      include: { shipment: true },
+    });
 
-    const getStatus = (o: Record<string, unknown>): ShipStatus => {
-      // prefer explicit shipment status; fall back to fulfillmentStatus
-      const s =
-        o.shiprocketStatus ??
-        o.shippingStatus ??
-        o.shipmentStatus ??
-        o.fulfillmentStatus ??
-        "pending";
-      // normalize to our enum
-      const normalized = String(s).toLowerCase().replace(/\s+/g, "_");
-      if (["pending", "picked_up", "in_transit", "delivered", "failed"].includes(normalized))
-        return normalized as ShipStatus;
-      // map common fulfillment states
-      if (normalized === "shipped") return "in_transit";
-      if (normalized === "ready_to_ship") return "pending";
-      return "pending";
-    };
+    const items = orders.map((o) => {
+      const s = o.shipment;
+      const customerName = [o.customerFirstName, o.customerLastName].filter(Boolean).join(" ");
+      return {
+        // `id` is the order id: /api/shipments/[id] keys off the order, since
+        // OrderShipment is 1:1 with Order and may not exist yet.
+        id: o.id,
+        orderId: o.id,
+        orderNumber: o.orderNumber,
+        customer: customerName || o.customerEmail || "Guest",
+        courierName: s?.courierName ?? null,
+        awbNumber: s?.awbNumber ?? null,
+        trackingUrl: s?.trackingUrl ?? null,
+        labelUrl: s?.labelUrl ?? null,
+        status: (s
+          ? (s.status.toLowerCase() as ShipStatus)
+          : statusFromFulfillment(o.fulfillmentStatus)) as ShipStatus,
+        estimatedDelivery: s?.estimatedDelivery?.toISOString() ?? null,
+        actualDelivery: s?.actualDelivery?.toISOString() ?? o.deliveredAt?.toISOString() ?? null,
+        createdAt: o.createdAt.toISOString(),
+      };
+    });
 
-    const getCustomer = (o: Record<string, unknown>) => {
-      const first = (o.customerFirstName ?? o.firstName ?? null) as string | null;
-      const last = (o.customerLastName ?? o.lastName ?? null) as string | null;
-      const email = (o.customerEmail ?? o.email ?? null) as string | null;
-      const name = [first, last].filter(Boolean).join(" ");
-      return name || email || "Guest";
-    };
-
-    const items = rows
-      .map((o) => {
-        const st = getStatus(o);
-        return {
-          id: o.id,
-          orderId: o.id,
-          orderNumber: o.orderNumber ?? o.order_id ?? (o.id ? String(o.id).slice(-6) : ""),
-          customer: getCustomer(o),
-          courierName: o.courierName ?? o.courier ?? null,
-          awbNumber: o.awbNumber ?? o.trackingNumber ?? null,
-          trackingUrl: o.trackingUrl ?? o.shiprocketTrackingUrl ?? null,
-          labelUrl: o.labelUrl ?? null,
-          status: st as ShipStatus,
-          estimatedDelivery:
-            (o.estimatedDelivery ??
-              o.estimatedDeliveryAt ??
-              o.eta ??
-              null) && new Date((o.estimatedDelivery ?? o.estimatedDeliveryAt ?? o.eta) as string).toISOString(),
-          actualDelivery:
-            (o.actualDelivery ??
-              o.deliveredAt ??
-              null) && new Date((o.actualDelivery ?? o.deliveredAt) as string).toISOString(),
-          createdAt: o.createdAt ? new Date(o.createdAt as string).toISOString() : null,
-        };
-      })
-      .filter((x) => (status ? x.status === status : true))
-      .filter((x) => {
-        if (!q) return true;
-        return (
-          ((x.orderNumber as string) ?? "").toLowerCase().includes(q) ||
-          ((x.customer as string) ?? "").toLowerCase().includes(q) ||
-          ((x.awbNumber as string) ?? "").toLowerCase().includes(q) ||
-          ((x.courierName as string) ?? "").toLowerCase().includes(q)
-        );
-      });
-
-    return NextResponse.json({ items });
-  } catch {
-    return NextResponse.json({ items: [] });
+    return ok({ items });
+  } catch (e) {
+    return server(e);
   }
 }

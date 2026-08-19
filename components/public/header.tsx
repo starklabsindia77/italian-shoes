@@ -1,10 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Menu, X, Search, Home, ChevronDown, ShoppingBag, Phone, Plane } from 'lucide-react';
+import { User, Menu, X, Search, ShoppingBag, Phone, Plane } from 'lucide-react';
 import { Cormorant_Garamond } from 'next/font/google';
-import AnnouncementBar from './announcementBar';
 import { CartIcon } from '@/components/cart/CartIcon';
 import { useCartStore } from '@/lib/stores';
 import { useRouter, usePathname } from 'next/navigation';
@@ -70,22 +68,6 @@ const navItems = [
     ],
   },
 ];
-
-interface DropdownItem { label: string; href: string; }
-
-const NavDropdown: React.FC<{ items: DropdownItem[]; router: ReturnType<typeof useRouter> }> = ({ items, router }) => (
-  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-52 bg-white border border-gray-100 shadow-lg rounded-sm py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
-    {items.map((sub) => (
-      <button
-        key={sub.label}
-        onClick={() => router.push(sub.href)}
-        className="block w-full text-left px-4 py-2 text-[11px] font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
-      >
-        {sub.label}
-      </button>
-    ))}
-  </div>
-);
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -259,7 +241,7 @@ const Header: React.FC = () => {
                     textTransform: 'uppercase',
                   }}
                 >
-                  Create Men's Shoes
+                  Create Men&apos;s Shoes
                 </span>
               )}
             </div>

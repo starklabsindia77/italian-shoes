@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import https from 'https';
 
 function parseGlb(buffer: Buffer) {
@@ -39,8 +37,8 @@ async function main() {
           reject(new Error(`Failed to load: ${res.statusCode}`));
           return;
         }
-        const chunks: any[] = [];
-        res.on('data', (chunk) => chunks.push(chunk));
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
         res.on('end', () => resolve(Buffer.concat(chunks)));
       }).on('error', reject);
     });
@@ -49,8 +47,8 @@ async function main() {
   try {
     const buffer = await fetchBuffer(fullUrl);
     parseGlb(buffer);
-  } catch (e: any) {
-    console.error('Error:', e.message);
+  } catch (e) {
+    console.error('Error:', e instanceof Error ? e.message : e);
   }
 }
 

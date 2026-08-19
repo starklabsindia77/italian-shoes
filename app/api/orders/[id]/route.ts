@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 type ShipmentStatus = "PENDING" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED" | "FAILED";
-import { ok, bad, notFound, server, requireAuth, requireAdmin } from "@/lib/api-helpers";
+import { ok, bad, notFound, forbidden, server, requireAuth, requireAdmin } from "@/lib/api-helpers";
 import { OrderUpdateStatusSchema } from "@/lib/validators";
 import { EmailService } from "@/lib/email-service";
 
@@ -59,17 +59,29 @@ function mapOrderResponse(o: Record<string, any>) {
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await requireAuth();
+    const session = await requireAuth();
+    const u = session.user as { id?: string; email?: string | null; role?: string; permissions?: string[] };
+
     const o = await prisma.order.findUnique({
       where: { id },
-      include: { 
+      include: {
         items: {
           include: { style: true, sole: true, size: true }
-        }, 
-        shipment: true 
+        },
+        shipment: true
       }
     });
     if (!o) return notFound();
+
+    // Staff may read any order; a customer may only read their own. Without
+    // this check any signed-in user could enumerate other customers' orders,
+    // including their shipping address and phone number.
+    const isStaff = u.role === "ADMIN" || !!u.permissions?.includes("orders.view");
+    const isOwner =
+      (!!u.id && o.customerId === u.id) ||
+      (!!u.email && o.customerEmail.toLowerCase() === u.email.toLowerCase());
+    if (!isStaff && !isOwner) return forbidden();
+
     return ok(mapOrderResponse(o));
   } catch (e) { return server(e); }
 }

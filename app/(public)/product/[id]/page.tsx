@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   Heart,
@@ -87,6 +87,7 @@ const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined)
 // Transform API data to match UI expectations
 const transformApiData = (
   productApiData: {
+    id?: string;
     productId?: string;
     images?: string[];
     assets?: { thumbnail?: string; glb?: { url: string } };
@@ -104,6 +105,9 @@ const transformApiData = (
   panelsApiData: { items?: any[] } | null
 ) => {
   return {
+    // `id` is the cuid the cart and pricing APIs key off; `productId` is the
+    // human-readable slug and must not be used as a cart identifier.
+    id: productApiData?.id || "",
     productId: productApiData?.productId || "",
     title: productApiData?.title || "",
     price: productApiData?.price || 0,
@@ -182,7 +186,6 @@ const transformApiData = (
 export default function DerbyBuilderClean() {
   // State for API data
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [productData, setProductData] = useState<any>(null);
   const [sizesData, setSizesData] = useState<{ items?: any[] } | null>(null);
   const [panelsData, setPanelsData] = useState<{ items?: any[] } | null>(null);
@@ -194,11 +197,9 @@ export default function DerbyBuilderClean() {
   // UI-only state
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activePanel, setActivePanel] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "Materials" | "Style" | "Soles" | "Colors" | "Inscription"
-  >("Materials");
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  const [selectedSole, setSelectedSole] = useState<string | null>(null);
+  // Style and Sole selection were removed from the configurator; the model now
+  // comes from the product's own GLB.
+  const [activeTab] = useState<"Materials" | "Colors" | "Inscription">("Materials");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [inscription, setInscription] = useState({ toe: "", tongue: "" });
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -272,9 +273,6 @@ export default function DerbyBuilderClean() {
         if (panelsData.items && panelsData.items.length > 0) {
           setActivePanel(panelsData.items[0].panelId);
         }
-        if (productData.styles && productData.styles.length > 0) {
-          setSelectedStyle(productData.styles[0].id);
-        }
         if (sizesData.items && sizesData.items.length > 0) {
           setSelectedSize(sizesData.items[0].id);
         }
@@ -301,21 +299,15 @@ export default function DerbyBuilderClean() {
   }, [cfg.sizes, selectedSize]);
 
   const avatarData = useMemo(() => {
-    // If a sole is selected, check if it has a glbUrl
-    const selectedSoleObj = (productData?.selectedSoles || []).find(
-      (so: any) => (so.id || so.name) === selectedSole
-    );
-    
-    const selectedStyleObj = (productData?.selectedStyles || []).find(
-      (so: any) => (so.id || so.name) === selectedStyle
-    );
+    // The product's own GLB is authoritative. Older products stored their model
+    // only against a style or sole, so those are used as a fallback to keep the
+    // viewport populated now that neither is selectable.
+    const fallbackGlb =
+      (productData?.selectedSoles || []).find((so: any) => so?.glbUrl)?.glbUrl ||
+      (productData?.selectedStyles || []).find((st: any) => st?.glbUrl)?.glbUrl;
 
-    console.log("selectedSoleObj", selectedSoleObj);
-    console.log("selectedStyleObj", selectedStyleObj);
-
-    const glbUrl = selectedSoleObj?.glbUrl || selectedStyleObj?.glbUrl || cfg.assets?.glb?.url;
-    return getAssetUrl(glbUrl);
-  }, [productData?.selectedSoles, selectedSole, productData?.selectedStyles, selectedStyle, cfg.assets?.glb?.url]);
+    return getAssetUrl(cfg.assets?.glb?.url || fallbackGlb);
+  }, [productData?.selectedSoles, productData?.selectedStyles, cfg.assets?.glb?.url]);
 
   // Helper functions to get filtered materials and colors
   const getAvailableMaterials = () => {
@@ -409,29 +401,10 @@ export default function DerbyBuilderClean() {
 
 
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const actionsCount = useMemo(
-    () =>
-      [
-        selectedStyle,
-        selectedSole,
-        selectedColor,
-      ].filter(Boolean).length,
-    [
-      selectedStyle,
-      selectedSole,
-      selectedColor,
-    ]
-  );
-
-
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearAll = () => {
     if (cfg.panels && cfg.panels.length > 0) {
       setActivePanel(cfg.panels[0].id);
     }
-    setSelectedSole(null);
     setSelectedColor(null);
     setInscription({ toe: "", tongue: "" });
     if (cfg.sizes && cfg.sizes.length > 0) {
@@ -515,7 +488,7 @@ export default function DerbyBuilderClean() {
               <span className="text-gray-300">›</span>
               <Link href="/collections" className="hover:text-gray-900 transition-colors">Create Design</Link>
               <span className="text-gray-300">›</span>
-              <Link href="/collections" className="hover:text-gray-900 transition-colors">Create Men's Shoes</Link>
+              <Link href="/collections" className="hover:text-gray-900 transition-colors">Create Men&apos;s Shoes</Link>
               <span className="text-gray-300">›</span>
               <span className="text-gray-900 font-semibold">{cfg.title?.replace("`", "'") || "Men's Luxury Chelsea Boots"}</span>
             </nav>
@@ -652,7 +625,7 @@ export default function DerbyBuilderClean() {
                   {/* Add to Cart Button */}
                   <div className="flex-shrink-0 flex-1 sm:flex-none">
                     <AddToCartButton
-                      productId={cfg.productId || ""}
+                      productId={cfg.id || id}
                       title={cfg.title || ""}
                       price={cfg.price || 0}
                       originalPrice={cfg.compareAtPrice && cfg.compareAtPrice > 0 ? cfg.compareAtPrice : undefined}
@@ -670,26 +643,8 @@ export default function DerbyBuilderClean() {
               </div>
             </div>
 
-            {/* Customization Tabs */}
+            {/* Customization */}
             <div>
-              <div className="mb-4">
-                <div className="relative inline-flex bg-gray-100 p-0.5 rounded-full h-8 shadow-sm w-full justify-between items-center">
-                  {(["Materials", "Style", "Soles"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setActiveTab(t)}
-                      className={`relative px-4 text-xs font-semibold rounded-full transition-all duration-200 flex items-center justify-center flex-1 h-7 ${
-                        activeTab === t
-                          ? "bg-red-500 text-white shadow-sm"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/50"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Materials */}
               {activeTab === "Materials" && (
                 <>
@@ -907,76 +862,6 @@ export default function DerbyBuilderClean() {
                   </div>
                 </>
               )}
-
-              {/* Style */}
-              {activeTab === "Style" && (
-                <div>
-                  <h3 className="font-medium mb-2">Style</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {(cfg.selectedStyles || []).map((s: any) => (
-                      <button
-                        key={s.id || s.name}
-                        onClick={() => {
-                          const newStyle = (s.id || s.name);
-                          setSelectedStyle(prev => prev === newStyle ? null : newStyle);
-                          if (selectedStyle !== newStyle) {
-                            setSelectedSole(null);
-                          }
-                        }}
-                        className={`p-2 rounded-md border transition ${selectedStyle === (s.id || s.name)
-                          ? "border-red-500 ring-1 ring-red-100"
-                          : "border-gray-200"
-                          }`}
-                      >
-                        <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-1 flex items-center justify-center">
-                          <img
-                            src={getAssetUrl(s.imageUrl)}
-                            alt={s.name}
-                            className="object-contain w-full h-full"
-                          />
-                        </div>
-                        <div className="text-sm text-center">{s.name}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Soles */}
-              {activeTab === "Soles" && (
-                <div>
-                  <h3 className="font-medium mb-2">Soles</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {(cfg.selectedSoles || []).map((so: any) => (
-                      <button
-                        key={so.id || so.name}
-                        onClick={() => {
-                          const newSole = (so.id || so.name);
-                          setSelectedSole(prev => prev === newSole ? null : newSole);
-                          if (selectedSole !== newSole) {
-                            setSelectedStyle(null);
-                          }
-                        }}
-                        className={`p-2 rounded-md border transition ${selectedSole === (so.id || so.name)
-                          ? "border-red-500 ring-1 ring-red-100"
-                          : "border-gray-200"
-                          }`}
-                      >
-                        <div className="w-full h-20 rounded-md overflow-hidden bg-gray-50 mb-2 flex items-center justify-center">
-                          <img
-                            src={getAssetUrl(so.imageUrl)}
-                            alt={so.name}
-                            className="object-contain w-full h-full"
-                          />
-                        </div>
-                        <div className="text-sm font-medium">{so.name}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-
 
               {/* Inscription */}
               {activeTab === "Inscription" && (

@@ -34,7 +34,7 @@ test.describe('Admin smoke navigation', () => {
   for (const route of adminRoutes) {
     test(`navigates to ${route.path} and sees heading`, async ({ page }) => {
       await page.goto(route.path);
-      await expect(page.getByRole('heading', { name: route.heading as any })).toBeVisible();
+      await expect(page.getByRole('heading', { name: route.heading })).toBeVisible();
     });
   }
 });

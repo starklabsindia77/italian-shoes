@@ -2,24 +2,41 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+type ProductAssets = {
+    glb?: { url?: string | null } | null;
+    thumbnail?: string | null;
+} | null;
+
+/**
+ * `glbUrl` / `thumbnailUrl` are legacy columns that predate the `assets` JSON
+ * field, so they are absent from the generated Prisma types. These narrow
+ * shapes describe the legacy surface without falling back to `any`.
+ */
+type LegacyProductFields = { glbUrl?: string | null; thumbnailUrl?: string | null };
+type LegacyProductDelegate = {
+    update: (args: {
+        where: { id: string };
+        data: LegacyProductFields;
+    }) => Promise<unknown>;
+};
+
 async function migrate() {
     console.log('🚀 Starting asset migration...');
     const products = await prisma.product.findMany();
 
     for (const p of products) {
-        const assets = p.assets as any;
+        const assets = p.assets as ProductAssets;
         const glbUrl = assets?.glb?.url;
         const thumbnailUrl = assets?.thumbnail;
 
         if (glbUrl || thumbnailUrl) {
             console.log(`Updating product ${p.productId}...`);
-            // Cast to any to bypass type checks for missing fields
-            // glbUrl and thumbnailUrl were likely moved to the 'assets' JSON field
-            await (prisma.product as any).update({
+            const legacy = p as typeof p & LegacyProductFields;
+            await (prisma.product as unknown as LegacyProductDelegate).update({
                 where: { id: p.id },
                 data: {
-                    glbUrl: glbUrl || (p as any).glbUrl,
-                    thumbnailUrl: thumbnailUrl || (p as any).thumbnailUrl
+                    glbUrl: glbUrl || legacy.glbUrl,
+                    thumbnailUrl: thumbnailUrl || legacy.thumbnailUrl
                 }
             });
         }

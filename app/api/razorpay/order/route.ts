@@ -1,48 +1,71 @@
-import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
-import { getSettings } from "@/lib/settings";
+import { z } from "zod";
+import { ok, bad, server } from "@/lib/api-helpers";
+import { getRazorpayCredentials } from "@/lib/razorpay";
+import { quoteCart, toMinorUnits, PricingError, BASE_CURRENCY } from "@/lib/pricing";
+
+/**
+ * The client sends what it wants to buy — never what it costs. The amount is
+ * derived from database prices and stored tax/shipping settings, so a tampered
+ * request cannot create a ₹1 order for a ₹50,000 cart.
+ */
+const CreateOrderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1),
+        quantity: z.number().int().min(1),
+      })
+    )
+    .min(1),
+  shippingMethodId: z.string().nullable().optional(),
+});
 
 export async function POST(req: Request) {
-    try {
-        const { amount, currency = "INR" } = await req.json();
+  try {
+    const raw = await req.json().catch(() => null);
+    const parsed = CreateOrderSchema.safeParse(raw);
+    if (!parsed.success) return bad(parsed.error.message);
 
-        if (!amount) {
-            return NextResponse.json({ error: "Amount is required" }, { status: 400 });
-        }
-
-        const settings = await getSettings();
-        const { razorpayKeyId: settingsKeyId, razorpayKeySecret: settingsKeySecret } = settings.integrations;
-
-        // Use DB settings if available, otherwise fallback to environment variables
-        const finalKeyId = settingsKeyId || process.env.RAZORPAY_KEY_ID;
-        const finalKeySecret = settingsKeySecret || process.env.RAZORPAY_KEY_SECRET;
-
-        if (!finalKeyId || !finalKeySecret) {
-            return NextResponse.json(
-                { error: "Razorpay keys not configured. Please set them in admin settings or environment variables." },
-                { status: 500 }
-            );
-        }
-
-        const razorpay = new Razorpay({
-            key_id: finalKeyId,
-            key_secret: finalKeySecret,
-        });
-
-        const options = {
-            amount: Math.round(amount * 100), // Razorpay expects amount in paise (cents)
-            currency,
-            receipt: `receipt_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
-
-        return NextResponse.json(order);
-    } catch (error: unknown) {
-        console.error("Razorpay order creation error:", error);
-        return NextResponse.json(
-            { error: (error as Error)?.message || "Failed to create Razorpay order" },
-            { status: 500 }
-        );
+    const credentials = await getRazorpayCredentials();
+    if (!credentials) {
+      return bad(
+        "Razorpay keys are not configured. Set them in admin settings or the environment.",
+        503
+      );
     }
+
+    const quote = await quoteCart({
+      items: parsed.data.items,
+      shippingMethodId: parsed.data.shippingMethodId ?? null,
+    });
+
+    if (quote.total <= 0) return bad("Order total must be greater than zero");
+
+    const razorpay = new Razorpay({
+      key_id: credentials.keyId,
+      key_secret: credentials.keySecret,
+    });
+
+    const order = await razorpay.orders.create({
+      amount: toMinorUnits(quote.total),
+      // Always the base currency: prices are stored in it and the storefront's
+      // currency selector only affects display.
+      currency: BASE_CURRENCY,
+      receipt: `rcpt_${Date.now().toString(36)}`,
+    });
+
+    // Returning the quote lets the client show the authoritative figures and
+    // reconcile them against what it displayed.
+    return ok({
+      razorpayOrderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: credentials.keyId,
+      quote,
+    });
+  } catch (e) {
+    if (e instanceof PricingError) return bad(e.message, e.status);
+    return server(e);
+  }
 }

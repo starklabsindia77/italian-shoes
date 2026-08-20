@@ -22,8 +22,8 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 echo "==> downloading release ${RELEASE_SHA}"
-aws s3 cp "${S3_PREFIX}/release.tar.gz" "$WORK/release.tar.gz"
-aws s3 cp "${S3_PREFIX}/release.tar.gz.sha256" "$WORK/release.tar.gz.sha256"
+aws s3 cp --no-progress "${S3_PREFIX}/release.tar.gz" "$WORK/release.tar.gz"
+aws s3 cp --no-progress "${S3_PREFIX}/release.tar.gz.sha256" "$WORK/release.tar.gz.sha256"
 
 echo "==> verifying checksum"
 (cd "$WORK" && sha256sum -c release.tar.gz.sha256)

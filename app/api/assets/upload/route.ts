@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     await requirePermission("products.manage");
 
-    const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME;
+    const bucket = process.env.S3_BUCKET_NAME;
     if (!bucket) return bad("S3 bucket is not configured", 500);
 
     const { searchParams } = new URL(req.url);

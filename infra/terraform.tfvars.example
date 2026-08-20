@@ -1,0 +1,33 @@
+# Copy to terraform.tfvars (gitignored) and fill in. terraform.tfvars must
+# NEVER be committed — it is listed in .gitignore.
+
+project     = "italian-shoes"
+environment = "production"
+aws_region  = "ap-south-1"
+
+# owner/repo pinned into the GitHub OIDC trust policy. Only this repo's
+# main branch can assume the deploy role.
+github_repo   = "your-github-owner/your-repo"
+github_branch = "main"
+
+# Empty string = HTTP only (non-production). Set a real domain for HTTPS;
+# DNS-validating the ACM cert is a two-apply process, see DEPLOY_CHECKLIST.md.
+domain_name = ""
+
+# Receives GuardDuty findings, CloudWatch alarms, and budget alerts.
+# The SNS subscription must be confirmed via the email AWS sends.
+alert_email = "you@example.com"
+
+# The EXISTING product-assets bucket (uploads/GLB models) and its region.
+# Not managed by Terraform; the instance role gets scoped Put/Get on it.
+assets_bucket_name   = "your-assets-bucket"
+assets_bucket_region = "us-east-1"
+
+monthly_budget_usd = 60
+
+# Break-glass SSH CIDRs. Leave empty. Seriously.
+admin_cidrs = []
+
+# Outbound SMTP (port-scoped). Set to [] to close SMTP egress entirely.
+smtp_egress_cidrs = ["0.0.0.0/0"]
+smtp_port         = 587

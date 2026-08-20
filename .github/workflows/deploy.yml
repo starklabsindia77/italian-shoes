@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           rm -rf .next/cache package
           mkdir package
-          cp -r .next public package.json package-lock.json prisma next.config.ts middleware.ts package/
+          cp -r .next public package.json package-lock.json prisma next.config.mjs middleware.ts package/
           cd package
           # Production dependencies only, resolved for the TARGET platform:
           # the instance is linux/arm64 (Graviton), the runner is x64, and

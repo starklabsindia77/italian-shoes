@@ -26,7 +26,19 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 echo "==> downloading dump"
-aws s3 cp "s3://${BUCKET}/${DUMP_KEY}" "$TMP/dump.sql.gz"
+aws s3 cp --no-progress "s3://${BUCKET}/${DUMP_KEY}" "$TMP/dump.sql.gz"
+
+# If a deploy ran before the restore, `prisma migrate deploy` already
+# created every table, and the dump's CREATE TABLE statements would abort
+# the restore. WIPE_SCHEMA_FIRST=yes drops and recreates the public schema
+# first. DESTRUCTIVE: only ever use it on a database whose current content
+# you are certain is disposable (empty schema from migrations, or a failed
+# earlier restore).
+if [ "${WIPE_SCHEMA_FIRST:-no}" = "yes" ]; then
+  echo "==> WIPE_SCHEMA_FIRST=yes — dropping and recreating schema 'public'"
+  psql "$DATABASE_URL" --set ON_ERROR_STOP=1 --quiet \
+    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+fi
 
 echo "==> restoring (ON_ERROR_STOP=1 — any failed statement aborts)"
 gunzip -c "$TMP/dump.sql.gz" | psql "$DATABASE_URL" \

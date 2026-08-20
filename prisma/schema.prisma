@@ -1,5 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  // "native" = the machine running generate (dev laptops, CI runner);
+  // linux-arm64 = the Graviton production instance. Without the explicit
+  // target, generate on the x64 runner ships only an x64 query engine and
+  // the app dies at first query in production.
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

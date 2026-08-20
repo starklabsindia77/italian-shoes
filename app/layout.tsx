@@ -8,6 +8,12 @@ import Script from "next/script";
 import { getSettings } from "@/lib/settings";
 import { RazorpayMagicCheckout } from "@/components/integrations/RazorpayMagicCheckout";
 
+// Render every route at request time. The database is only reachable from
+// the instance (it is private, by design), so build-time prerendering can
+// never query it -- and this app's pages are DB-driven anyway. This also
+// fixes the old behavior where dashboard pages were frozen at deploy time.
+export const dynamic = "force-dynamic";
+
 
 
 const montserrat = Montserrat({

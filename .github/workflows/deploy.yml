@@ -63,6 +63,13 @@ jobs:
           # needs the DB at build time is a bug to fix, not a reason to
           # expose the DB to runner IPs like the old pipeline did.
           DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+          # lib/auth.ts throws at module load (hit during build page-data
+          # collection) if NEXTAUTH_SECRET is absent. These dummies exist
+          # only to satisfy that presence check: server-side env is read at
+          # RUNTIME from Parameter Store on the instance — nothing from
+          # this block ships in the artifact.
+          NEXTAUTH_SECRET: build-dummy-not-a-secret-runtime-uses-parameter-store
+          NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_CLOUDFRONT_URL: ${{ vars.NEXT_PUBLIC_CLOUDFRONT_URL }}
         run: |
           npx prisma generate

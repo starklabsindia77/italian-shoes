@@ -1,90 +1,158 @@
-name: Deploy Next.js to Lightsail
+# Deploy: build on the runner, upload to S3, execute on the instance via
+# SSM Run Command. The SSM agent polls AWS OUTBOUND over 443, so this
+# pipeline opens no inbound port anywhere — no SSH key, no runner IP
+# allowlist, no 0.0.0.0/0. That combination is what got the previous two
+# instances compromised; do not reintroduce it.
+#
+# Auth is GitHub OIDC -> short-lived STS credentials for one pinned
+# role/repo/branch. Secrets required (none of them are credentials):
+#   AWS_DEPLOY_ROLE_ARN, ARTIFACTS_BUCKET, HEALTHCHECK_URL
+# Optional repo *variable* (not secret): NEXT_PUBLIC_CLOUDFRONT_URL —
+# build-time public CDN base URL, inlined into the client bundle.
+
+name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # mint the OIDC token for AWS
+  contents: read
+
+# One deploy at a time; a second push queues rather than racing the first.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-south-1
+  INSTANCE_NAME_TAG: italian-shoes-app # must match the instance's Name tag in Terraform
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production # attach required reviewers here later if wanted
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: npm
 
-      - name: Install dependencies & Build (Runner Check)
-        # We pass env here so the build doesn't fail on the GitHub runner
+      - name: Install dependencies
+        # --legacy-peer-deps: pre-existing next-auth@4 <-> nodemailer@8 peer
+        # conflict, same flag the project has always needed.
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        # The only test gate that can run here: Playwright e2e needs a live
+        # DB + browsers and the DB is (correctly) unreachable from this
+        # runner. Run e2e locally / in a separate workflow against a
+        # non-production database.
+        run: npm run lint
+
+      - name: Build
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          NEXT_PUBLIC_AWS_S3_REGION: ${{ secrets.NEXT_PUBLIC_AWS_S3_REGION }}
-          NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID: ${{ secrets.NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID }}
-          NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY: ${{ secrets.NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY }}
-          NEXT_PUBLIC_AWS_S3_BUCKET_NAME: ${{ secrets.NEXT_PUBLIC_AWS_S3_BUCKET_NAME }}
-          NEXT_PUBLIC_CLOUDFRONT_URL: ${{ secrets.NEXT_PUBLIC_CLOUDFRONT_URL }}
-          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+          # Dummy DB URL: the runner has NO path to the real database (it is
+          # private — that is the design, not an oversight). Anything that
+          # needs the DB at build time is a bug to fix, not a reason to
+          # expose the DB to runner IPs like the old pipeline did.
+          DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+          NEXT_PUBLIC_CLOUDFRONT_URL: ${{ vars.NEXT_PUBLIC_CLOUDFRONT_URL }}
         run: |
-          npm install --legacy-peer-deps
           npx prisma generate
           npm run build
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Package release
+        env:
+          DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+        run: |
+          set -euo pipefail
+          rm -rf .next/cache package
+          mkdir package
+          cp -r .next public package.json package-lock.json prisma next.config.ts middleware.ts package/
+          cd package
+          # Production dependencies only, resolved for the TARGET platform:
+          # the instance is linux/arm64 (Graviton), the runner is x64, and
+          # --os/--cpu make npm select arm64 prebuilds (sharp etc).
+          # --ignore-scripts: no package install-script runs in CI.
+          npm ci --omit=dev --legacy-peer-deps --ignore-scripts --os linux --cpu arm64
+          # Regenerate the Prisma client inside the package (CLI version
+          # pinned from the lockfile; driver-adapter client is arch-neutral).
+          PRISMA_VERSION="$(node -p "require('./package-lock.json').packages['node_modules/prisma'].version")"
+          npx --yes "prisma@${PRISMA_VERSION}" generate
+          tar -czf ../release.tar.gz .
+          cd ..
+          sha256sum release.tar.gz > release.tar.gz.sha256
+
+      - name: Configure AWS credentials (OIDC — no stored keys)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -euo pipefail
-            # Set the APP_DIR secret to the checkout path on the server. The
-            # fallback matches the root the nginx config serves .next from.
-            cd "${{ secrets.APP_DIR || '/var/www/html' }}"
-            git pull origin main
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-            # 1. Create/Overwrite the .env file on the server
-            echo "DATABASE_URL=\"${{ secrets.DATABASE_URL }}\"" > .env
-            echo "NEXTAUTH_URL=\"${{ secrets.NEXTAUTH_URL }}\"" >> .env
-            echo "NEXTAUTH_SECRET=\"${{ secrets.NEXTAUTH_SECRET }}\"" >> .env
-            echo "UPLOAD_DIR=\"./uploads\"" >> .env
-            echo "MAX_FILE_SIZE_MB=\"50\"" >> .env
-            echo "NEXT_PUBLIC_AWS_S3_REGION=\"${{ secrets.NEXT_PUBLIC_AWS_S3_REGION }}\"" >> .env
-            echo "NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID=\"${{ secrets.NEXT_PUBLIC_AWS_S3_ACCESS_KEY_ID }}\"" >> .env
-            echo "NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY=\"${{ secrets.NEXT_PUBLIC_AWS_S3_SECRET_ACCESS_KEY }}\"" >> .env
-            echo "NEXT_PUBLIC_AWS_S3_BUCKET_NAME=\"${{ secrets.NEXT_PUBLIC_AWS_S3_BUCKET_NAME }}\"" >> .env
-            echo "NEXT_PUBLIC_CLOUDFRONT_URL=\"${{ secrets.NEXT_PUBLIC_CLOUDFRONT_URL }}\"" >> .env
-            echo "RAZORPAY_KEY_ID=\"${{ secrets.RAZORPAY_KEY_ID }}\"" >> .env
-            echo "RAZORPAY_KEY_SECRET=\"${{ secrets.RAZORPAY_KEY_SECRET }}\"" >> .env
+      - name: Upload artifact to S3
+        run: |
+          set -euo pipefail
+          PREFIX="s3://${{ secrets.ARTIFACTS_BUCKET }}/releases/${GITHUB_SHA}"
+          aws s3 cp release.tar.gz        "${PREFIX}/release.tar.gz"
+          aws s3 cp release.tar.gz.sha256 "${PREFIX}/release.tar.gz.sha256"
+          aws s3 cp infra/scripts/deploy-remote.sh "${PREFIX}/deploy-remote.sh"
 
-            # 2. Install, apply schema changes, then build
-            npm install --legacy-peer-deps
-            npx prisma generate
-            # Without this the committed migrations never reach the database.
-            npx prisma migrate deploy
+      - name: Deploy via SSM Run Command
+        run: |
+          set -euo pipefail
+          PREFIX="s3://${{ secrets.ARTIFACTS_BUCKET }}/releases/${GITHUB_SHA}"
 
-            # A partially written .next makes `next start` 404 every dynamic
-            # route, so build into a clean directory and fail the deploy if the
-            # build did not complete.
-            rm -rf .next
-            npm run build
-            test -f .next/BUILD_ID
+          PARAMS=$(jq -cn \
+            --arg c1 "set -euo pipefail" \
+            --arg c2 "aws s3 cp ${PREFIX}/deploy-remote.sh /tmp/deploy-remote.sh" \
+            --arg c3 "chmod +x /tmp/deploy-remote.sh" \
+            --arg c4 "ARTIFACTS_BUCKET='${{ secrets.ARTIFACTS_BUCKET }}' RELEASE_SHA='${GITHUB_SHA}' /tmp/deploy-remote.sh" \
+            '{commands: [$c1, $c2, $c3, $c4], executionTimeout: ["900"]}')
 
-            pm2 restart all --update-env || pm2 start npm --name "next-app" -- start
+          CMD_ID=$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --targets "Key=tag:Name,Values=${INSTANCE_NAME_TAG}" \
+            --comment "deploy ${GITHUB_SHA}" \
+            --parameters "$PARAMS" \
+            --query 'Command.CommandId' --output text)
+          echo "SSM command: $CMD_ID"
 
-            # 3. Smoke-check that the server came back up
-            for i in $(seq 1 15); do
-              if curl -fsS http://localhost:3000/api/health > /dev/null; then
-                echo "Health check passed"
-                exit 0
-              fi
-              sleep 2
-            done
-            echo "Health check failed after restart" >&2
-            pm2 logs --nostream --lines 50 || true
+          STATUS="Pending"
+          for _ in $(seq 1 90); do
+            STATUS=$(aws ssm list-command-invocations --command-id "$CMD_ID" \
+              --query 'CommandInvocations[0].Status' --output text 2>/dev/null || echo "Pending")
+            case "$STATUS" in
+              Success|Failed|Cancelled|TimedOut) break ;;
+            esac
+            sleep 10
+          done
+
+          echo "== instance stdout/stderr =="
+          aws ssm list-command-invocations --command-id "$CMD_ID" --details \
+            --query 'CommandInvocations[0].CommandPlugins[0].Output' --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Deploy failed with SSM status: $STATUS"
             exit 1
+          fi
+
+      - name: Verify through the ALB
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 10 "${{ secrets.HEALTHCHECK_URL }}" > /dev/null; then
+              echo "Health check passed."
+              exit 0
+            fi
+            echo "Attempt $i failed; retrying in $((i * 5))s"
+            sleep $((i * 5))
+          done
+          echo "Health endpoint never returned 200 through the ALB."
+          exit 1

@@ -1,0 +1,181 @@
+#!/bin/bash
+# Bootstrap for the ${project} app instance (Amazon Linux 2023, arm64).
+# Rendered by Terraform templatefile(). Terraform interpolates dollar-brace
+# expressions; shell variables in here are brace-less (or escaped) on purpose.
+# This script contains NO secrets — config/secrets come from Parameter Store
+# at service start via refresh-app-env.
+set -euxo pipefail
+exec > /var/log/user-data.log 2>&1
+
+# --- SSM agent (remote access; preinstalled on AL2023, make sure it runs) ---
+systemctl enable --now amazon-ssm-agent
+
+# --- No SSH. Access is Session Manager only (constraint 2). ----------------
+systemctl disable --now sshd || true
+systemctl mask sshd
+
+# --- Automatic security updates, applied automatically ----------------------
+dnf -y install dnf-automatic
+sed -i 's/^upgrade_type.*/upgrade_type = security/' /etc/dnf/automatic.conf
+sed -i 's/^apply_updates.*/apply_updates = yes/' /etc/dnf/automatic.conf
+systemctl enable --now dnf-automatic.timer
+
+# --- Runtime: Node.js 20 (matches CI) + tools -------------------------------
+dnf -y install nodejs20 nodejs20-npm jq tar gzip rsyslog
+# AL2023 installs versioned binaries (node-20 etc); expose unversioned names.
+for b in node npm npx; do
+  [ -x "/usr/bin/$b" ] || ln -sf "/usr/bin/$b-20" "/usr/bin/$b"
+done
+node --version
+
+# rsyslog gives us /var/log/messages fed from journald, which the CloudWatch
+# agent tails below. The app's systemd unit logs with SyslogIdentifier=app.
+systemctl enable --now rsyslog
+
+# --- Dedicated unprivileged app user (constraint 5) -------------------------
+useradd --system --home-dir /opt/app --create-home --shell /usr/sbin/nologin app || true
+mkdir -p /opt/app/releases /opt/app/shared
+chown -R app:app /opt/app
+chmod 750 /opt/app
+
+# --- RDS TLS: trust bundle referenced by DATABASE_URL's sslrootcert ---------
+mkdir -p /etc/ssl/rds
+curl -fsS https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+  -o /etc/ssl/rds/global-bundle.pem
+
+# --- refresh-app-env: Parameter Store -> env file, owned by app, mode 0400 --
+cat > /usr/local/bin/refresh-app-env <<'EOF'
+#!/bin/bash
+# Pulls every parameter under ${param_path} into /opt/app/shared/app.env
+# (systemd EnvironmentFile format). Runs as root (ExecStartPre=+); the file
+# is readable only by the app user. Never echoes values.
+set -euo pipefail
+ENV_FILE=/opt/app/shared/app.env
+TMP=$(mktemp)
+trap 'rm -f "$TMP"' EXIT
+aws ssm get-parameters-by-path \
+  --path "${param_path}" \
+  --with-decryption \
+  --region "${region}" \
+  --query 'Parameters[].{Name:Name,Value:Value}' \
+  --output json |
+  jq -r '.[] | (.Name | split("/") | last) + "=\"" + (.Value | gsub("\""; "\\\"")) + "\""' > "$TMP"
+if [ ! -s "$TMP" ]; then
+  echo "refresh-app-env: no parameters found under ${param_path}" >&2
+  exit 1
+fi
+install -o app -g app -m 0400 "$TMP" "$ENV_FILE"
+EOF
+chmod 755 /usr/local/bin/refresh-app-env
+
+# --- systemd unit: sandboxed, unprivileged ----------------------------------
+cat > /etc/systemd/system/app.service <<'EOF'
+[Unit]
+Description=${project} Next.js app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=app
+Group=app
+WorkingDirectory=/opt/app/current
+EnvironmentFile=/opt/app/shared/app.env
+Environment=NODE_ENV=production
+Environment=HOME=/opt/app
+Environment=NODE_EXTRA_CA_CERTS=/etc/ssl/rds/global-bundle.pem
+# Refresh config from Parameter Store on every (re)start. '+' = run as root,
+# outside the sandbox, because only root may write the 0400 env file.
+ExecStartPre=+/usr/local/bin/refresh-app-env
+ExecStart=/usr/bin/node /opt/app/current/node_modules/next/dist/bin/next start -p ${app_port}
+Restart=always
+RestartSec=5
+SyslogIdentifier=app
+
+# Sandboxing. The filesystem is read-only except .next (Next.js runtime
+# cache: ISR, image optimizer). No privileges, no capabilities, no devices.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/app/current/.next
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+SystemCallFilter=@system-service
+MemoryMax=80%
+# MemoryDenyWriteExecute is DELIBERATELY absent: V8's JIT requires
+# writable->executable memory transitions and Node.js crashes on start
+# under it. Every other requested sandbox option is present. If you want
+# W^X enforcement, the app would have to run with --jitless (significant
+# performance cost) — decide that deliberately, not here.
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable app.service
+# Not started here: there is no release on the box yet. The first deploy
+# (S3 artifact + SSM Run Command) installs /opt/app/current and starts it.
+
+# --- AIDE file-integrity baseline + daily check to syslog -------------------
+dnf -y install aide
+# Release dirs churn on every deploy; monitoring them would bury real signal.
+echo '!/opt/app' >> /etc/aide.conf
+aide --init
+mv /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+
+cat > /etc/systemd/system/aide-check.service <<'EOF'
+[Unit]
+Description=AIDE file integrity check
+
+[Service]
+Type=oneshot
+# Exit code is non-zero when differences are found; log and carry on —
+# the finding lands in syslog -> CloudWatch, which is the alerting path.
+ExecStart=/bin/bash -c '/usr/sbin/aide --check 2>&1 | logger -t aide; true'
+EOF
+
+cat > /etc/systemd/system/aide-check.timer <<'EOF'
+[Unit]
+Description=Daily AIDE check
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now aide-check.timer
+
+# --- CloudWatch agent: ship syslog (app + AIDE + system) to the log group ---
+dnf -y install amazon-cloudwatch-agent
+cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<'EOF'
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "${log_group}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    }
+  }
+}
+EOF
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json -s
+
+echo "bootstrap complete"

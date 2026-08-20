@@ -22,7 +22,7 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME,
+        Bucket: process.env.S3_BUCKET_NAME,
         Key: s3Key,
         Body: buffer,
         ContentType: meta.split(";")[0].split(":")[1] || "image/png",

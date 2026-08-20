@@ -8,6 +8,8 @@ import Script from "next/script";
 import { getSettings } from "@/lib/settings";
 import { RazorpayMagicCheckout } from "@/components/integrations/RazorpayMagicCheckout";
 
+
+
 const montserrat = Montserrat({
   subsets: ["latin"],
   variable: "--font-montserrat",

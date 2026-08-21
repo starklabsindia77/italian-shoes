@@ -76,8 +76,11 @@ const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined)
   if (urlLower.includes("yellow")) return "/leather/yellow.jpg";
   if (urlLower.includes("orange")) return "/leather/orange.png";
   if (urlLower.includes("grey") || urlLower.includes("gray")) return "/leather/grey.png";
-  
-  return s3Url;
+
+  // No local swatch matched (colors added after the local 1-20 set):
+  // serve the real asset from the CDN. Returning the raw relative path
+  // here made the browser request /colors/... from the app server -> 404.
+  return getAssetUrl(s3Url);
 };
 
 /* ----------------------

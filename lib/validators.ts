@@ -99,6 +99,7 @@ export const SizeCreateSchema = z.object({
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional()
 });
+export const SizeUpdateSchema = SizeCreateSchema.partial();
 
 // Panel
 export const PanelCreateSchema = z.object({

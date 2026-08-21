@@ -13,22 +13,27 @@ export async function GET(req: Request) {
     
     const { skip, limit } = pagination(req);
 
-    // Bypass Prisma model to avoid missing column error
-    let query = `SELECT id, name, region, value, "euEquivalent", "ukEquivalent", "isActive", "sortOrder", "extId", "createdAt", "updatedAt" FROM "Size" WHERE "isActive" = true`;
-    if (q) {
-      query += ` AND ("name" ILIKE '%${q.replace(/'/g, "''")}%')`;
-    }
-    if (region) {
-      query += ` AND "region" = '${region}'`;
-    }
-    query += ` ORDER BY "sortOrder" ASC, "value" ASC OFFSET ${skip} LIMIT ${limit}`;
+    // Plain Prisma queries. This handler once bypassed the model with raw
+    // SQL to survive drift between schema.prisma and the live database;
+    // schema and migrations are reconciled now, and raw string-built SQL
+    // was an injection liability.
+    const where = {
+      isActive: true,
+      ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
+      ...(region ? { region } : {}),
+    };
 
-    const [items, totalCountResult] = await Promise.all([
-      prisma.$queryRawUnsafe<Record<string, unknown>[]>(query),
-      prisma.$queryRawUnsafe<{ count: bigint }[]>(`SELECT COUNT(*) as count FROM "Size" WHERE "isActive" = true`)
+    const [items, total] = await Promise.all([
+      prisma.size.findMany({
+        where,
+        orderBy: [{ sortOrder: "asc" }, { value: "asc" }],
+        skip,
+        take: limit,
+      }),
+      // Matches the previous behavior: the total ignores q/region filters.
+      prisma.size.count({ where: { isActive: true } }),
     ]);
 
-    const total = Number(totalCountResult[0].count);
     const data = { items, total, limit };
 
     const response = ok(data);

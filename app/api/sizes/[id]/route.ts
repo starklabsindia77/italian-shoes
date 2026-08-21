@@ -1,14 +1,16 @@
 import { prisma } from "@/lib/prisma";
-import { ok, server, notFound, requireAdmin } from "@/lib/api-helpers";
+import { ok, bad, server, notFound, requireAdmin } from "@/lib/api-helpers";
+import { SizeUpdateSchema } from "@/lib/validators";
+
+// These handlers once used raw string-built SQL to bypass drift between
+// schema.prisma and the live database. Schema and migrations are
+// reconciled now — and the old PUT interpolated request-body keys as SQL
+// column identifiers, which was an injection sink. Plain Prisma only.
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const results = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT id, name, region, value, "euEquivalent", "ukEquivalent", "isActive", "sortOrder", "extId", "createdAt", "updatedAt" FROM "Size" WHERE id = $1 LIMIT 1`,
-      id
-    );
-    const s = results[0];
+    const s = await prisma.size.findUnique({ where: { id } });
     return s ? ok(s) : notFound();
   } catch (e) { return server(e); }
 }
@@ -18,31 +20,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     await requireAdmin();
     const { id } = await params;
     const body = await req.json();
-    
-    // Simple update using raw SQL to bypass sizeId
-    const setClauses = [];
-    const values = [];
-    let i = 1;
-    for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
-      if (key === 'id' || key === 'sizeId') continue;
-      setClauses.push(`"${key}" = $${i}`);
-      values.push(value);
-      i++;
-    }
-    values.push(id);
-    
-    if (setClauses.length > 0) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "Size" SET ${setClauses.join(', ')}, "updatedAt" = NOW() WHERE id = $${i}`,
-        ...values
-      );
-    }
 
-    const results = await prisma.$queryRawUnsafe<Record<string, unknown>[]>(
-      `SELECT id, name, region, value, "euEquivalent", "ukEquivalent", "isActive", "sortOrder", "extId", "createdAt", "updatedAt" FROM "Size" WHERE id = $1 LIMIT 1`,
-      id
-    );
-    return ok(results[0]);
+    const parsed = SizeUpdateSchema.safeParse(body);
+    if (!parsed.success) return bad(parsed.error.message);
+    // sizeId is a stable business identifier; ignore attempts to change it
+    // here, matching the old handler's behavior.
+    const { sizeId: _ignored, ...data } = parsed.data;
+
+    const updated = await prisma.size.update({ where: { id }, data });
+    return ok(updated);
   } catch (e) {
     if ((e as { code?: string })?.code === "P2025") return notFound();
     return server(e);

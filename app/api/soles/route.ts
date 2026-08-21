@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { SoleCreateSchema } from "@/lib/validators";
@@ -41,8 +42,8 @@ export async function POST(req: Request) {
     const parsed = SoleCreateSchema.safeParse(body);
     if (!parsed.success) return bad(parsed.error.message);
 
-    // Ensure soleId is always a string (not undefined) to satisfy Prisma type
-    const data = { ...parsed.data };
+    // Generate the business id when the dashboard form omits it.
+    const data = { ...parsed.data, soleId: parsed.data.soleId ?? randomUUID() };
   
 
 

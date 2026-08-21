@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { SizeCreateSchema } from "@/lib/validators";
@@ -46,7 +47,10 @@ export async function POST(req: Request) {
     const parsed = SizeCreateSchema.safeParse(body);
     if (!parsed.success) return bad(parsed.error.message);
 
-    const created = await prisma.size.create({ data: parsed.data });
+    // The dashboard form doesn't send a business id; generate one.
+    const created = await prisma.size.create({
+      data: { ...parsed.data, sizeId: parsed.data.sizeId ?? randomUUID() },
+    });
 
     // Invalidate sizes cache
     revalidateTag("sizes");

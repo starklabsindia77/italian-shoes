@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { StyleCreateSchema } from "@/lib/validators";
@@ -30,7 +31,9 @@ export async function POST(req: Request) {
     const parsed = StyleCreateSchema.safeParse(body);
     if (!parsed.success) return bad(parsed.error.message);
 
-    const created = await prisma.style.create({ data: parsed.data });
+    const created = await prisma.style.create({
+      data: { ...parsed.data, styleId: parsed.data.styleId ?? randomUUID() },
+    });
     return ok(created, 201);
   } catch (e) { return server(e); }
 }

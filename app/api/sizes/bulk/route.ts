@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, requireAdmin } from "@/lib/api-helpers";
 import { SizeCreateSchema } from "@/lib/validators";
@@ -12,7 +13,10 @@ export async function POST(req: Request) {
     for (const item of body) {
       const parsed = SizeCreateSchema.safeParse(item);
       if (!parsed.success) return bad(parsed.error.message);
-      records.push(parsed.data);
+      // sizeId is optional in the schema (forms omit it); the upsert key
+      // must be concrete, so generate one for new rows — a fresh UUID
+      // never matches an existing row, making those pure creates.
+      records.push({ ...parsed.data, sizeId: parsed.data.sizeId ?? randomUUID() });
     }
 
     const result = await prisma.$transaction(

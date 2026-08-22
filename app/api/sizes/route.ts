@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { SizeCreateSchema } from "@/lib/validators";
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     // SQL to survive drift between schema.prisma and the live database;
     // schema and migrations are reconciled now, and raw string-built SQL
     // was an injection liability.
-    const where = {
+    const where: Prisma.SizeWhereInput = {
       isActive: true,
       ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
       ...(region ? { region } : {}),

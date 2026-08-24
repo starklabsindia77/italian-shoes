@@ -854,6 +854,7 @@ export default function DerbyBuilderClean() {
                                 }`}
                               >
                                 <img
+                                  crossOrigin="anonymous"
                                   src={getLocalTextureUrl(color.name, color.imageUrl)}
                                   alt={color.name}
                                   className="object-cover w-8 h-8 block"

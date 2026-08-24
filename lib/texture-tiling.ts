@@ -93,8 +93,12 @@ export function clearUvScaleCache(root: THREE.Object3D) {
  */
 export function applyTiling(texture: THREE.Texture, mesh: THREE.Mesh, modelSize: number) {
   const uvScale = getUvScale(mesh);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+  // Mirrored so adjacent tiles are reflections: edges always line up, which
+  // keeps non-tileable source images (AI-generated photos, cropped scans)
+  // from rendering as a brick wall of visible seams. Purpose-made seamless
+  // textures look the same either way.
+  texture.wrapS = THREE.MirroredRepeatWrapping;
+  texture.wrapT = THREE.MirroredRepeatWrapping;
 
   // When UV density cannot be measured, fall back to tiling across the panel's
   // 0..1 UV range. Still far closer to correct than the (1,1) that stretched a

@@ -406,8 +406,10 @@ const Avatar: React.FC<AvatarSceneProps> = ({
         tex.flipY = false;
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = 16;
-        tex.wrapS = THREE.RepeatWrapping;
-        tex.wrapT = THREE.RepeatWrapping;
+        // applyTiling() later sets the authoritative mirrored wrap; keep the
+        // base texture consistent with it.
+        tex.wrapS = THREE.MirroredRepeatWrapping;
+        tex.wrapT = THREE.MirroredRepeatWrapping;
         cache.set(url, tex);
         return tex;
       } catch (error) {

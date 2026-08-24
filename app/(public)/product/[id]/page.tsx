@@ -42,40 +42,40 @@ const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined)
   
   // Try extraction from colorName first
   // 1. Numeric check (e.g. "color 1", "swatch 15")
-  const numMatch = name.match(/\b\d+\b/);
-  if (numMatch) {
-    const num = numMatch[0];
-    const numInt = parseInt(num, 10);
-    if (numInt >= 1 && numInt <= 20) {
-      if ([10, 11, 12, 14, 15, 16, 17, 18].includes(numInt)) {
-        return `/leather/${num}.png`;
-      }
-      return `/leather/${num}.jpg`;
-    }
-  }
+  // const numMatch = name.match(/\b\d+\b/);
+  // if (numMatch) {
+  //   const num = numMatch[0];
+  //   const numInt = parseInt(num, 10);
+  //   if (numInt >= 1 && numInt <= 20) {
+  //     if ([10, 11, 12, 14, 15, 16, 17, 18].includes(numInt)) {
+  //       return `/leather/${num}.png`;
+  //     }
+  //     return `/leather/${num}.jpg`;
+  //   }
+  // }
   
-  // 2. Keyword matching
-  if (name.includes("dark red") || name.includes("dark-red")) return "/leather/dark-red.png";
-  if (name.includes("mahroon") || name.includes("maroon") || name.includes("burgundy")) return "/leather/mahroon.png";
-  if (name.includes("light brown") || name.includes("light-brown") || name.includes("tan")) return "/leather/light-brown.jpg";
-  if (name.includes("black")) return "/leather/black.jpg";
-  if (name.includes("brown") || name.includes("coffee")) return "/leather/brown.jpg";
-  if (name.includes("red")) return "/leather/red.jpg";
-  if (name.includes("yellow")) return "/leather/yellow.jpg";
-  if (name.includes("orange")) return "/leather/orange.png";
-  if (name.includes("grey") || name.includes("gray")) return "/leather/grey.png";
+  // // 2. Keyword matching
+  // if (name.includes("dark red") || name.includes("dark-red")) return "/leather/dark-red.png";
+  // if (name.includes("mahroon") || name.includes("maroon") || name.includes("burgundy")) return "/leather/mahroon.png";
+  // if (name.includes("light brown") || name.includes("light-brown") || name.includes("tan")) return "/leather/light-brown.jpg";
+  // if (name.includes("black")) return "/leather/black.jpg";
+  // if (name.includes("brown") || name.includes("coffee")) return "/leather/brown.jpg";
+  // if (name.includes("red")) return "/leather/red.jpg";
+  // if (name.includes("yellow")) return "/leather/yellow.jpg";
+  // if (name.includes("orange")) return "/leather/orange.png";
+  // if (name.includes("grey") || name.includes("gray")) return "/leather/grey.png";
   
-  // Try extraction from s3Url
-  const urlLower = s3Url.toLowerCase();
-  if (urlLower.includes("dark-red")) return "/leather/dark-red.png";
-  if (urlLower.includes("mahroon") || urlLower.includes("maroon") || urlLower.includes("burgundy")) return "/leather/mahroon.png";
-  if (urlLower.includes("light-brown") || urlLower.includes("light_brown")) return "/leather/light-brown.jpg";
-  if (urlLower.includes("black")) return "/leather/black.jpg";
-  if (urlLower.includes("brown")) return "/leather/brown.jpg";
-  if (urlLower.includes("red")) return "/leather/red.jpg";
-  if (urlLower.includes("yellow")) return "/leather/yellow.jpg";
-  if (urlLower.includes("orange")) return "/leather/orange.png";
-  if (urlLower.includes("grey") || urlLower.includes("gray")) return "/leather/grey.png";
+  // // Try extraction from s3Url
+  // const urlLower = s3Url.toLowerCase();
+  // if (urlLower.includes("dark-red")) return "/leather/dark-red.png";
+  // if (urlLower.includes("mahroon") || urlLower.includes("maroon") || urlLower.includes("burgundy")) return "/leather/mahroon.png";
+  // if (urlLower.includes("light-brown") || urlLower.includes("light_brown")) return "/leather/light-brown.jpg";
+  // if (urlLower.includes("black")) return "/leather/black.jpg";
+  // if (urlLower.includes("brown")) return "/leather/brown.jpg";
+  // if (urlLower.includes("red")) return "/leather/red.jpg";
+  // if (urlLower.includes("yellow")) return "/leather/yellow.jpg";
+  // if (urlLower.includes("orange")) return "/leather/orange.png";
+  // if (urlLower.includes("grey") || urlLower.includes("gray")) return "/leather/grey.png";
 
   // No local swatch matched (colors added after the local 1-20 set):
   // serve the real asset from the CDN. Returning the raw relative path
@@ -822,6 +822,8 @@ export default function DerbyBuilderClean() {
                                 return null;
                               }
                             }
+
+                            // console.log("Rendering swatch for color:", getLocalTextureUrl(color.name, color.imageUrl))
 
                             const colorKey = `${material.materialId}-${color.id}`;
                             return (

@@ -29,14 +29,24 @@ data "aws_iam_policy_document" "deploy_assume" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Pinned to ONE repo and ONE branch. A wildcard in `sub` (e.g.
-    # "repo:*") would let ANY repository on GitHub assume this role and
-    # deploy to production. Widening this is an account takeover, not a
-    # convenience — never do it.
+    # Pinned to ONE repo. A wildcard in `sub` (e.g. "repo:*") would let
+    # ANY repository on GitHub assume this role and deploy to production.
+    # Widening this is an account takeover, not a convenience — never do it.
+    #
+    # Two allowed forms because the deploy job declares
+    # `environment: production`, which changes the OIDC sub claim from the
+    # branch form to the environment form. The environment form does not
+    # itself pin the branch — enforce that in GitHub: Settings →
+    # Environments → production → deployment branches → main only.
+    # (This matches the trust policy LIVE in AWS since 2026-08-21; losing
+    # this block breaks every deploy with sts:AssumeRoleWithWebIdentity.)
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.github_branch}"]
+      values = [
+        "repo:${var.github_repo}:ref:refs/heads/${var.github_branch}",
+        "repo:${var.github_repo}:environment:production",
+      ]
     }
   }
 }

@@ -253,6 +253,7 @@ export function MaterialSelection({
                               <div className="flex-1 flex items-center space-x-2">
                                 {color.imageUrl && (
                                   <img
+                                    crossOrigin="anonymous"
                                     src={getAssetUrl(color.imageUrl)}
                                     alt={color.name}
                                     className="w-4 h-4 rounded border object-cover"

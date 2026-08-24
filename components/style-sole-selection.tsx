@@ -153,6 +153,7 @@ export function StyleSoleSelection({
                         {item.imageUrl && (
                           <div className="w-8 h-8 rounded border overflow-hidden flex-shrink-0">
                             <img
+                              crossOrigin="anonymous"
                               src={getAssetUrl(item.imageUrl)}
                               alt={item.name}
                               className="w-full h-full object-cover"
@@ -217,6 +218,7 @@ export function StyleSoleSelection({
                             <span className="font-medium">Image:</span>
                             <div className="mt-1">
                               <img
+                                crossOrigin="anonymous"
                                 src={item.imageUrl}
                                 alt={item.name}
                                 className="w-20 h-20 rounded border object-cover"

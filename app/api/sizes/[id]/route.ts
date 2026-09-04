@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, notFound, requireAdmin } from "@/lib/api-helpers";
 import { SizeUpdateSchema } from "@/lib/validators";
+import { revalidateTag } from "next/cache";
 
 // These handlers once used raw string-built SQL to bypass drift between
 // schema.prisma and the live database. Schema and migrations are
@@ -28,6 +29,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { sizeId: _ignored, ...data } = parsed.data;
 
     const updated = await prisma.size.update({ where: { id }, data });
+    revalidateTag("sizes");
     return ok(updated);
   } catch (e) {
     if ((e as { code?: string })?.code === "P2025") return notFound();
@@ -40,6 +42,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     await requireAdmin();
     const { id } = await params;
     await prisma.size.delete({ where: { id } });
+    revalidateTag("sizes");
     return ok({ ok: true });
   } catch (e) {
     if ((e as { code?: string })?.code === "P2025") return notFound();

@@ -62,11 +62,6 @@ const LEATHER_PBR = {
 const DEFAULT_ROUGHNESS = LEATHER_PBR.roughness;
 const DEFAULT_BRIGHTNESS = 1.15;
 
-/** The GLB and the HDRI compete for bandwidth on first paint, so the canvas is
- *  revealed first and the environment map is attached a moment later. */
-const CANVAS_REVEAL_MS = 1200;
-const ENVIRONMENT_DELAY_MS = 3500;
-
 /* ============================================================================
    Error boundary
    ========================================================================= */
@@ -611,8 +606,9 @@ const DomSpinner: React.FC = () => (
 
 const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
   ({ avatarData, objectList, setObjectList, selectedTextureMap }, ref) => {
-    const [isReady, setIsReady] = useState(false);
-    const [isEnvReady, setIsEnvReady] = useState(false);
+    // Starts true: the Canvas mounts immediately and Suspense covers the model
+    // load. It only flips false during WebGL context-loss recovery below.
+    const [isReady, setIsReady] = useState(true);
     const [autoRetryCount, setAutoRetryCount] = useState(0);
     const [isTextureLoading, setIsTextureLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
@@ -634,14 +630,11 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
       if (!avatarData || avatarData === "") setHasError(false);
     }, [avatarData]);
 
+    // Kick the GLB fetch/parse the moment the URL is known, independent of the
+    // Canvas mount — and keep the model warm across error-recovery remounts.
     useEffect(() => {
-      const revealTimer = setTimeout(() => setIsReady(true), CANVAS_REVEAL_MS);
-      const envTimer = setTimeout(() => setIsEnvReady(true), ENVIRONMENT_DELAY_MS);
-      return () => {
-        clearTimeout(revealTimer);
-        clearTimeout(envTimer);
-      };
-    }, []);
+      if (avatarData) useGLTF.preload(avatarData);
+    }, [avatarData]);
 
     const canvasStyle = useMemo(
       () => ({ width: "100%", height: "100%", display: isReady ? "block" : ("none" as const) }),
@@ -716,7 +709,6 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
                   if (autoRetryCount < 1) {
                     setAutoRetryCount((prev) => prev + 1);
                     setIsReady(false);
-                    setIsEnvReady(false);
                     setTimeout(() => setIsReady(true), 500);
                   } else {
                     setHasError(true);
@@ -743,9 +735,9 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
             <directionalLight position={[-5, 3, 5]} intensity={0.6} />
             <directionalLight position={[0, 5, -6]} intensity={0.8} color="#fff" />
 
-            {isEnvReady && (
-              <Environment files="/hdri/studio_small_08_4k.hdr" background={false} />
-            )}
+            <Suspense fallback={null}>
+              <Environment files="/hdri/studio_small_08_1k.hdr" background={false} />
+            </Suspense>
 
             <ContactShadows
               position={[0, 0.001, 0]}

@@ -613,6 +613,8 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     const [isTextureLoading, setIsTextureLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
     const glRef = useRef<THREE.WebGLRenderer | null>(null);
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const cameraRef = useRef<THREE.Camera | null>(null);
 
     // The only two viewport controls.
     const [roughness, setRoughness] = useState<number>(DEFAULT_ROUGHNESS);
@@ -623,7 +625,16 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
     React.useImperativeHandle(ref, () => ({
-      captureScreenshot: () => glRef.current?.domElement.toDataURL("image/png") ?? null,
+      captureScreenshot: () => {
+        const gl = glRef.current;
+        if (!gl) return null;
+        // Without preserveDrawingBuffer the back buffer is invalid after
+        // compositing, so render synchronously right before reading it.
+        if (sceneRef.current && cameraRef.current) {
+          gl.render(sceneRef.current, cameraRef.current);
+        }
+        return gl.domElement.toDataURL("image/png");
+      },
     }));
 
     useEffect(() => {
@@ -685,14 +696,26 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
               // instead of the renderer's default black clear colour.
               alpha: true,
               powerPreference: "high-performance",
-              preserveDrawingBuffer: true,
+              // Screenshots re-render on demand in captureScreenshot instead;
+              // keeping the buffer preserved costs every frame.
+              preserveDrawingBuffer: false,
               failIfMajorPerformanceCaveat: false,
             }}
-            dpr={[1, 2]}
+            dpr={[1, 1.5]}
             style={canvasStyle}
             camera={{ position: [2.2, 0.5, 0.001], fov: 50 }}
-            onCreated={({ gl }: { gl: THREE.WebGLRenderer }) => {
+            onCreated={({
+              gl,
+              scene,
+              camera,
+            }: {
+              gl: THREE.WebGLRenderer;
+              scene: THREE.Scene;
+              camera: THREE.Camera;
+            }) => {
               glRef.current = gl;
+              sceneRef.current = scene;
+              cameraRef.current = camera;
               try {
                 gl.outputColorSpace = THREE.SRGBColorSpace;
                 gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -729,8 +752,8 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
               position={[2, 6, 5]}
               intensity={1.6}
               castShadow
-              shadow-mapSize-width={2048}
-              shadow-mapSize-height={2048}
+              shadow-mapSize-width={1024}
+              shadow-mapSize-height={1024}
             />
             <directionalLight position={[-5, 3, 5]} intensity={0.6} />
             <directionalLight position={[0, 5, -6]} intensity={0.8} color="#fff" />

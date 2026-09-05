@@ -82,6 +82,9 @@ export async function POST(req: NextRequest) {
         Key: s3Key,
         Body: buffer,
         ContentType: file.type || (folder === "GLB" ? "model/gltf-binary" : "application/octet-stream"),
+        // Keys are uuid-prefixed, so every upload is a new URL — safe to mark
+        // immutable. Served as the object's Cache-Control header.
+        CacheControl: "public, max-age=31536000, immutable",
       })
     );
 

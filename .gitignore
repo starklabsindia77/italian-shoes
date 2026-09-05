@@ -63,3 +63,4 @@ crash.log
 tfplan
 .next/
 node_modules/
+package-lock.json

@@ -73,7 +73,27 @@ export async function POST(req: NextRequest) {
       return bad(`Unexpected content type "${file.type}" for "${folder}"`);
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    let buffer: Buffer = Buffer.from(await file.arrayBuffer());
+
+    // Compress .glb uploads (meshopt + WebP textures) so the storefront viewer
+    // never downloads a raw multi-megabyte export. Best-effort: a model the
+    // optimizer cannot parse is stored as uploaded. (.gltf is skipped — it may
+    // reference external files the optimizer cannot resolve here.)
+    if (folder === "GLB" && extension === ".glb") {
+      try {
+        const { optimizeGlb } = await import("@/lib/glb-optimize");
+        const optimized = await optimizeGlb(buffer);
+        if (optimized.length > 0 && optimized.length < buffer.length) {
+          console.log(
+            `GLB optimized: ${fileName} ${buffer.length} -> ${optimized.length} bytes`
+          );
+          buffer = optimized;
+        }
+      } catch (err) {
+        console.error(`GLB optimization failed for ${fileName}; storing original`, err);
+      }
+    }
+
     const s3Key = `${folder}/${uuidv4()}-${fileName}`;
 
     await getS3Client().send(

@@ -94,14 +94,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const s3Key = `${folder}/${uuidv4()}-${fileName}`;
+    let uploadName = fileName;
+    let contentType =
+      file.type || (folder === "GLB" ? "model/gltf-binary" : "application/octet-stream");
+
+    // Colour textures arrive as raw photos (some over 20MB) but tile onto the
+    // model at ~1-2K. Cap them at 2048px WebP so neither the swatch grid nor
+    // the 3D loader ever pays for the original. Best-effort like the GLB path.
+    if (folder === "colors" && [".png", ".jpg", ".jpeg"].includes(extension)) {
+      try {
+        const sharp = (await import("sharp")).default;
+        const before = buffer.length;
+        buffer = await sharp(buffer)
+          .rotate()
+          .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 82 })
+          .toBuffer();
+        uploadName = uploadName.replace(/\.(png|jpe?g)$/i, ".webp");
+        contentType = "image/webp";
+        console.log(`Colour texture resized: ${fileName} ${before} -> ${buffer.length} bytes`);
+      } catch (err) {
+        console.error(`Colour resize failed for ${fileName}; storing original`, err);
+      }
+    }
+
+    const s3Key = `${folder}/${uuidv4()}-${uploadName}`;
 
     await getS3Client().send(
       new PutObjectCommand({
         Bucket: bucket,
         Key: s3Key,
         Body: buffer,
-        ContentType: file.type || (folder === "GLB" ? "model/gltf-binary" : "application/octet-stream"),
+        ContentType: contentType,
         // Keys are uuid-prefixed, so every upload is a new URL — safe to mark
         // immutable. Served as the object's Cache-Control header.
         CacheControl: "public, max-age=31536000, immutable",
@@ -109,7 +133,7 @@ export async function POST(req: NextRequest) {
     );
 
     // Relative path; resolved against CloudFront by getAssetUrl().
-    return ok({ url: `/${s3Key}`, name: fileName });
+    return ok({ url: `/${s3Key}`, name: uploadName });
   } catch (e) {
     return server(e);
   }

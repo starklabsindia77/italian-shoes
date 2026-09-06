@@ -4,6 +4,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Heart,
   MessageCircle,
@@ -80,6 +81,82 @@ const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined)
   // serve the real asset from the CDN. Returning the raw relative path
   // here made the browser request /colors/... from the app server -> 404.
   return getAssetUrl(s3Url);
+};
+
+/**
+ * Route a texture through the Next image optimizer before it reaches the 3D
+ * loader. Colour sources on S3 can be multi-megabyte photos (one is 20MB);
+ * the model only ever needs ~1080px, which the optimizer serves as WebP at a
+ * fraction of the bytes. Falls through untouched for data:/blob: URLs.
+ */
+const getModelTextureUrl = (url: string): string => {
+  if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
+  return `/_next/image?url=${encodeURIComponent(url)}&w=1080&q=80`;
+};
+
+/* ----------------------
+   Style / Sole variants
+   ---------------------- */
+
+/** One admin-attached style or sole entry (full-shoe combo GLB per entry). */
+interface VariantOption {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  glbUrl?: string | null;
+}
+
+const VariantStrip: React.FC<{
+  label: string;
+  options: VariantOption[];
+  selectedId: string | null;
+  onSelect: (option: VariantOption) => void;
+}> = ({ label, options, selectedId, onSelect }) => {
+  if (!options || options.length === 0) return null;
+
+  return (
+    <div className="mb-3">
+      <label className="text-xs font-medium text-gray-400 whitespace-nowrap">
+        {label}:
+      </label>
+      <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
+        {options.map((opt) => {
+          const isSelected = selectedId === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onSelect(opt)}
+              title={opt.name}
+              className={`flex w-16 flex-shrink-0 cursor-pointer flex-col items-center gap-1 rounded-md p-1 transition-all duration-150 ${
+                isSelected
+                  ? "ring-2 ring-red-500 ring-offset-1"
+                  : "border border-gray-200 hover:scale-105"
+              }`}
+            >
+              {opt.imageUrl ? (
+                <Image
+                  src={getAssetUrl(opt.imageUrl)}
+                  alt={opt.name}
+                  width={96}
+                  height={96}
+                  quality={75}
+                  className="h-12 w-12 rounded object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">
+                  {opt.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span className="w-full truncate text-center text-[10px] text-gray-600">
+                {opt.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 /* ----------------------
@@ -204,6 +281,31 @@ export default function ProductBuilder({
   const materialsData: any[] | null = productData?.selectedMaterials ?? null;
   const [history, setHistory] = useState<Record<string, any>[]>([]);
 
+  // Style / Sole variants attached to the product in the dashboard. Each entry
+  // carries a full-shoe combo GLB, so picking one swaps the whole model.
+  const styleOptions: VariantOption[] = useMemo(
+    () => (Array.isArray(productData?.selectedStyles) ? productData.selectedStyles : []),
+    [productData?.selectedStyles]
+  );
+  const soleOptions: VariantOption[] = useMemo(
+    () => (Array.isArray(productData?.selectedSoles) ? productData.selectedSoles : []),
+    [productData?.selectedSoles]
+  );
+  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
+  const [selectedSoleId, setSelectedSoleId] = useState<string | null>(null);
+  // Both picks are remembered for the order, but each entry is a complete
+  // model — so the most recently clicked strip drives the viewport.
+  const [glbSource, setGlbSource] = useState<"style" | "sole" | null>(null);
+
+  const pickStyle = (opt: VariantOption) => {
+    setSelectedStyleId((prev) => (prev === opt.id ? null : opt.id));
+    setGlbSource("style");
+  };
+  const pickSole = (opt: VariantOption) => {
+    setSelectedSoleId((prev) => (prev === opt.id ? null : opt.id));
+    setGlbSource("sole");
+  };
+
   // UI-only state
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activePanel, setActivePanel] = useState<string | null>(
@@ -257,15 +359,39 @@ export default function ProductBuilder({
   }, [cfg.sizes, selectedSize]);
 
   const avatarData = useMemo(() => {
-    // The product's own GLB is authoritative. Older products stored their model
-    // only against a style or sole, so those are used as a fallback to keep the
-    // viewport populated now that neither is selectable.
-    const fallbackGlb =
-      (productData?.selectedSoles || []).find((so: any) => so?.glbUrl)?.glbUrl ||
-      (productData?.selectedStyles || []).find((st: any) => st?.glbUrl)?.glbUrl;
+    // An explicit style/sole pick wins (last-clicked strip first, since each
+    // entry is a complete combo model). Otherwise the product's own GLB, then
+    // the legacy fallback for old products that stored their model only
+    // against a style or sole.
+    const styleGlb = styleOptions.find((s) => s.id === selectedStyleId)?.glbUrl;
+    const soleGlb = soleOptions.find((s) => s.id === selectedSoleId)?.glbUrl;
+    const variantGlb =
+      glbSource === "sole" ? soleGlb || styleGlb : styleGlb || soleGlb;
 
-    return getAssetUrl(cfg.assets?.glb?.url || fallbackGlb);
-  }, [productData?.selectedSoles, productData?.selectedStyles, cfg.assets?.glb?.url]);
+    const fallbackGlb =
+      soleOptions.find((so) => so?.glbUrl)?.glbUrl ||
+      styleOptions.find((st) => st?.glbUrl)?.glbUrl;
+
+    return getAssetUrl(variantGlb || cfg.assets?.glb?.url || fallbackGlb);
+  }, [styleOptions, soleOptions, selectedStyleId, selectedSoleId, glbSource, cfg.assets?.glb?.url]);
+
+  // Every variant model, resolved — handed to the viewer for cache warming.
+  const variantGlbUrls = useMemo(
+    () =>
+      [...styleOptions, ...soleOptions]
+        .map((v) => (v?.glbUrl ? getAssetUrl(v.glbUrl) : ""))
+        .filter(Boolean),
+    [styleOptions, soleOptions]
+  );
+
+  const selectedStyleObject = useMemo(
+    () => styleOptions.find((s) => s.id === selectedStyleId) || null,
+    [styleOptions, selectedStyleId]
+  );
+  const selectedSoleObject = useMemo(
+    () => soleOptions.find((s) => s.id === selectedSoleId) || null,
+    [soleOptions, selectedSoleId]
+  );
 
   // Helper functions to get filtered materials and colors
   const getAvailableMaterials = () => {
@@ -483,11 +609,16 @@ export default function ProductBuilder({
 
               {avatarData ? (
                 <ShoeAvatar
+                  // Remount on model change: the viewer's texture-diffing refs
+                  // are per-model, so a fresh mount re-applies the chosen
+                  // leathers to the new GLB (mesh/panel names are shared).
+                  key={avatarData}
                   ref={shoeAvatarRef}
                   avatarData={avatarData}
                   objectList={objectList}
                   setObjectList={setObjectList}
                   selectedTextureMap={selectedTextureMap}
+                  preloadUrls={variantGlbUrls}
                 />
               ) : (
                 <div className="flex items-center justify-center h-96 bg-gray-100 rounded-lg">
@@ -558,6 +689,16 @@ export default function ProductBuilder({
                       originalPrice={cfg.compareAtPrice && cfg.compareAtPrice > 0 ? cfg.compareAtPrice : undefined}
                       image={getAssetUrl(cfg.assets?.thumbnail || "/ShoeSoleFixed.glb")}
                       size={selectedSizeObject || selectedSize}
+                      style={
+                        selectedStyleObject
+                          ? { id: selectedStyleObject.id, name: selectedStyleObject.name }
+                          : undefined
+                      }
+                      sole={
+                        selectedSoleObject
+                          ? { id: selectedSoleObject.id, name: selectedSoleObject.name }
+                          : undefined
+                      }
                       variant="Default"
                       buttonVariant="default"
                       buttonSize="default"
@@ -579,6 +720,20 @@ export default function ProductBuilder({
                   <p className="text-xs text-gray-500 mb-3 text-center">
                     Choose a material and color for every part of your shoes
                   </p>
+
+                  {/* Style / Sole variants (hidden while the product has none) */}
+                  <VariantStrip
+                    label="Select a style"
+                    options={styleOptions}
+                    selectedId={selectedStyleId}
+                    onSelect={pickStyle}
+                  />
+                  <VariantStrip
+                    label="Select a sole"
+                    options={soleOptions}
+                    selectedId={selectedSoleId}
+                    onSelect={pickSole}
+                  />
 
                   {/* Panel Selection */}
                   <div className="mb-3">
@@ -766,7 +921,7 @@ export default function ProductBuilder({
                                   setSelectedColor(colorKey);
                                   handleTextureChange(
                                     selectedPanelName,
-                                    localUrl,
+                                    getModelTextureUrl(localUrl),
                                     material.materialName,
                                     color.name
                                   );
@@ -777,10 +932,12 @@ export default function ProductBuilder({
                                     : "border border-gray-200 hover:scale-105"
                                 }`}
                               >
-                                <img
-                                  crossOrigin="anonymous"
+                                <Image
                                   src={getLocalTextureUrl(color.name, color.imageUrl)}
                                   alt={color.name}
+                                  width={64}
+                                  height={64}
+                                  quality={70}
                                   className="object-cover w-8 h-8 block"
                                 />
                               </div>

@@ -9,8 +9,9 @@ export function getAssetUrl(path: string | null | undefined) {
   if (!path) return "";
   if (path.startsWith("http") || path.startsWith("data:")) return path;
 
-  // Keep local directories local to bypass S3 CDN
-  if (path.startsWith("/leather/") || path.startsWith("/img/") || path.startsWith("/models/") || path.startsWith("/placeholder/")) {
+  // Keep local directories local to bypass S3 CDN. /_next/ covers URLs already
+  // routed through the Next image optimizer — never CDN-prefix those.
+  if (path.startsWith("/leather/") || path.startsWith("/img/") || path.startsWith("/models/") || path.startsWith("/placeholder/") || path.startsWith("/_next/")) {
     return path;
   }
 

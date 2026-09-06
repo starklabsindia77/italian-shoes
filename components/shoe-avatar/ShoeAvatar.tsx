@@ -39,6 +39,8 @@ interface AvatarProps {
   setObjectList: React.Dispatch<React.SetStateAction<THREE.Mesh[]>>;
   selectedTextureMap?: Record<string, TextureConfig>;
   setIsTextureLoading?: React.Dispatch<SetStateAction<boolean>>;
+  /** Other style/sole variant GLBs to warm in the loader cache for instant swaps. */
+  preloadUrls?: string[];
 }
 
 interface AvatarSceneProps extends AvatarProps {
@@ -605,7 +607,7 @@ const DomSpinner: React.FC = () => (
    ========================================================================= */
 
 const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
-  ({ avatarData, objectList, setObjectList, selectedTextureMap }, ref) => {
+  ({ avatarData, objectList, setObjectList, selectedTextureMap, preloadUrls }, ref) => {
     // Starts true: the Canvas mounts immediately and Suspense covers the model
     // load. It only flips false during WebGL context-loss recovery below.
     const [isReady, setIsReady] = useState(true);
@@ -646,6 +648,14 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     useEffect(() => {
       if (avatarData) useGLTF.preload(avatarData);
     }, [avatarData]);
+
+    // Warm the other variants once the active model is requested, so switching
+    // style/sole swaps instantly instead of showing an empty viewport.
+    useEffect(() => {
+      preloadUrls?.forEach((url) => {
+        if (url && url !== avatarData) useGLTF.preload(url);
+      });
+    }, [preloadUrls, avatarData]);
 
     const canvasStyle = useMemo(
       () => ({ width: "100%", height: "100%", display: isReady ? "block" : ("none" as const) }),

@@ -3,6 +3,18 @@
 // not ship (--omit=dev) and the sandboxed service cannot install.
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    // Swatch/texture sources live on S3 (and a CloudFront alias may front it
+    // later). The optimizer serves ~2KB WebP thumbs instead of multi-MB
+    // originals; sharp is a direct dependency so prod optimization works.
+    remotePatterns: [
+      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "**.cloudfront.net" },
+    ],
+    formats: ["image/webp"],
+    // Asset keys are uuid-versioned, so optimized copies can cache for a year.
+    minimumCacheTTL: 31536000,
+  },
   async headers() {
     return [
       {

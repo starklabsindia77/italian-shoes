@@ -106,20 +106,24 @@ interface VariantOption {
   glbUrl?: string | null;
 }
 
-const VariantStrip: React.FC<{
-  label: string;
+const VariantGrid: React.FC<{
+  heading: string;
   options: VariantOption[];
   selectedId: string | null;
   onSelect: (option: VariantOption) => void;
-}> = ({ label, options, selectedId, onSelect }) => {
-  if (!options || options.length === 0) return null;
+}> = ({ heading, options, selectedId, onSelect }) => {
+  if (!options || options.length === 0) {
+    return (
+      <p className="py-10 text-center text-xs text-gray-400">
+        No options available yet.
+      </p>
+    );
+  }
 
   return (
-    <div className="mb-3">
-      <label className="text-xs font-medium text-gray-400 whitespace-nowrap">
-        {label}:
-      </label>
-      <div className="mt-1.5 flex gap-2 overflow-x-auto pb-1">
+    <>
+      <p className="mb-3 text-center text-xs text-gray-500">{heading}</p>
+      <div className="grid max-h-72 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
         {options.map((opt) => {
           const isSelected = selectedId === opt.id;
           return (
@@ -128,34 +132,32 @@ const VariantStrip: React.FC<{
               type="button"
               onClick={() => onSelect(opt)}
               title={opt.name}
-              className={`flex w-16 flex-shrink-0 cursor-pointer flex-col items-center gap-1 rounded-md p-1 transition-all duration-150 ${
+              aria-pressed={isSelected}
+              className={`flex aspect-square cursor-pointer items-center justify-center overflow-hidden rounded-md border p-1 transition-all duration-150 ${
                 isSelected
-                  ? "ring-2 ring-red-500 ring-offset-1"
-                  : "border border-gray-200 hover:scale-105"
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-gray-200 hover:border-gray-300"
               }`}
             >
               {opt.imageUrl ? (
                 <Image
                   src={getAssetUrl(opt.imageUrl)}
                   alt={opt.name}
-                  width={96}
-                  height={96}
+                  width={160}
+                  height={160}
                   quality={75}
-                  className="h-12 w-12 rounded object-cover"
+                  className="h-full w-full object-contain"
                 />
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded bg-gray-100 text-[9px] text-gray-400">
-                  {opt.name.slice(0, 2).toUpperCase()}
-                </div>
+                <span className="px-1 text-center text-[10px] leading-tight text-gray-500">
+                  {opt.name}
+                </span>
               )}
-              <span className="w-full truncate text-center text-[10px] text-gray-600">
-                {opt.name}
-              </span>
             </button>
           );
         })}
       </div>
-    </div>
+    </>
   );
 };
 
@@ -324,9 +326,11 @@ export default function ProductBuilder({
   const [activePanel, setActivePanel] = useState<string | null>(
     () => panelsData?.items?.[0]?.panelId ?? null
   );
-  // Style and Sole selection were removed from the configurator; the model now
-  // comes from the product's own GLB.
-  const [activeTab] = useState<"Materials" | "Colors" | "Inscription">("Materials");
+  // Materials / Style / Soles share one segmented control, the way the storefront
+  // reference does it. "Inscription" has no tab yet — its panel is kept below.
+  const [activeTab, setActiveTab] = useState<
+    "Materials" | "Style" | "Soles" | "Inscription"
+  >("Materials");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [inscription, setInscription] = useState({ toe: "", tongue: "" });
   const [selectedSize, setSelectedSize] = useState<string | null>(
@@ -406,6 +410,17 @@ export default function ProductBuilder({
         .map((v) => (v?.glbUrl ? getAssetUrl(v.glbUrl) : ""))
         .filter(Boolean),
     [attachedStyles, soleOptions]
+  );
+
+  // Only the tabs the product can actually fill. With nothing to switch to,
+  // the bar is dropped entirely rather than shown as a single full-width pill.
+  const builderTabs = useMemo<("Materials" | "Style" | "Soles")[]>(
+    () => [
+      "Materials",
+      ...(styleOptions.length > 0 ? (["Style"] as const) : []),
+      ...(soleOptions.length > 0 ? (["Soles"] as const) : []),
+    ],
+    [styleOptions.length, soleOptions.length]
   );
 
   const selectedStyleObject = useMemo(
@@ -737,6 +752,28 @@ export default function ProductBuilder({
 
             {/* Customization */}
             <div>
+              {/* Materials / Style / Soles switcher. A tab only appears when
+                  the product actually has options behind it. */}
+              {builderTabs.length > 1 && (
+                <div className="mb-4 flex rounded-full bg-gray-100 p-1">
+                  {builderTabs.map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      aria-pressed={activeTab === tab}
+                      className={`flex-1 cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                        activeTab === tab
+                          ? "bg-red-500 text-white shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Materials */}
               {activeTab === "Materials" && (
                 <>
@@ -744,20 +781,6 @@ export default function ProductBuilder({
                   <p className="text-xs text-gray-500 mb-3 text-center">
                     Choose a material and color for every part of your shoes
                   </p>
-
-                  {/* Style / Sole variants (hidden while the product has none) */}
-                  <VariantStrip
-                    label="Select a style"
-                    options={styleOptions}
-                    selectedId={selectedStyleId}
-                    onSelect={pickStyle}
-                  />
-                  <VariantStrip
-                    label="Select a sole"
-                    options={soleOptions}
-                    selectedId={selectedSoleId}
-                    onSelect={pickSole}
-                  />
 
                   {/* Panel Selection */}
                   <div className="mb-3">
@@ -972,6 +995,26 @@ export default function ProductBuilder({
                     ))}
                   </div>
                 </>
+              )}
+
+              {/* Style */}
+              {activeTab === "Style" && (
+                <VariantGrid
+                  heading="Choose your favorite style"
+                  options={styleOptions}
+                  selectedId={selectedStyleId}
+                  onSelect={pickStyle}
+                />
+              )}
+
+              {/* Soles */}
+              {activeTab === "Soles" && (
+                <VariantGrid
+                  heading="Choose your favorite sole"
+                  options={soleOptions}
+                  selectedId={selectedSoleId}
+                  onSelect={pickSole}
+                />
               )}
 
               {/* Inscription */}

@@ -5,6 +5,7 @@ import {
   getCachedProduct,
   getCachedSizes,
   getCachedPanels,
+  getCachedActiveStyles,
 } from "@/lib/product-page-data";
 import { getAssetUrl } from "@/lib/utils";
 import ProductBuilder from "./product-builder";
@@ -21,10 +22,11 @@ export default async function ProductPage({
 }) {
   const { id } = await params;
 
-  const [product, sizes, panels] = await Promise.all([
+  const [product, sizes, panels, styles] = await Promise.all([
     getCachedProduct(id),
     getCachedSizes(),
     getCachedPanels(),
+    getCachedActiveStyles(),
   ]);
 
   if (!product) notFound();
@@ -54,6 +56,7 @@ export default async function ProductPage({
       productData={product}
       sizesData={sizes}
       panelsData={panels}
+      stylesData={styles}
     />
   );
 }

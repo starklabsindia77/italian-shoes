@@ -52,3 +52,23 @@ export const getCachedPanels = () =>
     ["panels-product-page"],
     { revalidate: 3600, tags: ["panels"] }
   )();
+
+/**
+ * Active styles from the catalogue, used by the product page when the product
+ * itself has no styles attached in the dashboard — otherwise the "Select a
+ * style" strip would have nothing to show. Only the fields the strip and the
+ * model swap need; sorted the same way /api/styles/active sorts.
+ */
+export const getCachedActiveStyles = () =>
+  unstable_cache(
+    async () => {
+      const items = await prisma.style.findMany({
+        where: { isActive: true },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, imageUrl: true, glbUrl: true },
+      });
+      return { items };
+    },
+    ["styles-product-page"],
+    { revalidate: 3600, tags: ["styles"] }
+  )();

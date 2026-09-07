@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAdmin } from "@/lib/api-helpers";
 import { StyleCreateSchema } from "@/lib/validators";
+import { revalidateTag } from "next/cache";
 
 export async function GET(req: Request) {
   try {
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
     const created = await prisma.style.create({
       data: { ...parsed.data, styleId: parsed.data.styleId ?? randomUUID() },
     });
+    // The public product page caches the active style list under this tag.
+    revalidateTag("styles");
     return ok(created, 201);
   } catch (e) { return server(e); }
 }

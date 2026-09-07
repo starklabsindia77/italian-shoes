@@ -269,6 +269,8 @@ interface ProductBuilderProps {
   productData: any;
   sizesData: { items?: any[] } | null;
   panelsData: { items?: any[] } | null;
+  /** Active style catalogue — shown when the product has none attached. */
+  stylesData?: { items?: any[] } | null;
 }
 
 export default function ProductBuilder({
@@ -276,6 +278,7 @@ export default function ProductBuilder({
   productData,
   sizesData,
   panelsData,
+  stylesData,
 }: ProductBuilderProps) {
   // Data arrives server-rendered; the only fetch-era state left is history.
   const materialsData: any[] | null = productData?.selectedMaterials ?? null;
@@ -283,9 +286,19 @@ export default function ProductBuilder({
 
   // Style / Sole variants attached to the product in the dashboard. Each entry
   // carries a full-shoe combo GLB, so picking one swaps the whole model.
-  const styleOptions: VariantOption[] = useMemo(
+  const attachedStyles: VariantOption[] = useMemo(
     () => (Array.isArray(productData?.selectedStyles) ? productData.selectedStyles : []),
     [productData?.selectedStyles]
+  );
+  // Products with no styles attached fall back to the active style catalogue,
+  // so the shopper can still pick a style instead of seeing no strip at all.
+  const catalogueStyles: VariantOption[] = useMemo(
+    () => (Array.isArray(stylesData?.items) ? stylesData.items : []),
+    [stylesData?.items]
+  );
+  const styleOptions: VariantOption[] = useMemo(
+    () => (attachedStyles.length > 0 ? attachedStyles : catalogueStyles),
+    [attachedStyles, catalogueStyles]
   );
   const soleOptions: VariantOption[] = useMemo(
     () => (Array.isArray(productData?.selectedSoles) ? productData.selectedSoles : []),
@@ -370,18 +383,29 @@ export default function ProductBuilder({
 
     const fallbackGlb =
       soleOptions.find((so) => so?.glbUrl)?.glbUrl ||
-      styleOptions.find((st) => st?.glbUrl)?.glbUrl;
+      attachedStyles.find((st) => st?.glbUrl)?.glbUrl;
 
     return getAssetUrl(variantGlb || cfg.assets?.glb?.url || fallbackGlb);
-  }, [styleOptions, soleOptions, selectedStyleId, selectedSoleId, glbSource, cfg.assets?.glb?.url]);
+  }, [
+    styleOptions,
+    attachedStyles,
+    soleOptions,
+    selectedStyleId,
+    selectedSoleId,
+    glbSource,
+    cfg.assets?.glb?.url,
+  ]);
 
-  // Every variant model, resolved — handed to the viewer for cache warming.
+  // Every variant model attached to this product, resolved — handed to the
+  // viewer for cache warming. Deliberately excludes the catalogue fallback:
+  // warming a whole catalogue of GLBs on load would cost far more than the
+  // one-off load when a shopper actually picks one.
   const variantGlbUrls = useMemo(
     () =>
-      [...styleOptions, ...soleOptions]
+      [...attachedStyles, ...soleOptions]
         .map((v) => (v?.glbUrl ? getAssetUrl(v.glbUrl) : ""))
         .filter(Boolean),
-    [styleOptions, soleOptions]
+    [attachedStyles, soleOptions]
   );
 
   const selectedStyleObject = useMemo(

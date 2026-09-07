@@ -108,7 +108,9 @@ export async function POST(req: NextRequest) {
         buffer = await sharp(buffer)
           .rotate()
           .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 82 })
+          // q90: these are the files the 3D viewer loads directly — grain
+          // detail matters more than the last few hundred KB.
+          .webp({ quality: 90 })
           .toBuffer();
         uploadName = uploadName.replace(/\.(png|jpe?g)$/i, ".webp");
         contentType = "image/webp";

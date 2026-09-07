@@ -25,7 +25,8 @@ import { getS3Client } from "../lib/s3";
 
 const PREFIX = "colors/";
 const MAX_DIMENSION = 2048;
-const QUALITY = 82;
+// q90: the 3D viewer loads these files directly — grain detail matters.
+const QUALITY = 90;
 /** Objects already smaller than this are left untouched. */
 const SKIP_BELOW_BYTES = 400 * 1024;
 

@@ -83,17 +83,6 @@ const getLocalTextureUrl = (colorName: string, s3Url: string | null | undefined)
   return getAssetUrl(s3Url);
 };
 
-/**
- * Route a texture through the Next image optimizer before it reaches the 3D
- * loader. Colour sources on S3 can be multi-megabyte photos (one is 20MB);
- * the model only ever needs ~1080px, which the optimizer serves as WebP at a
- * fraction of the bytes. Falls through untouched for data:/blob: URLs.
- */
-const getModelTextureUrl = (url: string): string => {
-  if (!url || url.startsWith("data:") || url.startsWith("blob:")) return url;
-  return `/_next/image?url=${encodeURIComponent(url)}&w=1080&q=80`;
-};
-
 /* ----------------------
    Style / Sole variants
    ---------------------- */
@@ -966,9 +955,14 @@ export default function ProductBuilder({
                                     colorName: color.name
                                   });
                                   setSelectedColor(colorKey);
+                                  // The 3D loader gets the S3 file directly:
+                                  // colour sources are pre-shrunk on upload
+                                  // (~0.5-1MB WebP), and a second pass through
+                                  // the image optimizer visibly softened the
+                                  // leather grain (double compression).
                                   handleTextureChange(
                                     selectedPanelName,
-                                    getModelTextureUrl(localUrl),
+                                    localUrl,
                                     material.materialName,
                                     color.name
                                   );

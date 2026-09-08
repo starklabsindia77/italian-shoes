@@ -288,8 +288,8 @@ export default function ProductBuilder({
     [stylesData?.items]
   );
   const styleOptions: VariantOption[] = useMemo(
-    () => (attachedStyles.length > 0 ? attachedStyles : catalogueStyles),
-    [attachedStyles, catalogueStyles]
+    () => (attachedStyles.length > 0 ? attachedStyles : []),
+    [attachedStyles]
   );
   const soleOptions: VariantOption[] = useMemo(
     () => (Array.isArray(productData?.selectedSoles) ? productData.selectedSoles : []),

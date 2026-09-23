@@ -173,27 +173,48 @@ export async function POST(req: Request) {
       return bad("Order total does not match the authorised payment.", 409);
     }
 
-    const designsByProduct = new Map(d.items.map((i) => [i.productId, i]));
+    // Size/style/sole ids come from the browser's cart, which can hold ids that
+    // no longer exist (deleted options, cached product pages, fallback sizes).
+    // They are foreign keys, so keep only the ones that resolve — the payment
+    // has already been taken and must not fail on a stale reference.
+    const idsOf = (key: "sizeId" | "styleId" | "soleId") =>
+      [...new Set(d.items.map((i) => i[key]).filter((v): v is string => !!v))];
+    const [sizes, styles, soles] = await Promise.all([
+      prisma.size.findMany({ where: { id: { in: idsOf("sizeId") } }, select: { id: true } }),
+      prisma.style.findMany({ where: { id: { in: idsOf("styleId") } }, select: { id: true } }),
+      prisma.sole.findMany({ where: { id: { in: idsOf("soleId") } }, select: { id: true } }),
+    ]);
+    const known = {
+      sizeId: new Set(sizes.map((x) => x.id)),
+      styleId: new Set(styles.map((x) => x.id)),
+      soleId: new Set(soles.map((x) => x.id)),
+    };
+    const ref = (key: keyof typeof known, v: string | null | undefined) =>
+      v && known[key].has(v) ? v : null;
+
+    // One order line per cart line, so the same shoe in two sizes or designs
+    // keeps both. Prices come from the quote, never from the request.
+    const quotedByProduct = new Map(quote.items.map((q) => [q.productId, q]));
     const itemsToCreate = await Promise.all(
-      quote.items.map(async (q) => {
-        const source = designsByProduct.get(q.productId);
+      d.items.map(async (source) => {
+        const q = quotedByProduct.get(source.productId)!;
         return {
           productId: q.productId,
           productTitle: q.productTitle,
-          sku: source?.sku ?? null,
-          quantity: q.quantity,
+          sku: source.sku ?? null,
+          quantity: source.quantity,
           price: q.price,
-          totalPrice: q.totalPrice,
-          productVariantId: source?.productVariantId ?? null,
-          styleId: source?.styleId ?? null,
-          soleId: source?.soleId ?? null,
-          sizeId: source?.sizeId ?? null,
-          panelCustomization: (source?.panelCustomization ?? {}) as Prisma.InputJsonValue,
-          designGlbUrl: source?.designGlbUrl ?? null,
-          designThumbnail: source?.designThumbnail
+          totalPrice: q.price * source.quantity,
+          productVariantId: source.productVariantId ?? null,
+          styleId: ref("styleId", source.styleId),
+          soleId: ref("soleId", source.soleId),
+          sizeId: ref("sizeId", source.sizeId),
+          panelCustomization: (source.panelCustomization ?? {}) as Prisma.InputJsonValue,
+          designGlbUrl: source.designGlbUrl ?? null,
+          designThumbnail: source.designThumbnail
             ? await uploadBase64ToS3(source.designThumbnail)
             : null,
-          designConfig: (source?.designConfig ?? undefined) as Prisma.InputJsonValue | undefined,
+          designConfig: (source.designConfig ?? undefined) as Prisma.InputJsonValue | undefined,
         };
       })
     );

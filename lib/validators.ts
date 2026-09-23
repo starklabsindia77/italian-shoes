@@ -162,12 +162,14 @@ export const GenerateVariantsSchema = z.object({
 // Monetary fields are deliberately absent: subtotal, tax, shipping, discount and
 // total are recomputed server-side by lib/pricing.ts, and the currency is always
 // the store's base currency. The client supplies only *what* was bought, the
-// customer details, and the Razorpay payment result to verify.
+// customer details, and the Razorpay or Cashfree payment result to verify.
 export const OrderCreateSchema = z.object({
   orderNumber: z.string().min(1),
-  razorpayOrderId: z.string().min(1),
-  razorpayPaymentId: z.string().min(1),
-  razorpaySignature: z.string().min(1),
+  paymentGateway: z.enum(["razorpay", "cashfree"]).default("razorpay"),
+  razorpayOrderId: z.string().min(1).optional(),
+  razorpayPaymentId: z.string().min(1).optional(),
+  razorpaySignature: z.string().min(1).optional(),
+  cashfreeOrderId: z.string().min(1).optional(),
   customerEmail: z.string().email(),
   customerFirstName: z.string().optional(),
   customerLastName: z.string().optional(),
@@ -189,6 +191,14 @@ export const OrderCreateSchema = z.object({
     designThumbnail: z.string().nullable().optional(),
     designConfig: z.any().nullable().optional()
   })).min(1)
+}).superRefine((d, ctx) => {
+  const missing =
+    d.paymentGateway === "cashfree"
+      ? !d.cashfreeOrderId
+      : !d.razorpayOrderId || !d.razorpayPaymentId || !d.razorpaySignature;
+  if (missing) {
+    ctx.addIssue({ code: "custom", message: `Missing ${d.paymentGateway} payment details` });
+  }
 });
 export const OrderUpdateStatusSchema = z.object({
   status: z.string().optional(),

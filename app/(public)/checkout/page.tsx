@@ -16,6 +16,36 @@ import Link from "next/link";
 import Script from "next/script";
 import { toast } from "sonner";
 
+type PaymentFields =
+  | { paymentGateway: "razorpay"; razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }
+  | { paymentGateway: "cashfree"; cashfreeOrderId: string };
+
+/**
+ * Stashed before opening Cashfree so that, if a payment method escapes the
+ * modal and redirects the whole page, the order can still be saved when
+ * Cashfree sends the shopper back to /checkout?cf_order_id=…
+ */
+const CF_PENDING_KEY = "cf_pending_checkout";
+
+/** Hands the payment result to the server, which verifies it with the gateway before recording the order. */
+async function saveOrder(orderPayload: Record<string, unknown>, payment: PaymentFields) {
+  const saveResponse = await fetch("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...orderPayload, ...payment }),
+  });
+
+  if (!saveResponse.ok) {
+    const body = await saveResponse.json().catch(() => null);
+    const ref = payment.paymentGateway === "cashfree" ? payment.cashfreeOrderId : payment.razorpayPaymentId;
+    throw new Error(
+      body?.error ||
+        "Your payment went through but the order could not be saved. Please contact support with your payment reference: " +
+          ref
+    );
+  }
+}
+
 const Checkout = () => {
   const [settings, setSettings] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,6 +72,35 @@ const Checkout = () => {
         }
       })
       .catch((err) => console.error("Failed to load settings", err));
+  }, []);
+
+  // Resume a Cashfree payment that finished via full-page redirect.
+  useEffect(() => {
+    const cfOrderId = new URLSearchParams(window.location.search).get("cf_order_id");
+    if (!cfOrderId) return;
+    let pending: { cashfreeOrderId: string; orderPayload: Record<string, unknown> } | null = null;
+    try {
+      pending = JSON.parse(sessionStorage.getItem(CF_PENDING_KEY) || "null");
+    } catch {
+      // storage unavailable — fall through to the support message
+    }
+    if (!pending || pending.cashfreeOrderId !== cfOrderId) {
+      toast.error(`We couldn't resume your checkout. If you were charged, contact support with reference ${cfOrderId}.`);
+      return;
+    }
+    setIsProcessing(true);
+    saveOrder(pending.orderPayload, { paymentGateway: "cashfree", cashfreeOrderId: cfOrderId })
+      .then(() => {
+        try { sessionStorage.removeItem(CF_PENDING_KEY); } catch { /* ignore */ }
+        clearCart();
+        window.location.href = "/orders/success";
+      })
+      .catch((err: any) => {
+        toast.error(err.message || "Failed to save order.");
+        setIsProcessing(false);
+      });
+    // Runs once on landing; clearCart is a stable store action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const subtotal = getTotalPrice();
@@ -105,30 +164,105 @@ const Checkout = () => {
       return;
     }
 
+    const gateway: "razorpay" | "cashfree" = settings?.integrations?.paymentGateway === "cashfree" ? "cashfree" : "razorpay";
+    if (gateway === "cashfree" && !shippingData.phone) {
+      toast.error("Please enter your mobile number.");
+      return;
+    }
+
     setIsProcessing(true);
 
+    const cartItems = items.map((it) => ({ productId: it.productId, quantity: it.quantity }));
+    const customerName = [shippingData.firstName, shippingData.lastName].filter(Boolean).join(" ");
+    const orderPayload = {
+      orderNumber: "ORD-" + Date.now().toString().slice(-6),
+      customerEmail: contactData.email,
+      customerFirstName: shippingData.firstName,
+      customerLastName: shippingData.lastName,
+      customerPhone: shippingData.phone,
+      isGuest: true,
+      shippingAddress: shippingData,
+      billingAddress: shippingData, // Same as shipping for now
+      shippingMethodId: selectedShipping.id ?? null,
+      items: items.map(it => ({
+        productId: it.productId,
+        quantity: it.quantity,
+        designThumbnail: it.image || null,
+        designConfig: it.config || null,
+        styleId: it.style?.id || null,
+        soleId: it.sole?.id || null,
+        sizeId: typeof it.size === "string" ? it.size : (it.size as { id?: string } | undefined)?.id || null,
+        panelCustomization: it.config || {},
+      }))
+    };
+
+    const readError = async (response: Response, fallback: string) => {
+      const errorData = await response.json().catch(() => null);
+      return errorData?.error || fallback;
+    };
+
+    const finish = () => {
+      toast.success("Order placed successfully!");
+      clearCart();
+      window.location.href = "/orders/success";
+    };
+
     try {
+      if (gateway === "cashfree") {
+        // 1. Server prices the cart and opens a Cashfree order.
+        const response = await fetch("/api/cashfree/order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: cartItems,
+            shippingMethodId: selectedShipping.id ?? null,
+            customer: { email: contactData.email, phone: shippingData.phone, name: customerName },
+          }),
+        });
+        if (!response.ok) throw new Error(await readError(response, "Failed to create payment order"));
+        const cfOrder = await response.json();
+
+        try {
+          sessionStorage.setItem(
+            CF_PENDING_KEY,
+            JSON.stringify({ cashfreeOrderId: cfOrder.cashfreeOrderId, orderPayload })
+          );
+        } catch {
+          // Quota or privacy mode: the modal path below still works without it.
+        }
+
+        // 2. Open the Cashfree modal. The SDK script is only fetched on demand.
+        const { load } = await import("@cashfreepayments/cashfree-js");
+        const cashfree = await load({ mode: cfOrder.environment });
+        const result = await cashfree.checkout({
+          paymentSessionId: cfOrder.paymentSessionId,
+          redirectTarget: "_modal",
+        });
+
+        if (result.error) {
+          toast.error("Payment failed: " + (result.error.message || "please try again."));
+          return;
+        }
+        if (result.redirect) return; // Page is navigating away; the resume effect takes over.
+
+        // 3. Server confirms with Cashfree that the order is PAID before saving.
+        await saveOrder(orderPayload, { paymentGateway: "cashfree", cashfreeOrderId: cfOrder.cashfreeOrderId });
+        try { sessionStorage.removeItem(CF_PENDING_KEY); } catch { /* ignore */ }
+        finish();
+        return;
+      }
+
       // 1. Ask the server to price the cart and open a Razorpay order. Amounts
       //    are derived server-side from database prices — never sent from here.
       const response = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
+          items: cartItems,
           shippingMethodId: selectedShipping.id ?? null,
         }),
       });
-
-      if (!response.ok) {
-        let errorMessage = "Failed to create payment order";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // Fallback if response is not JSON — keep the default errorMessage
-        }
-        throw new Error(errorMessage);
-      }
+      if (!response.ok) throw new Error(await readError(response, "Failed to create payment order"));
 
       const orderData = await response.json();
 
@@ -144,55 +278,19 @@ const Checkout = () => {
           try {
             // 3. Hand the signed payment result to the server, which verifies it
             //    against the Razorpay secret before recording the order.
-            const orderPayload = {
-              orderNumber: "ORD-" + Date.now().toString().slice(-6),
+            await saveOrder(orderPayload, {
+              paymentGateway: "razorpay",
               razorpayOrderId: paymentResponse.razorpay_order_id,
               razorpayPaymentId: paymentResponse.razorpay_payment_id,
               razorpaySignature: paymentResponse.razorpay_signature,
-              customerEmail: contactData.email,
-              customerFirstName: shippingData.firstName,
-              customerLastName: shippingData.lastName,
-              customerPhone: shippingData.phone,
-              isGuest: true,
-              shippingAddress: shippingData,
-              billingAddress: shippingData, // Same as shipping for now
-              shippingMethodId: selectedShipping.id ?? null,
-              items: items.map(it => ({
-                productId: it.productId,
-                quantity: it.quantity,
-                designThumbnail: it.image || null,
-                designConfig: it.config || null,
-                styleId: it.style?.id || null,
-                soleId: it.sole?.id || null,
-                sizeId: typeof it.size === "string" ? it.size : (it.size as { id?: string } | undefined)?.id || null,
-                panelCustomization: it.config || {},
-              }))
-            };
-
-            const saveResponse = await fetch("/api/orders", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(orderPayload),
             });
-
-            if (!saveResponse.ok) {
-              const body = await saveResponse.json().catch(() => null);
-              throw new Error(
-                body?.error ||
-                  "Your payment went through but the order could not be saved. Please contact support with your payment id: " +
-                    paymentResponse.razorpay_payment_id
-              );
-            }
-
-            toast.success("Order placed successfully!");
-            clearCart();
-            window.location.href = "/orders/success";
+            finish();
           } catch (err: any) {
             toast.error(err.message || "Failed to save order.");
           }
         },
         prefill: {
-          name: [shippingData.firstName, shippingData.lastName].filter(Boolean).join(" "),
+          name: customerName,
           email: contactData.email,
           contact: shippingData.phone,
         },
@@ -216,11 +314,13 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Script
-        id="razorpay-checkout"
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="afterInteractive"
-      />
+      {settings && settings.integrations?.paymentGateway !== "cashfree" && (
+        <Script
+          id="razorpay-checkout"
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="afterInteractive"
+        />
+      )}
       <div className="container mx-auto px-4 py-8">
         {/* ... existing code ... */}
         <div className="text-center mb-8">

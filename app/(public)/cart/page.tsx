@@ -68,7 +68,7 @@ const Cart = () => {
   }
 
   // Shipping calculation (can also be made dynamic later if needed, but keeping existing logic for now)
-  const shipping = subtotal > 10000 ? 0 : 499; // Using a more realistic RS value or keeping it simple
+  const shipping = subtotal > 10000 ? 0 : 0; // Using a more realistic RS value or keeping it simple
   total += shipping;
 
   const handleCheckout = () => {

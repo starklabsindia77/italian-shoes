@@ -46,6 +46,10 @@ type Settings = {
     razorpayKeyId?: string | null;
     razorpayKeySecret?: string | null;
     razorpayMagicCheckoutEnabled: boolean;
+    paymentGateway?: "razorpay" | "cashfree";
+    cashfreeAppId?: string | null;
+    cashfreeSecretKey?: string | null;
+    cashfreeEnvironment?: "sandbox" | "production";
   };
   shipping: {
     methods: {
@@ -96,6 +100,9 @@ const FALLBACK: Settings = {
     shiprocketFasterCheckoutEnabled: false,
     razorpayKeyId: "",
     razorpayMagicCheckoutEnabled: false,
+    paymentGateway: "razorpay",
+    cashfreeAppId: "",
+    cashfreeEnvironment: "sandbox",
   },
   shipping: {
     methods: [
@@ -527,6 +534,75 @@ export default function SettingsPage() {
               </div>
               <div className="md:col-span-2">
                 <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Razorpay Settings</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle>Cashfree Payment Gateway</CardTitle>
+              <CardDescription>
+                Cashfree PG credentials. Point the Cashfree payment webhook at <code>/api/cashfree/webhook</code>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <Field label="Cashfree App ID">
+                <Input
+                  placeholder="App ID (x-client-id)"
+                  value={data.integrations.cashfreeAppId ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, cashfreeAppId: e.target.value } }))}
+                />
+              </Field>
+              <Field label="Cashfree Secret Key">
+                <Input
+                  type="password"
+                  placeholder="Secret key (leave blank to keep current)"
+                  value={data.integrations.cashfreeSecretKey ?? ""}
+                  onChange={(e) => setData((d) => ({ ...d, integrations: { ...d.integrations, cashfreeSecretKey: e.target.value } }))}
+                />
+              </Field>
+              <Field label="Environment">
+                <Select
+                  value={data.integrations.cashfreeEnvironment ?? "sandbox"}
+                  onValueChange={(v: "sandbox" | "production") =>
+                    setData((d) => ({ ...d, integrations: { ...d.integrations, cashfreeEnvironment: v } }))
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sandbox">Sandbox (test)</SelectItem>
+                    <SelectItem value="production">Production (live)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="md:col-span-2">
+                <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Cashfree Settings</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle>Checkout Payment Gateway</CardTitle>
+              <CardDescription>Which gateway charges customers at checkout. Configure its keys above first.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6 md:grid-cols-2">
+              <Field label="Active Gateway">
+                <Select
+                  value={data.integrations.paymentGateway ?? "razorpay"}
+                  onValueChange={(v: "razorpay" | "cashfree") =>
+                    setData((d) => ({ ...d, integrations: { ...d.integrations, paymentGateway: v } }))
+                  }
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="razorpay">Razorpay</SelectItem>
+                    <SelectItem value="cashfree">Cashfree</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <div className="md:col-span-2">
+                <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Gateway</Button>
               </div>
             </CardContent>
           </Card>

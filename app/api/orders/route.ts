@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAuth } from "@/lib/api-helpers";
 import { OrderCreateSchema } from "@/lib/validators";
@@ -7,7 +8,8 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { EmailService } from "@/lib/email-service";
 import { getRazorpayCredentials, verifyPaymentSignature } from "@/lib/razorpay";
-import { quoteCart, toMinorUnits, PricingError } from "@/lib/pricing";
+import { getCashfreeCredentials, fetchCashfreeOrder, CashfreeError } from "@/lib/cashfree";
+import { quoteCart, toMinorUnits, PricingError, BASE_CURRENCY } from "@/lib/pricing";
 
 async function uploadBase64ToS3(base64Data: string, folder: string = "designs") {
   if (!base64Data || !base64Data.startsWith("data:image")) return base64Data;
@@ -80,11 +82,65 @@ export async function GET(req: Request) {
   } catch (e) { return server(e); }
 }
 
+type VerifiedPayment = { gatewayOrderId: string; chargedMinor: number };
+type OrderInput = z.infer<typeof OrderCreateSchema>;
+
 /**
- * Records an order after a Razorpay payment.
+ * Razorpay: the checkout callback is HMAC-signed with the API secret, so verify
+ * the signature, then read the authorised amount back from Razorpay.
+ */
+async function verifyRazorpay(d: OrderInput): Promise<VerifiedPayment | Response> {
+  const credentials = await getRazorpayCredentials();
+  if (!credentials) return bad("Razorpay is not configured; cannot verify payment.", 503);
+
+  // Presence is guaranteed by OrderCreateSchema's refinement.
+  const razorpayOrderId = d.razorpayOrderId!;
+  const signatureValid = verifyPaymentSignature({
+    razorpayOrderId,
+    razorpayPaymentId: d.razorpayPaymentId!,
+    signature: d.razorpaySignature!,
+    keySecret: credentials.keySecret,
+  });
+  if (!signatureValid) {
+    console.warn("orders/rejected-signature", { razorpayOrderId });
+    return bad("Payment could not be verified.", 400);
+  }
+
+  const RazorpayCtor = (await import("razorpay")).default;
+  const razorpay = new RazorpayCtor({ key_id: credentials.keyId, key_secret: credentials.keySecret });
+  const remoteOrder = await razorpay.orders.fetch(razorpayOrderId);
+  return { gatewayOrderId: razorpayOrderId, chargedMinor: Number(remoteOrder.amount) };
+}
+
+/**
+ * Cashfree: the browser-side result is not signed, so ask Cashfree directly —
+ * with our secret — whether the order is PAID and for how much.
+ */
+async function verifyCashfree(d: OrderInput): Promise<VerifiedPayment | Response> {
+  const credentials = await getCashfreeCredentials();
+  if (!credentials) return bad("Cashfree is not configured; cannot verify payment.", 503);
+
+  const cashfreeOrderId = d.cashfreeOrderId!;
+  const remoteOrder = await fetchCashfreeOrder(credentials, cashfreeOrderId);
+  if (remoteOrder.order_status !== "PAID" || remoteOrder.order_currency !== BASE_CURRENCY) {
+    console.warn("orders/cashfree-unpaid", {
+      cashfreeOrderId,
+      status: remoteOrder.order_status,
+      currency: remoteOrder.order_currency,
+    });
+    return bad("Payment has not been completed.", 402);
+  }
+  return {
+    gatewayOrderId: remoteOrder.order_id,
+    chargedMinor: toMinorUnits(Number(remoteOrder.order_amount)),
+  };
+}
+
+/**
+ * Records an order after a Razorpay or Cashfree payment.
  *
  * Two things are deliberately NOT taken from the request body:
- *   1. the payment outcome — the Razorpay signature is verified with the API
+ *   1. the payment outcome — it is verified against the gateway using the API
  *      secret, so a forged callback cannot mark an order paid; and
  *   2. the money — every amount is recomputed from database prices and stored
  *      settings, so a tampered cart cannot change what was charged.
@@ -96,41 +152,22 @@ export async function POST(req: Request) {
     if (!parsed.success) return bad(parsed.error.message);
     const d = parsed.data;
 
-    const credentials = await getRazorpayCredentials();
-    if (!credentials) {
-      return bad("Razorpay is not configured; cannot verify payment.", 503);
-    }
-
-    const signatureValid = verifyPaymentSignature({
-      razorpayOrderId: d.razorpayOrderId,
-      razorpayPaymentId: d.razorpayPaymentId,
-      signature: d.razorpaySignature,
-      keySecret: credentials.keySecret,
-    });
-    if (!signatureValid) {
-      console.warn("orders/rejected-signature", { razorpayOrderId: d.razorpayOrderId });
-      return bad("Payment could not be verified.", 400);
-    }
+    const payment = d.paymentGateway === "cashfree" ? await verifyCashfree(d) : await verifyRazorpay(d);
+    if (payment instanceof Response) return payment;
 
     // Re-price from the database, then confirm the amount actually authorised by
-    // Razorpay matches it. This catches both cart tampering and a stale quote.
+    // the gateway matches it. This catches both cart tampering and a stale quote.
     const quote = await quoteCart({
       items: d.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       shippingMethodId: d.shippingMethodId ?? null,
     });
 
-    const RazorpayCtor = (await import("razorpay")).default;
-    const razorpay = new RazorpayCtor({
-      key_id: credentials.keyId,
-      key_secret: credentials.keySecret,
-    });
-
-    const remoteOrder = await razorpay.orders.fetch(d.razorpayOrderId);
     const expectedMinor = toMinorUnits(quote.total);
-    if (Number(remoteOrder.amount) !== expectedMinor) {
+    if (payment.chargedMinor !== expectedMinor) {
       console.warn("orders/amount-mismatch", {
-        razorpayOrderId: d.razorpayOrderId,
-        charged: remoteOrder.amount,
+        gateway: d.paymentGateway,
+        gatewayOrderId: payment.gatewayOrderId,
+        charged: payment.chargedMinor,
         expected: expectedMinor,
       });
       return bad("Order total does not match the authorised payment.", 409);
@@ -181,9 +218,9 @@ export async function POST(req: Request) {
     try {
       created = await prisma.order.create({
         data: {
-          // The Razorpay order id is unique, which makes a replayed callback a
+          // The gateway order id is unique, which makes a replayed callback a
           // unique-constraint violation rather than a duplicate order.
-          orderId: d.razorpayOrderId,
+          orderId: payment.gatewayOrderId,
           orderNumber: d.orderNumber,
           customerId: customer.id,
           customerEmail: d.customerEmail,
@@ -232,6 +269,7 @@ export async function POST(req: Request) {
     return ok(created, 201);
   } catch (e) {
     if (e instanceof PricingError) return bad(e.message, e.status);
+    if (e instanceof CashfreeError) return bad(e.message, e.status);
     return server(e);
   }
 }

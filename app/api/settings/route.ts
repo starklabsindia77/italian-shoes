@@ -21,7 +21,10 @@ let MEMORY_CACHE: PlainObject | null = null;
 function redactSecrets(settings: typeof SETTINGS_DEFAULTS) {
   const out = deepMerge(settings as unknown as PlainObject, {}) as typeof SETTINGS_DEFAULTS;
   const integrations = out.integrations as PlainObject | undefined;
-  if (integrations) delete integrations.razorpayKeySecret;
+  if (integrations) {
+    delete integrations.razorpayKeySecret;
+    delete integrations.cashfreeSecretKey;
+  }
   const email = out.email as PlainObject | undefined;
   if (email) {
     delete email.resendApiKey;

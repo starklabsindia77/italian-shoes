@@ -19,6 +19,13 @@ export const SETTINGS_DEFAULTS = {
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
     razorpayKeySecret: "",
     razorpayMagicCheckoutEnabled: false,
+    // Which gateway the storefront checkout charges through.
+    paymentGateway: "razorpay" as "razorpay" | "cashfree",
+    cashfreeAppId: process.env.CASHFREE_APP_ID || "",
+    cashfreeSecretKey: "",
+    cashfreeEnvironment: (process.env.CASHFREE_ENV === "production" ? "production" : "sandbox") as
+      | "sandbox"
+      | "production",
   },
   shipping: {
     methods: [
@@ -113,6 +120,7 @@ export function deepMerge<T extends PlainObject>(base: T, patch: PlainObject): T
  */
 const SECRET_PATHS: Array<[section: string, key: string]> = [
   ["integrations", "razorpayKeySecret"],
+  ["integrations", "cashfreeSecretKey"],
   ["email", "resendApiKey"],
   ["email", "smtpPass"],
 ];

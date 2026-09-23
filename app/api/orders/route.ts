@@ -10,6 +10,7 @@ import { EmailService } from "@/lib/email-service";
 import { getRazorpayCredentials, verifyPaymentSignature } from "@/lib/razorpay";
 import { getCashfreeCredentials, fetchCashfreeOrder, CashfreeError } from "@/lib/cashfree";
 import { quoteCart, toMinorUnits, PricingError, BASE_CURRENCY } from "@/lib/pricing";
+import { getSettings } from "@/lib/settings";
 
 async function uploadBase64ToS3(base64Data: string, folder: string = "designs") {
   if (!base64Data || !base64Data.startsWith("data:image")) return base64Data;
@@ -137,7 +138,22 @@ async function verifyCashfree(d: OrderInput): Promise<VerifiedPayment | Response
 }
 
 /**
- * Records an order after a Razorpay or Cashfree payment.
+ * No online payment: allowed only when the store's configured gateway really
+ * is "none" — otherwise a client could skip paying just by sending
+ * paymentGateway: "none". The order is recorded as payment-PENDING, so it is
+ * never mistaken for a paid one.
+ */
+async function acceptUnpaid(): Promise<{ gatewayOrderId: string } | Response> {
+  const settings = await getSettings();
+  if (settings.integrations?.paymentGateway !== "none") {
+    return bad("Online payment is required for this store.", 402);
+  }
+  return { gatewayOrderId: `manual_${uuidv4()}` };
+}
+
+/**
+ * Records an order after a Razorpay or Cashfree payment, or — when the store
+ * runs without a payment gateway — as an unpaid order.
  *
  * Two things are deliberately NOT taken from the request body:
  *   1. the payment outcome — it is verified against the gateway using the API
@@ -152,8 +168,14 @@ export async function POST(req: Request) {
     if (!parsed.success) return bad(parsed.error.message);
     const d = parsed.data;
 
-    const payment = d.paymentGateway === "cashfree" ? await verifyCashfree(d) : await verifyRazorpay(d);
+    const payment =
+      d.paymentGateway === "none"
+        ? await acceptUnpaid()
+        : d.paymentGateway === "cashfree"
+          ? await verifyCashfree(d)
+          : await verifyRazorpay(d);
     if (payment instanceof Response) return payment;
+    const paid = "chargedMinor" in payment;
 
     // Re-price from the database, then confirm the amount actually authorised by
     // the gateway matches it. This catches both cart tampering and a stale quote.
@@ -163,7 +185,7 @@ export async function POST(req: Request) {
     });
 
     const expectedMinor = toMinorUnits(quote.total);
-    if (payment.chargedMinor !== expectedMinor) {
+    if (paid && payment.chargedMinor !== expectedMinor) {
       console.warn("orders/amount-mismatch", {
         gateway: d.paymentGateway,
         gatewayOrderId: payment.gatewayOrderId,
@@ -259,7 +281,7 @@ export async function POST(req: Request) {
           discount: quote.discount,
           total: quote.total,
           currency: quote.currency,
-          paymentStatus: "PAID",
+          paymentStatus: paid ? "PAID" : "PENDING",
           items: { create: itemsToCreate },
         },
         include: { items: true },

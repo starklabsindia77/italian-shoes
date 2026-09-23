@@ -46,7 +46,7 @@ type Settings = {
     razorpayKeyId?: string | null;
     razorpayKeySecret?: string | null;
     razorpayMagicCheckoutEnabled: boolean;
-    paymentGateway?: "razorpay" | "cashfree";
+    paymentGateway?: "razorpay" | "cashfree" | "none";
     cashfreeAppId?: string | null;
     cashfreeSecretKey?: string | null;
     cashfreeEnvironment?: "sandbox" | "production";
@@ -498,7 +498,7 @@ export default function SettingsPage() {
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle>Razorpay Payment Gateway</CardTitle>
-              <CardDescription>Enable Razorpay Payment Gateway.</CardDescription>
+              <CardDescription>Razorpay API keys. Whether checkout charges through Razorpay is set under Checkout Payment Gateway below.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <Field label="Razorpay Key ID">
@@ -518,7 +518,10 @@ export default function SettingsPage() {
               </Field>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <div className="text-sm font-medium">Enable Razorpay Payment Gateway</div>
+                  <div className="text-sm font-medium">Enable Razorpay Magic Checkout</div>
+                  <div className="text-xs text-muted-foreground">
+                    Shows Razorpay&apos;s one-click Magic Checkout on the cart page. This does not turn the Razorpay gateway on or off.
+                  </div>
                 </div>
                 <Switch
                   checked={data.integrations.razorpayMagicCheckoutEnabled}
@@ -584,13 +587,16 @@ export default function SettingsPage() {
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle>Checkout Payment Gateway</CardTitle>
-              <CardDescription>Which gateway charges customers at checkout. Configure its keys above first.</CardDescription>
+              <CardDescription>
+                Which gateway charges customers at checkout. Configure its keys above first. Choose None to take
+                orders without online payment: they are saved as payment pending and you collect payment yourself.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 md:grid-cols-2">
               <Field label="Active Gateway">
                 <Select
                   value={data.integrations.paymentGateway ?? "razorpay"}
-                  onValueChange={(v: "razorpay" | "cashfree") =>
+                  onValueChange={(v: "razorpay" | "cashfree" | "none") =>
                     setData((d) => ({ ...d, integrations: { ...d.integrations, paymentGateway: v } }))
                   }
                 >
@@ -598,6 +604,7 @@ export default function SettingsPage() {
                   <SelectContent>
                     <SelectItem value="razorpay">Razorpay</SelectItem>
                     <SelectItem value="cashfree">Cashfree</SelectItem>
+                    <SelectItem value="none">None (no online payment)</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>

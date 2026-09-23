@@ -31,8 +31,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { getAssetUrl } from "@/lib/utils";
-import { ArrowLeft, RefreshCcw, Save, Play, CheckCheck, PackageOpen, Truck, CheckCircle2, ShoppingCart, ArrowRight } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Save, Play, CheckCheck, PackageOpen, Truck, CheckCircle2, ShoppingCart, ArrowRight, ZoomIn } from "lucide-react";
 
 type Currency = "USD" | "EUR" | "GBP";
 type OrderStatus =
@@ -174,7 +175,27 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = React.useState<OrderFull | null>(null);
   const [selectedItem, setSelectedItem] = React.useState<OrderItem | null>(null);
-  const [zoomedImage, setZoomedImage] = React.useState<{ url: string; title: string } | null>(null);
+  // fit: "cover" for material textures, "contain" for product/design images so nothing is cropped.
+  const [zoomedImage, setZoomedImage] = React.useState<{ url: string; title: string; subtitle?: string; fit?: "cover" | "contain" } | null>(null);
+  const zoomedFullSizeUrl = useOpenableUrl(zoomedImage ? getAssetUrl(zoomedImage.url) : "");
+  const zoomSwatch = (panel: string, v: any) => {
+    if (!v?.colorUrl) return;
+    setZoomedImage({
+      url: v.colorUrl,
+      title: `${panelLabel(panel)}: ${v.details?.colorName || v.colorName || v.color || "N/A"}`,
+      subtitle: [v.details?.family, (v.details?.materialName || v.materialName || v.material || "").trim()].filter(Boolean).join(" · "),
+      fit: "cover",
+    });
+  };
+  const zoomDesign = (it: OrderItem) => {
+    if (!it.designThumbnail) return;
+    setZoomedImage({
+      url: it.designThumbnail,
+      title: it.productTitle || it.title || "Design",
+      subtitle: [it.style?.styleName, it.sole?.soleName, it.size?.sizeName].filter(Boolean).join(" · "),
+      fit: "contain",
+    });
+  };
   const [localManufacturing, setLocalManufacturing] = React.useState<ManufacturingInfo | null>(null);
   const [localShipping, setLocalShipping] = React.useState<ShippingInfo | null>(null);
 
@@ -397,9 +418,17 @@ export default function OrderDetailPage() {
                         >
                           <TableCell className="align-top">
                             {it.designThumbnail ? (
-                              <div className="relative aspect-square w-16 overflow-hidden rounded-lg border bg-muted group-hover:opacity-80 transition-opacity">
+                              <button
+                                type="button"
+                                title="Click to enlarge"
+                                onClick={(e) => { e.stopPropagation(); zoomDesign(it); }}
+                                className="group/thumb relative block aspect-square w-16 overflow-hidden rounded-lg border bg-muted cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              >
                                 <img src={getAssetUrl(it.designThumbnail)} alt={it.productTitle} className="object-cover w-full h-full" />
-                              </div>
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                                  <ZoomIn className="size-5 text-white" />
+                                </span>
+                              </button>
                             ) : (
                               <div className="flex aspect-square w-16 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
                                 <ShoppingCart className="size-6 opacity-20" />
@@ -427,12 +456,17 @@ export default function OrderDetailPage() {
                                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Detailed Configuration</span>
                                   <div className="flex flex-wrap gap-2">
                                     {Object.entries(it.panelCustomization).map(([panel, v]: [string, any]) => {
-                                      const label = panel.replace(/_/g, " ").replace(/-/g, " ");
+                                      const label = panelLabel(panel);
                                       const material = v.materialName || v.material || "N/A";
                                       const color = v.colorName || v.color || "N/A";
 
                                       return (
-                                        <div key={panel} className="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5 bg-white shadow-sm min-w-[140px]">
+                                        <SwatchHoverCard key={panel} panel={panel} value={v}>
+                                        <button
+                                          type="button"
+                                          onClick={() => zoomSwatch(panel, v)}
+                                          className="flex items-center gap-2 border border-slate-200 rounded-lg p-1.5 bg-white shadow-sm min-w-[140px] text-left cursor-zoom-in hover:border-slate-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                        >
                                           <div className="size-8 rounded-md border shrink-0 overflow-hidden bg-slate-50">
                                             {v.colorUrl ? (
                                               <img src={getAssetUrl(v.colorUrl)} alt={v.colorName} className="object-cover w-full h-full" />
@@ -447,7 +481,8 @@ export default function OrderDetailPage() {
                                               <span className="text-[9px] text-slate-500 font-medium leading-tight truncate">{material}</span>
                                             </div>
                                           </div>
-                                        </div>
+                                        </button>
+                                        </SwatchHoverCard>
                                       );
                                     })}
                                   </div>
@@ -631,11 +666,21 @@ export default function OrderDetailPage() {
             <div className="space-y-4">
               <div className="relative aspect-square w-full overflow-hidden rounded-2xl border bg-slate-50 shadow-inner">
                 {selectedItem?.designThumbnail ? (
-                  <img 
-                    src={getAssetUrl(selectedItem.designThumbnail)} 
-                    alt={selectedItem.productTitle} 
-                    className="object-contain w-full h-full p-4"
-                  />
+                  <button
+                    type="button"
+                    title="Click to enlarge"
+                    onClick={() => zoomDesign(selectedItem)}
+                    className="group/design block w-full h-full cursor-zoom-in"
+                  >
+                    <img 
+                      src={getAssetUrl(selectedItem.designThumbnail)} 
+                      alt={selectedItem.productTitle} 
+                      className="object-contain w-full h-full p-4"
+                    />
+                    <span className="absolute right-3 bottom-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white opacity-80 group-hover/design:opacity-100">
+                      <ZoomIn className="size-3.5" /> Enlarge
+                    </span>
+                  </button>
                 ) : (
                   <div className="flex items-center justify-center w-full h-full text-muted-foreground">
                     <ShoppingCart className="size-20 opacity-10" />
@@ -650,7 +695,7 @@ export default function OrderDetailPage() {
               </div>
 
               <div className="rounded-xl bg-slate-50 p-4 border border-slate-100 italic text-sm text-slate-600">
-                Large design preview captured at time of order.
+                Design preview captured at time of order. Click the image to enlarge.
               </div>
             </div>
 
@@ -660,10 +705,10 @@ export default function OrderDetailPage() {
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Panel Configuration</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {selectedItem?.panelCustomization && Object.entries(selectedItem.panelCustomization).map(([panel, v]: [string, any]) => (
+                    <SwatchHoverCard key={panel} panel={panel} value={v}>
                     <div 
-                      key={panel} 
                       className="flex gap-4 border border-slate-200 rounded-xl p-3 bg-white hover:bg-slate-50 transition-colors shadow-sm items-center cursor-zoom-in group/swatch"
-                      onClick={() => v.colorUrl && setZoomedImage({ url: v.colorUrl, title: `${panel.replace(/_/g, " ")}: ${v.colorName || v.color}` })}
+                      onClick={() => zoomSwatch(panel, v)}
                     >
                       <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border bg-slate-50 shadow-sm group-hover/swatch:ring-2 group-hover/swatch:ring-primary/20 transition-all">
                         {v.colorUrl ? (
@@ -689,6 +734,7 @@ export default function OrderDetailPage() {
                         </div>
                       </div>
                     </div>
+                    </SwatchHoverCard>
                   ))}
                   {(!selectedItem?.panelCustomization || Object.keys(selectedItem.panelCustomization).length === 0) && (
                     <div className="col-span-2 py-4 text-center text-sm text-muted-foreground bg-muted/50 rounded-xl">
@@ -721,22 +767,32 @@ export default function OrderDetailPage() {
 
       {/* Swatch Zoom Dialog */}
       <Dialog open={!!zoomedImage} onOpenChange={(open) => !open && setZoomedImage(null)}>
-        <DialogContent className="max-w-2xl bg-white border-none shadow-2xl p-0 overflow-hidden rounded-3xl">
+        <DialogContent className="sm:max-w-4xl bg-white border-none shadow-2xl p-0 overflow-hidden rounded-3xl">
           <DialogHeader className="sr-only">
-            <DialogTitle>{zoomedImage?.title || "Material Preview"}</DialogTitle>
-            <DialogDescription>High-resolution material texture preview</DialogDescription>
+            <DialogTitle>{zoomedImage?.title || "Image Preview"}</DialogTitle>
+            <DialogDescription>Enlarged image preview</DialogDescription>
           </DialogHeader>
-          <div className="relative aspect-square w-full bg-slate-100">
+          <div className={`relative w-full bg-slate-100 ${zoomedImage?.fit === "contain" ? "h-[80vh]" : "aspect-square max-h-[80vh]"}`}>
             {zoomedImage && (
               <img 
                 src={getAssetUrl(zoomedImage.url)} 
                 alt={zoomedImage.title} 
-                className="object-cover w-full h-full"
+                className={`w-full h-full ${zoomedImage.fit === "contain" ? "object-contain p-6" : "object-cover"}`}
               />
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-8">
               <h3 className="text-xl font-bold text-white">{zoomedImage?.title}</h3>
-              <p className="text-white/80 text-sm mt-1">High-resolution material texture preview</p>
+              {zoomedImage?.subtitle && <p className="text-white/80 text-sm mt-1">{zoomedImage.subtitle}</p>}
+              {zoomedFullSizeUrl && (
+                <a
+                  href={zoomedFullSizeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-2 text-xs text-white/90 underline underline-offset-2 hover:text-white"
+                >
+                  Open full size in new tab
+                </a>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -822,4 +878,89 @@ function renderAddress(addr: any, fallbackName: string) {
       {phone && <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 font-medium">PH: {phone}</div>}
     </div>
   );
+}
+
+function panelLabel(panel: string) {
+  return panel.replace(/_/g, " ").replace(/-/g, " ");
+}
+
+/** Hover a configured panel swatch to see what the customer picked, with catalog details when available. */
+function SwatchHoverCard({ panel, value: v, children }: { panel: string; value: any; children: React.ReactNode }) {
+  const d = v?.details;
+  const rows: Array<[string, React.ReactNode]> = [
+    ["Colour", d?.colorName || v?.colorName || v?.color || "N/A"],
+    ["Colour family", d?.family],
+    ["Colour code", d?.colorCode],
+    ["Hex", d?.hexCode && (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="inline-block size-3 rounded-sm border" style={{ backgroundColor: d.hexCode }} />
+        {d.hexCode}
+      </span>
+    )],
+    ["Material", (d?.materialName || v?.materialName || v?.material || "N/A").trim()],
+    ["Category", d?.materialCategory],
+  ];
+  return (
+    <HoverCard openDelay={150} closeDelay={50}>
+      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+      <HoverCardContent side="top" align="start" className="w-72 p-0 overflow-hidden">
+        <div className="aspect-[4/3] w-full bg-slate-100">
+          {v?.colorUrl ? (
+            <img src={getAssetUrl(v.colorUrl)} alt={v.colorName || panel} className="object-cover w-full h-full" />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full text-xs text-slate-400">No image</div>
+          )}
+        </div>
+        <div className="p-3 space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{panelLabel(panel)}</div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+            {rows.filter(([, val]) => val).map(([k, val]) => (
+              <React.Fragment key={k}>
+                <dt className="text-slate-500">{k}</dt>
+                <dd className="font-medium text-slate-900 break-words">{val}</dd>
+              </React.Fragment>
+            ))}
+          </dl>
+          {d?.materialDescription && d.materialDescription.trim() !== d.materialName?.trim() && (
+            <p className="text-xs text-slate-600 border-t pt-2">{d.materialDescription}</p>
+          )}
+          {d && d.isActive === false && (
+            <p className="text-xs font-medium text-amber-700">This colour is no longer active in the catalog.</p>
+          )}
+          {!d && v?.colorUrl && (
+            <p className="text-[11px] text-slate-400">Not found in the current material catalog (details shown as ordered).</p>
+          )}
+          <div className="flex items-center gap-1 text-[11px] text-slate-400"><ZoomIn className="size-3" /> Click to enlarge</div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+/**
+ * Browsers refuse to open `data:` URLs as a top-level page (the new tab comes
+ * up blank), and order design thumbnails can be stored inline as base64. Turn
+ * those into a same-origin blob: URL, which a new tab can open; http(s) URLs
+ * pass through unchanged.
+ */
+function useOpenableUrl(url: string) {
+  const [openable, setOpenable] = React.useState("");
+  React.useEffect(() => {
+    if (!url.startsWith("data:")) {
+      setOpenable(url);
+      return;
+    }
+    let objectUrl = "";
+    try {
+      const [meta, b64 = ""] = url.split(",");
+      const mime = meta.slice(5).split(";")[0] || "image/png";
+      const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+      objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      setOpenable(objectUrl);
+    } catch {
+      setOpenable("");
+    }
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [url]);
+  return openable;
 }

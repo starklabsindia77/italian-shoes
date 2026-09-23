@@ -19,8 +19,9 @@ export const SETTINGS_DEFAULTS = {
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
     razorpayKeySecret: "",
     razorpayMagicCheckoutEnabled: false,
-    // Which gateway the storefront checkout charges through.
-    paymentGateway: "razorpay" as "razorpay" | "cashfree",
+    // Which gateway the storefront checkout charges through. "none" places
+    // orders unpaid (payment collected offline / cash on delivery).
+    paymentGateway: "razorpay" as "razorpay" | "cashfree" | "none",
     cashfreeAppId: process.env.CASHFREE_APP_ID || "",
     cashfreeSecretKey: "",
     cashfreeEnvironment: (process.env.CASHFREE_ENV === "production" ? "production" : "sandbox") as

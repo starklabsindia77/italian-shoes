@@ -18,7 +18,8 @@ import { toast } from "sonner";
 
 type PaymentFields =
   | { paymentGateway: "razorpay"; razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }
-  | { paymentGateway: "cashfree"; cashfreeOrderId: string };
+  | { paymentGateway: "cashfree"; cashfreeOrderId: string }
+  | { paymentGateway: "none" };
 
 /**
  * Stashed before opening Cashfree so that, if a payment method escapes the
@@ -37,6 +38,9 @@ async function saveOrder(orderPayload: Record<string, unknown>, payment: Payment
 
   if (!saveResponse.ok) {
     const body = await saveResponse.json().catch(() => null);
+    if (payment.paymentGateway === "none") {
+      throw new Error(body?.error || "Your order could not be placed. Please try again.");
+    }
     const ref = payment.paymentGateway === "cashfree" ? payment.cashfreeOrderId : payment.razorpayPaymentId;
     throw new Error(
       body?.error ||
@@ -164,7 +168,9 @@ const Checkout = () => {
       return;
     }
 
-    const gateway: "razorpay" | "cashfree" = settings?.integrations?.paymentGateway === "cashfree" ? "cashfree" : "razorpay";
+    const configured = settings?.integrations?.paymentGateway;
+    const gateway: "razorpay" | "cashfree" | "none" =
+      configured === "cashfree" || configured === "none" ? configured : "razorpay";
     if (gateway === "cashfree" && !shippingData.phone) {
       toast.error("Please enter your mobile number.");
       return;
@@ -208,6 +214,13 @@ const Checkout = () => {
     };
 
     try {
+      if (gateway === "none") {
+        // No online payment: the server records the order as payment-pending.
+        await saveOrder(orderPayload, { paymentGateway: "none" });
+        finish();
+        return;
+      }
+
       if (gateway === "cashfree") {
         // 1. Server prices the cart and opens a Cashfree order.
         const response = await fetch("/api/cashfree/order", {
@@ -314,7 +327,7 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {settings && settings.integrations?.paymentGateway !== "cashfree" && (
+      {settings && (settings.integrations?.paymentGateway ?? "razorpay") === "razorpay" && (
         <Script
           id="razorpay-checkout"
           src="https://checkout.razorpay.com/v1/checkout.js"
@@ -405,7 +418,11 @@ const Checkout = () => {
                 disabled={isProcessing}
               >
                 <Shield className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                {isProcessing ? "Processing..." : "Complete Order"}
+                {isProcessing
+                  ? "Processing..."
+                  : settings?.integrations?.paymentGateway === "none"
+                    ? "Place Order"
+                    : "Complete Order"}
               </Button>
             </div>
           </div>

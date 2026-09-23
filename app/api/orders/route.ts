@@ -12,10 +12,23 @@ import { getCashfreeCredentials, fetchCashfreeOrder, CashfreeError } from "@/lib
 import { quoteCart, toMinorUnits, PricingError, BASE_CURRENCY } from "@/lib/pricing";
 import { getSettings } from "@/lib/settings";
 
-async function uploadBase64ToS3(base64Data: string, folder: string = "designs") {
+/**
+ * Moves an inline design image (data:image/...;base64) to S3 and returns its
+ * key path. Anything that is not an inline image passes through unchanged.
+ *
+ * On failure the order must still be recorded (payment is already taken), so
+ * this never throws. It logs loudly instead of failing silently, and outside
+ * development it drops the image rather than writing hundreds of KB of base64
+ * into the orders table. In development the inline image is kept so local
+ * test orders still show a design without S3 credentials.
+ */
+async function uploadBase64ToS3(base64Data: string, folder: string = "designs"): Promise<string | null> {
   if (!base64Data || !base64Data.startsWith("data:image")) return base64Data;
 
   try {
+    const bucket = process.env.S3_BUCKET_NAME;
+    if (!bucket || bucket === "CHANGEME") throw new Error("S3_BUCKET_NAME is not set");
+
     const [meta, data] = base64Data.split(",");
     const extension = meta.split(";")[0].split("/")[1] || "png";
     const buffer = Buffer.from(data, "base64");
@@ -25,7 +38,7 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME,
+        Bucket: bucket,
         Key: s3Key,
         Body: buffer,
         ContentType: meta.split(";")[0].split(":")[1] || "image/png",
@@ -34,8 +47,15 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 
     return `/${s3Key}`;
   } catch (error) {
-    console.error("Base64 S3 Upload Error:", error);
-    return base64Data; // Fallback to base64 if upload fails
+    const keepInline = process.env.NODE_ENV === "development";
+    console.error(
+      `orders/design-upload-failed: ${error instanceof Error ? error.message : String(error)} — ` +
+        (keepInline
+          ? "keeping the image inline (development only)."
+          : "order saved WITHOUT its design image. Check S3_BUCKET_NAME/S3_REGION and the instance role's s3:PutObject."),
+      error
+    );
+    return keepInline ? base64Data : null;
   }
 }
 

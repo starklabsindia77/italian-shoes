@@ -6,13 +6,26 @@ import { getSettings } from "@/lib/settings";
 
 export type RazorpayCredentials = { keyId: string; keySecret: string };
 
-/** DB settings win over env so the admin UI stays authoritative. */
+// Terraform seeds the SSM parameters with this value until the real key is set.
+const PLACEHOLDER = "CHANGEME";
+
+function pair(keyId?: string | null, keySecret?: string | null): RazorpayCredentials | null {
+  if (!keyId || !keySecret || keyId === PLACEHOLDER || keySecret === PLACEHOLDER) return null;
+  return { keyId, keySecret };
+}
+
+/**
+ * DB settings win over env so the admin UI stays authoritative. The id and
+ * secret are taken as a pair from one source: mixing a DB key id with an env
+ * secret (e.g. an admin save persisted only the id) makes Razorpay reject every
+ * call with 401 "Authentication failed".
+ */
 export async function getRazorpayCredentials(): Promise<RazorpayCredentials | null> {
   const settings = await getSettings();
-  const keyId = settings.integrations?.razorpayKeyId || process.env.RAZORPAY_KEY_ID;
-  const keySecret = settings.integrations?.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) return null;
-  return { keyId, keySecret };
+  return (
+    pair(settings.integrations?.razorpayKeyId, settings.integrations?.razorpayKeySecret) ??
+    pair(process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET)
+  );
 }
 
 /**

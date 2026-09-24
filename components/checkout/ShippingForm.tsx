@@ -17,8 +17,14 @@ export function ShippingForm({ data, onChange }: { data: Record<string, string>,
         if (!data.country && active.some((c: { code: string }) => c.code === "in")) {
           onChange("country", "in");
         }
+      })
+      .catch(() => {
+        // Keep the India fallback option rendered below.
       });
-  }, [data.country, onChange]);
+    // Load once. The parent passes a new `onChange` every render, so listing
+    // it here refetched /api/settings on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -83,7 +89,7 @@ export function ShippingForm({ data, onChange }: { data: Record<string, string>,
               <SelectTrigger className="mt-1 bg-background border-border focus:ring-primary focus:border-primary">
                 <SelectValue placeholder="Select State" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-72">
                 {INDIAN_STATES.map((s) => (
                   <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}

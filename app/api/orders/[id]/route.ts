@@ -54,6 +54,68 @@ function mapOrderResponse(o: Record<string, any>) {
     updatedAt: o.updatedAt,
   };
 }
+
+/**
+ * Panel customizations only snapshot colorUrl/colorName/materialName at order
+ * time. Look the swatch up in the material catalog (by its image URL) so staff
+ * can see the colour family, codes and material details. Best effort: a colour
+ * deleted since the order simply gets no `details`.
+ */
+// The catalog stores asset paths ("/colors/x.jpg") while orders snapshot the
+// resolved URL ("https://<bucket>/colors/x.jpg"), so compare on the path.
+function assetKey(url: string) {
+  try {
+    return url.startsWith("http") ? decodeURI(new URL(url).pathname) : url;
+  } catch {
+    return url;
+  }
+}
+
+async function withSwatchDetails(o: Record<string, any>) {
+  const urls = new Set<string>();
+  for (const it of o.items ?? []) {
+    for (const v of Object.values(it.panelCustomization ?? {}) as any[]) {
+      if (typeof v?.colorUrl === "string" && v.colorUrl) {
+        urls.add(v.colorUrl);
+        urls.add(assetKey(v.colorUrl));
+      }
+    }
+  }
+  if (urls.size === 0) return o;
+
+  const colors = await prisma.materialColor.findMany({
+    where: { imageUrl: { in: [...urls] } },
+    include: { material: { select: { name: true, category: true, description: true } } },
+  });
+  const byUrl = new Map(colors.map((c) => [assetKey(c.imageUrl ?? ""), c]));
+
+  return {
+    ...o,
+    items: o.items.map((it: Record<string, any>) => {
+      if (!it.panelCustomization || typeof it.panelCustomization !== "object") return it;
+      const panels = Object.fromEntries(
+        Object.entries(it.panelCustomization as Record<string, any>).map(([panel, v]) => {
+          const c = v?.colorUrl ? byUrl.get(assetKey(v.colorUrl)) : undefined;
+          if (!c) return [panel, v];
+          return [panel, {
+            ...v,
+            details: {
+              colorName: c.name,
+              colorCode: c.colorCode,
+              family: c.family,
+              hexCode: c.hexCode,
+              isActive: c.isActive,
+              materialName: c.material.name,
+              materialCategory: c.material.category,
+              materialDescription: c.material.description,
+            },
+          }];
+        })
+      );
+      return { ...it, panelCustomization: panels };
+    }),
+  };
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -82,7 +144,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       (!!u.email && o.customerEmail.toLowerCase() === u.email.toLowerCase());
     if (!isStaff && !isOwner) return forbidden();
 
-    return ok(mapOrderResponse(o));
+    return ok(mapOrderResponse(await withSwatchDetails(o)));
   } catch (e) { return server(e); }
 }
 

@@ -63,6 +63,21 @@ interface CartState {
   isItemInCart: (productId: string, variant: string) => boolean;
 }
 
+function configurationKey(item: Omit<CartItem, 'id' | 'addedAt'>) {
+  const sizeId = typeof item.size === 'string' ? item.size : item.size?.id;
+  return JSON.stringify([
+    item.productId,
+    item.variant,
+    sizeId ?? null,
+    item.style?.id ?? null,
+    item.sole?.id ?? null,
+    item.material?.id ?? null,
+    item.material?.color?.id ?? null,
+    item.notes ?? null,
+    item.config ?? null,
+  ]);
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -71,9 +86,10 @@ export const useCartStore = create<CartState>()(
 
       addItem: (newItem) => {
         const { productId, variant } = newItem;
-        const existingItem = get().items.find(
-          item => item.productId === productId && item.variant === variant
-        );
+        // Custom shoes share one productId/variant, so only an identical
+        // configuration bumps quantity; a different size or design is a new line.
+        const key = configurationKey(newItem);
+        const existingItem = get().items.find(item => configurationKey(item) === key);
 
         if (existingItem) {
           // Update quantity if item already exists

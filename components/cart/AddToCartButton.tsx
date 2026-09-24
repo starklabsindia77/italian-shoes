@@ -1,9 +1,10 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCartStore, CartSize } from "@/lib/stores";
-import { useToast } from "@/components/hooks/use-toast";
+import { toast } from "sonner";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -60,11 +61,9 @@ export const AddToCartButton = ({
   config,
   onBeforeAdd,
 }: AddToCartButtonProps) => {
-  const { addItem, isItemInCart } = useCartStore();
-  const { toast } = useToast();
+  const { addItem } = useCartStore();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-
-  const isInCart = isItemInCart(productId, variant);
 
   const handleAddToCart = async () => {
     setIsLoading(true);
@@ -95,17 +94,15 @@ export const AddToCartButton = ({
         config,
       });
 
-      toast({
-        title: "Added to cart",
+      // The app mounts sonner's <Toaster> (app/layout.tsx); the radix
+      // use-toast hook used previously has no toaster, so nothing showed.
+      toast.success("Added to cart", {
         description: `${title} has been added to your cart.`,
+        action: { label: "View cart", onClick: () => router.push("/cart") },
       });
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast({
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Couldn't add to cart", { description: "Something went wrong. Please try again." });
     } finally {
       setIsLoading(false);
     }
@@ -116,18 +113,12 @@ export const AddToCartButton = ({
       variant={buttonVariant}
       size={buttonSize}
       onClick={handleAddToCart}
-      disabled={isLoading || isInCart}
+      disabled={isLoading}
       className={className}
     >
-      {showIcon && (
-        isInCart ? (
-          <ShoppingCart className="h-4 w-4" />
-        ) : (
-          <Plus className="h-4 w-4" />
-        )
-      )}
+      {showIcon && <Plus className="h-4 w-4" />}
       <span className={showIcon ? "ml-2" : ""}>
-        {isLoading ? "Adding..." : isInCart ? "In Cart" : "Add to Cart"}
+        {isLoading ? "Adding..." : "Add to Cart"}
       </span>
     </Button>
   );

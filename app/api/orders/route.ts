@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAuth } from "@/lib/api-helpers";
 import { OrderCreateSchema } from "@/lib/validators";
@@ -7,12 +8,27 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { EmailService } from "@/lib/email-service";
 import { getRazorpayCredentials, verifyPaymentSignature } from "@/lib/razorpay";
-import { quoteCart, toMinorUnits, PricingError } from "@/lib/pricing";
+import { getCashfreeCredentials, fetchCashfreeOrder, CashfreeError } from "@/lib/cashfree";
+import { quoteCart, toMinorUnits, PricingError, BASE_CURRENCY } from "@/lib/pricing";
+import { getSettings } from "@/lib/settings";
 
-async function uploadBase64ToS3(base64Data: string, folder: string = "designs") {
+/**
+ * Moves an inline design image (data:image/...;base64) to S3 and returns its
+ * key path. Anything that is not an inline image passes through unchanged.
+ *
+ * On failure the order must still be recorded (payment is already taken), so
+ * this never throws. It logs loudly instead of failing silently, and outside
+ * development it drops the image rather than writing hundreds of KB of base64
+ * into the orders table. In development the inline image is kept so local
+ * test orders still show a design without S3 credentials.
+ */
+async function uploadBase64ToS3(base64Data: string, folder: string = "designs"): Promise<string | null> {
   if (!base64Data || !base64Data.startsWith("data:image")) return base64Data;
 
   try {
+    const bucket = process.env.S3_BUCKET_NAME;
+    if (!bucket || bucket === "CHANGEME") throw new Error("S3_BUCKET_NAME is not set");
+
     const [meta, data] = base64Data.split(",");
     const extension = meta.split(";")[0].split("/")[1] || "png";
     const buffer = Buffer.from(data, "base64");
@@ -22,7 +38,7 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME,
+        Bucket: bucket,
         Key: s3Key,
         Body: buffer,
         ContentType: meta.split(";")[0].split(":")[1] || "image/png",
@@ -31,8 +47,15 @@ async function uploadBase64ToS3(base64Data: string, folder: string = "designs") 
 
     return `/${s3Key}`;
   } catch (error) {
-    console.error("Base64 S3 Upload Error:", error);
-    return base64Data; // Fallback to base64 if upload fails
+    const keepInline = process.env.NODE_ENV === "development";
+    console.error(
+      `orders/design-upload-failed: ${error instanceof Error ? error.message : String(error)} — ` +
+        (keepInline
+          ? "keeping the image inline (development only)."
+          : "order saved WITHOUT its design image. Check S3_BUCKET_NAME/S3_REGION and the instance role's s3:PutObject."),
+      error
+    );
+    return keepInline ? base64Data : null;
   }
 }
 
@@ -80,11 +103,80 @@ export async function GET(req: Request) {
   } catch (e) { return server(e); }
 }
 
+type VerifiedPayment = { gatewayOrderId: string; chargedMinor: number };
+type OrderInput = z.infer<typeof OrderCreateSchema>;
+
 /**
- * Records an order after a Razorpay payment.
+ * Razorpay: the checkout callback is HMAC-signed with the API secret, so verify
+ * the signature, then read the authorised amount back from Razorpay.
+ */
+async function verifyRazorpay(d: OrderInput): Promise<VerifiedPayment | Response> {
+  const credentials = await getRazorpayCredentials();
+  if (!credentials) return bad("Razorpay is not configured; cannot verify payment.", 503);
+
+  // Presence is guaranteed by OrderCreateSchema's refinement.
+  const razorpayOrderId = d.razorpayOrderId!;
+  const signatureValid = verifyPaymentSignature({
+    razorpayOrderId,
+    razorpayPaymentId: d.razorpayPaymentId!,
+    signature: d.razorpaySignature!,
+    keySecret: credentials.keySecret,
+  });
+  if (!signatureValid) {
+    console.warn("orders/rejected-signature", { razorpayOrderId });
+    return bad("Payment could not be verified.", 400);
+  }
+
+  const RazorpayCtor = (await import("razorpay")).default;
+  const razorpay = new RazorpayCtor({ key_id: credentials.keyId, key_secret: credentials.keySecret });
+  const remoteOrder = await razorpay.orders.fetch(razorpayOrderId);
+  return { gatewayOrderId: razorpayOrderId, chargedMinor: Number(remoteOrder.amount) };
+}
+
+/**
+ * Cashfree: the browser-side result is not signed, so ask Cashfree directly —
+ * with our secret — whether the order is PAID and for how much.
+ */
+async function verifyCashfree(d: OrderInput): Promise<VerifiedPayment | Response> {
+  const credentials = await getCashfreeCredentials();
+  if (!credentials) return bad("Cashfree is not configured; cannot verify payment.", 503);
+
+  const cashfreeOrderId = d.cashfreeOrderId!;
+  const remoteOrder = await fetchCashfreeOrder(credentials, cashfreeOrderId);
+  if (remoteOrder.order_status !== "PAID" || remoteOrder.order_currency !== BASE_CURRENCY) {
+    console.warn("orders/cashfree-unpaid", {
+      cashfreeOrderId,
+      status: remoteOrder.order_status,
+      currency: remoteOrder.order_currency,
+    });
+    return bad("Payment has not been completed.", 402);
+  }
+  return {
+    gatewayOrderId: remoteOrder.order_id,
+    chargedMinor: toMinorUnits(Number(remoteOrder.order_amount)),
+  };
+}
+
+/**
+ * No online payment: allowed only when the store's configured gateway really
+ * is "none" — otherwise a client could skip paying just by sending
+ * paymentGateway: "none". The order is recorded as payment-PENDING, so it is
+ * never mistaken for a paid one.
+ */
+async function acceptUnpaid(): Promise<{ gatewayOrderId: string } | Response> {
+  const settings = await getSettings();
+  if (settings.integrations?.paymentGateway !== "none") {
+    return bad("Online payment is required for this store.", 402);
+  }
+  return { gatewayOrderId: `manual_${uuidv4()}` };
+}
+
+/**
+ * Records an order after a Razorpay or Cashfree payment, or — when the store
+ * runs without a payment gateway — as an unpaid order.
  *
  * Two things are deliberately NOT taken from the request body:
- *   1. the payment outcome — the Razorpay signature is verified with the API
+ *   1. the payment outcome — it is verified against the gateway using the API
  *      secret, so a forged callback cannot mark an order paid; and
  *   2. the money — every amount is recomputed from database prices and stored
  *      settings, so a tampered cart cannot change what was charged.
@@ -96,67 +188,75 @@ export async function POST(req: Request) {
     if (!parsed.success) return bad(parsed.error.message);
     const d = parsed.data;
 
-    const credentials = await getRazorpayCredentials();
-    if (!credentials) {
-      return bad("Razorpay is not configured; cannot verify payment.", 503);
-    }
-
-    const signatureValid = verifyPaymentSignature({
-      razorpayOrderId: d.razorpayOrderId,
-      razorpayPaymentId: d.razorpayPaymentId,
-      signature: d.razorpaySignature,
-      keySecret: credentials.keySecret,
-    });
-    if (!signatureValid) {
-      console.warn("orders/rejected-signature", { razorpayOrderId: d.razorpayOrderId });
-      return bad("Payment could not be verified.", 400);
-    }
+    const payment =
+      d.paymentGateway === "none"
+        ? await acceptUnpaid()
+        : d.paymentGateway === "cashfree"
+          ? await verifyCashfree(d)
+          : await verifyRazorpay(d);
+    if (payment instanceof Response) return payment;
+    const paid = "chargedMinor" in payment;
 
     // Re-price from the database, then confirm the amount actually authorised by
-    // Razorpay matches it. This catches both cart tampering and a stale quote.
+    // the gateway matches it. This catches both cart tampering and a stale quote.
     const quote = await quoteCart({
       items: d.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
       shippingMethodId: d.shippingMethodId ?? null,
     });
 
-    const RazorpayCtor = (await import("razorpay")).default;
-    const razorpay = new RazorpayCtor({
-      key_id: credentials.keyId,
-      key_secret: credentials.keySecret,
-    });
-
-    const remoteOrder = await razorpay.orders.fetch(d.razorpayOrderId);
     const expectedMinor = toMinorUnits(quote.total);
-    if (Number(remoteOrder.amount) !== expectedMinor) {
+    if (paid && payment.chargedMinor !== expectedMinor) {
       console.warn("orders/amount-mismatch", {
-        razorpayOrderId: d.razorpayOrderId,
-        charged: remoteOrder.amount,
+        gateway: d.paymentGateway,
+        gatewayOrderId: payment.gatewayOrderId,
+        charged: payment.chargedMinor,
         expected: expectedMinor,
       });
       return bad("Order total does not match the authorised payment.", 409);
     }
 
-    const designsByProduct = new Map(d.items.map((i) => [i.productId, i]));
+    // Size/style/sole ids come from the browser's cart, which can hold ids that
+    // no longer exist (deleted options, cached product pages, fallback sizes).
+    // They are foreign keys, so keep only the ones that resolve — the payment
+    // has already been taken and must not fail on a stale reference.
+    const idsOf = (key: "sizeId" | "styleId" | "soleId") =>
+      [...new Set(d.items.map((i) => i[key]).filter((v): v is string => !!v))];
+    const [sizes, styles, soles] = await Promise.all([
+      prisma.size.findMany({ where: { id: { in: idsOf("sizeId") } }, select: { id: true } }),
+      prisma.style.findMany({ where: { id: { in: idsOf("styleId") } }, select: { id: true } }),
+      prisma.sole.findMany({ where: { id: { in: idsOf("soleId") } }, select: { id: true } }),
+    ]);
+    const known = {
+      sizeId: new Set(sizes.map((x) => x.id)),
+      styleId: new Set(styles.map((x) => x.id)),
+      soleId: new Set(soles.map((x) => x.id)),
+    };
+    const ref = (key: keyof typeof known, v: string | null | undefined) =>
+      v && known[key].has(v) ? v : null;
+
+    // One order line per cart line, so the same shoe in two sizes or designs
+    // keeps both. Prices come from the quote, never from the request.
+    const quotedByProduct = new Map(quote.items.map((q) => [q.productId, q]));
     const itemsToCreate = await Promise.all(
-      quote.items.map(async (q) => {
-        const source = designsByProduct.get(q.productId);
+      d.items.map(async (source) => {
+        const q = quotedByProduct.get(source.productId)!;
         return {
           productId: q.productId,
           productTitle: q.productTitle,
-          sku: source?.sku ?? null,
-          quantity: q.quantity,
+          sku: source.sku ?? null,
+          quantity: source.quantity,
           price: q.price,
-          totalPrice: q.totalPrice,
-          productVariantId: source?.productVariantId ?? null,
-          styleId: source?.styleId ?? null,
-          soleId: source?.soleId ?? null,
-          sizeId: source?.sizeId ?? null,
-          panelCustomization: (source?.panelCustomization ?? {}) as Prisma.InputJsonValue,
-          designGlbUrl: source?.designGlbUrl ?? null,
-          designThumbnail: source?.designThumbnail
+          totalPrice: q.price * source.quantity,
+          productVariantId: source.productVariantId ?? null,
+          styleId: ref("styleId", source.styleId),
+          soleId: ref("soleId", source.soleId),
+          sizeId: ref("sizeId", source.sizeId),
+          panelCustomization: (source.panelCustomization ?? {}) as Prisma.InputJsonValue,
+          designGlbUrl: source.designGlbUrl ?? null,
+          designThumbnail: source.designThumbnail
             ? await uploadBase64ToS3(source.designThumbnail)
             : null,
-          designConfig: (source?.designConfig ?? undefined) as Prisma.InputJsonValue | undefined,
+          designConfig: (source.designConfig ?? undefined) as Prisma.InputJsonValue | undefined,
         };
       })
     );
@@ -181,9 +281,9 @@ export async function POST(req: Request) {
     try {
       created = await prisma.order.create({
         data: {
-          // The Razorpay order id is unique, which makes a replayed callback a
+          // The gateway order id is unique, which makes a replayed callback a
           // unique-constraint violation rather than a duplicate order.
-          orderId: d.razorpayOrderId,
+          orderId: payment.gatewayOrderId,
           orderNumber: d.orderNumber,
           customerId: customer.id,
           customerEmail: d.customerEmail,
@@ -201,7 +301,7 @@ export async function POST(req: Request) {
           discount: quote.discount,
           total: quote.total,
           currency: quote.currency,
-          paymentStatus: "PAID",
+          paymentStatus: paid ? "PAID" : "PENDING",
           items: { create: itemsToCreate },
         },
         include: { items: true },
@@ -232,6 +332,7 @@ export async function POST(req: Request) {
     return ok(created, 201);
   } catch (e) {
     if (e instanceof PricingError) return bad(e.message, e.status);
+    if (e instanceof CashfreeError) return bad(e.message, e.status);
     return server(e);
   }
 }

@@ -37,6 +37,8 @@ function mapOrderResponse(o: Record<string, any>) {
     },
     status: o.status.toLowerCase(),
     paymentStatus: o.paymentStatus.toLowerCase(),
+    // Null on orders placed before the column existed.
+    paymentMethod: o.paymentMethod ?? null,
     fulfillmentStatus: o.fulfillmentStatus.toLowerCase(),
     manufacturing: {
       estimatedProductionTime: o.estimatedProductionTime,

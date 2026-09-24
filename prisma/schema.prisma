@@ -1,9 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
-  // "native" = the machine running generate (dev laptops, CI runner);
-  // linux-arm64 = the Graviton production instance. Without the explicit
-  // target, generate on the x64 runner ships only an x64 query engine and
-  // the app dies at first query in production.
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
 }
 
@@ -226,6 +222,7 @@ model Order {
   currency                Currency          @default(USD)
   status                  OrderStatus       @default(DESIGN_RECEIVED)
   paymentStatus           PaymentStatus     @default(PENDING)
+  paymentMethod           PaymentMethod?
   fulfillmentStatus       FulfillmentStatus @default(UNFULFILLED)
   estimatedProductionTime Int               @default(0)
   actualProductionTime    Int?
@@ -338,6 +335,14 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+/// How the customer pays. Null on orders placed before this field existed.
+enum PaymentMethod {
+  RAZORPAY
+  CASHFREE
+  COD
+  MANUAL
 }
 
 enum PaymentStatus {

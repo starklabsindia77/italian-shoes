@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type PaymentMethod } from "@prisma/client";
 import type { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, bad, server, pagination, getSearchParams, requireAuth } from "@/lib/api-helpers";
@@ -172,6 +172,24 @@ async function acceptUnpaid(): Promise<{ gatewayOrderId: string } | Response> {
 }
 
 /**
+ * Cash on Delivery. The store's current setting is the only thing that decides
+ * whether this is allowed — never the request. A client that hides the COD
+ * option in its own UI, or that posts paymentGateway: "cod" directly, is
+ * checked here all the same, so switching COD off in the admin takes effect
+ * immediately even for a checkout page that was already open.
+ *
+ * The order is recorded payment-PENDING; the admin marks it PAID once the cash
+ * is collected.
+ */
+async function acceptCod(): Promise<{ gatewayOrderId: string } | Response> {
+  const settings = await getSettings();
+  if (!settings.payments?.codEnabled) {
+    return bad("Cash on Delivery is currently unavailable.", 402);
+  }
+  return { gatewayOrderId: `cod_${uuidv4()}` };
+}
+
+/**
  * Records an order after a Razorpay or Cashfree payment, or — when the store
  * runs without a payment gateway — as an unpaid order.
  *
@@ -191,11 +209,24 @@ export async function POST(req: Request) {
     const payment =
       d.paymentGateway === "none"
         ? await acceptUnpaid()
-        : d.paymentGateway === "cashfree"
-          ? await verifyCashfree(d)
-          : await verifyRazorpay(d);
+        : d.paymentGateway === "cod"
+          ? await acceptCod()
+          : d.paymentGateway === "cashfree"
+            ? await verifyCashfree(d)
+            : await verifyRazorpay(d);
     if (payment instanceof Response) return payment;
     const paid = "chargedMinor" in payment;
+
+    // COD and "no gateway" orders are unpaid by definition; the online gateways
+    // are only recorded as paid after their amount check below.
+    const paymentMethod: PaymentMethod =
+      d.paymentGateway === "cod"
+        ? "COD"
+        : d.paymentGateway === "none"
+          ? "MANUAL"
+          : d.paymentGateway === "cashfree"
+            ? "CASHFREE"
+            : "RAZORPAY";
 
     // Re-price from the database, then confirm the amount actually authorised by
     // the gateway matches it. This catches both cart tampering and a stale quote.
@@ -302,6 +333,7 @@ export async function POST(req: Request) {
           total: quote.total,
           currency: quote.currency,
           paymentStatus: paid ? "PAID" : "PENDING",
+          paymentMethod,
           items: { create: itemsToCreate },
         },
         include: { items: true },

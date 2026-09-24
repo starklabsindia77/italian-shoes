@@ -208,29 +208,16 @@ const ProductsPage = () => {
 
           {/* Price */}
           <div className="flex items-center justify-center gap-2 mb-3 text-xs tracking-wider">
-            {product.price && product.price.length > 0 ? (
-              (() => {
-                const discountedPrice = Math.min(...product.price);
-                const originalPrice = product.compareAtPrice && product.compareAtPrice > 0
-                  ? product.compareAtPrice
-                  : Math.round(discountedPrice * 1.5);
-                return (
-                  <>
-                    {originalPrice > discountedPrice && (
-                      <span className="text-gray-400 line-through font-normal">
-                        <Price amount={originalPrice} />
-                      </span>
-                    )}
-                    <span className="font-semibold text-red-500">
-                      <Price amount={discountedPrice} />
-                    </span>
-                  </>
-                );
-              })()
-            ) : (
-              <span className="font-semibold text-red-500">Price not available</span>
-            )}
-          </div>
+  {product.price && product.price.length > 0 ? (
+    <span className="font-semibold text-red-500">
+      <Price amount={Math.min(...product.price)} />
+    </span>
+  ) : (
+    <span className="font-semibold text-red-500">
+      Price not available
+    </span>
+  )}
+</div>
 
           {/* Link */}
           <span className="text-[10px] uppercase tracking-widest text-gray-500 font-normal transition-colors group-hover:text-black mt-1">

@@ -32,7 +32,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { getAssetUrl } from "@/lib/utils";
+import { getAssetUrl, labelForPaymentMethod } from "@/lib/utils";
 import { ArrowLeft, RefreshCcw, Save, Play, CheckCheck, PackageOpen, Truck, CheckCircle2, ShoppingCart, ArrowRight, ZoomIn } from "lucide-react";
 
 type Currency = "USD" | "EUR" | "GBP";
@@ -113,6 +113,8 @@ type OrderFull = {
   };
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  /** Null on orders placed before the column existed. */
+  paymentMethod?: "RAZORPAY" | "CASHFREE" | "COD" | "MANUAL" | null;
   fulfillmentStatus: FulfillmentStatus;
   manufacturing: ManufacturingInfo;
   shiprocket: ShippingInfo;
@@ -323,7 +325,12 @@ export default function OrderDetailPage() {
                 </Field>
                 <div className="text-sm">
                   <div className="mb-1 text-muted-foreground">Payment</div>
-                  {badgeForPayment(order.paymentStatus)}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {badgeForPayment(order.paymentStatus)}
+                    {order.paymentMethod && (
+                      <Badge variant="outline">{labelForPaymentMethod(order.paymentMethod)}</Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="text-sm">
                   <div className="mb-1 text-muted-foreground">Fulfillment</div>
@@ -851,6 +858,7 @@ function badgeForPayment(s: PaymentStatus) {
   const variant = s === "paid" ? "default" : s === "pending" ? "secondary" : "outline";
   return <Badge variant={variant as any}>{s.replaceAll("_", " ")}</Badge>;
 }
+
 
 function renderAddress(addr: any, fallbackName: string) {
   if (!addr) return <div className="text-sm text-muted-foreground italic">No address provided</div>;

@@ -18,7 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Save, Plus, Trash2, Truck, RefreshCcw } from "lucide-react";
 
-type Currency = "USD" | "EUR" | "GBP";
+type Currency = "INR" | "USD" | "EUR" | "GBP";
 
 type Settings = {
   general: {
@@ -37,6 +37,9 @@ type Settings = {
     enabled: boolean;
     taxInclusive: boolean;
     defaultRate: number; // %
+  };
+  payments: {
+    codEnabled: boolean;
   };
   integrations: {
     shiprocketEmail?: string | null;
@@ -85,14 +88,15 @@ type Settings = {
 const FALLBACK: Settings = {
   general: {
     storeName: "Italian Shoes",
-    supportEmail: "support@italianshoes.com",
-    supportPhone: "+1 (555) 123-4567",
-    timezone: "Europe/Rome",
+    supportEmail: "Support@italianshoescompany.com",
+    supportPhone: "+91 6283281964",
+    timezone: "Asia/Kolkata",
     storefrontUrl: "https://example.com",
     notes: "",
   },
-  currency: { defaultCurrency: "USD", multiCurrency: true },
+  currency: { defaultCurrency: "INR", multiCurrency: true },
   taxes: { enabled: true, taxInclusive: false, defaultRate: 18 },
+  payments: { codEnabled: false },
   integrations: {
     shiprocketEmail: "",
     shiprocketStatus: "disconnected",
@@ -152,6 +156,37 @@ export default function SettingsPage() {
   };
 
   React.useEffect(() => { load(); }, []);
+
+  /**
+   * COD saves through the dedicated payment-settings endpoint and applies
+   * immediately — there is no separate Save button for a single switch. The
+   * local value flips first so the switch feels responsive, and is rolled back
+   * if the request fails.
+   */
+  const saveCod = async (codEnabled: boolean) => {
+    const previous = data.payments.codEnabled;
+    setData((d) => ({ ...d, payments: { ...d.payments, codEnabled } }));
+
+    const run = async () => {
+      const res = await fetch("/api/admin/payment-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codEnabled }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || "Failed to update Cash on Delivery");
+      return body as { message?: string };
+    };
+
+    try {
+      const result = await run();
+      toast.success(result?.message || "Cash on Delivery updated");
+      await load();
+    } catch (e) {
+      setData((d) => ({ ...d, payments: { ...d.payments, codEnabled: previous } }));
+      toast.error(e instanceof Error ? e.message : "Failed to update Cash on Delivery");
+    }
+  };
 
   const save = async (patch: Partial<Settings>) => {
     const run = async () => {
@@ -253,6 +288,7 @@ export default function SettingsPage() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="INR">INR — Indian Rupee</SelectItem>
                     <SelectItem value="USD">USD</SelectItem>
                     <SelectItem value="EUR">EUR</SelectItem>
                     <SelectItem value="GBP">GBP</SelectItem>
@@ -262,7 +298,7 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <div className="text-sm font-medium">Enable multi-currency</div>
-                  <div className="text-xs text-muted-foreground">Show prices in USD/EUR/GBP.</div>
+                  <div className="text-xs text-muted-foreground">Show prices in INR/USD/EUR/GBP.</div>
                 </div>
                 <Switch
                   checked={data.currency.multiCurrency}
@@ -610,6 +646,36 @@ export default function SettingsPage() {
               </Field>
               <div className="md:col-span-2">
                 <Button onClick={() => save({ integrations: { ...data.integrations } })}><Save className="mr-2 size-4" />Save Gateway</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle>Payment Settings</CardTitle>
+              <CardDescription>
+                Payment methods offered at checkout alongside the online gateway above.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">Cash on Delivery</span>
+                    <Badge variant={data.payments.codEnabled ? "default" : "secondary"}>
+                      {data.payments.codEnabled ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Allow customers to pay when their order is delivered. Orders are saved as
+                    payment pending until you mark them paid.
+                  </div>
+                </div>
+                <Switch
+                  aria-label="Cash on Delivery"
+                  checked={data.payments.codEnabled}
+                  onCheckedChange={saveCod}
+                />
               </div>
             </CardContent>
           </Card>

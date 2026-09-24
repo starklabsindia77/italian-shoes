@@ -26,16 +26,38 @@ export class CashfreeError extends Error {
   }
 }
 
-/** DB settings win over env so the admin UI stays authoritative. */
+// Terraform seeds the SSM parameters with this value until the real key is set.
+const PLACEHOLDER = "CHANGEME";
+
+/**
+ * Credentials are only usable as a matched pair, so both halves come from the
+ * same source. Whitespace is trimmed because these are pasted by hand into the
+ * admin form, and a trailing space makes Cashfree reject every call with
+ * "authentication Failed".
+ */
+function pair(appId?: string | null, secretKey?: string | null): { appId: string; secretKey: string } | null {
+  const id = appId?.trim();
+  const secret = secretKey?.trim();
+  if (!id || !secret || id === PLACEHOLDER || secret === PLACEHOLDER) return null;
+  return { appId: id, secretKey: secret };
+}
+
+/**
+ * DB settings win over env so the admin UI stays authoritative. The app id and
+ * secret are taken as a pair from one source: mixing a DB app id with an env
+ * secret (e.g. an admin save persisted only the id) makes Cashfree reject every
+ * call with 401 "authentication Failed".
+ */
 export async function getCashfreeCredentials(): Promise<CashfreeCredentials | null> {
   const settings = await getSettings();
-  const appId = settings.integrations?.cashfreeAppId || process.env.CASHFREE_APP_ID;
-  const secretKey = settings.integrations?.cashfreeSecretKey || process.env.CASHFREE_SECRET_KEY;
+  const matched =
+    pair(settings.integrations?.cashfreeAppId, settings.integrations?.cashfreeSecretKey) ??
+    pair(process.env.CASHFREE_APP_ID, process.env.CASHFREE_SECRET_KEY);
+  if (!matched) return null;
+
   const envSetting = settings.integrations?.cashfreeEnvironment || process.env.CASHFREE_ENV;
-  if (!appId || !secretKey) return null;
   return {
-    appId,
-    secretKey,
+    ...matched,
     environment: envSetting === "production" ? "production" : "sandbox",
   };
 }
@@ -65,10 +87,32 @@ async function cashfreeFetch<T>(
     cache: "no-store",
   });
 
-  const json = (await res.json().catch(() => null)) as (T & { message?: string }) | null;
+  const json = (await res.json().catch(() => null)) as
+    | (T & { message?: string; code?: string; type?: string })
+    | null;
+
   if (!res.ok || !json) {
-    // Cashfree's message is safe to surface (e.g. "customer_phone is invalid");
-    // it never echoes credentials.
+    // 401/403 means Cashfree refused our API keys — a store misconfiguration,
+    // not something the shopper did or can fix. Log the detail an operator
+    // needs (never the keys themselves) and show the shopper something neutral,
+    // rather than passing Cashfree's bare "authentication Failed" to checkout.
+    if (res.status === 401 || res.status === 403) {
+      console.error(
+        "cashfree/credentials-rejected: Cashfree returned " +
+          `${res.status} "${json?.message ?? "no message"}" for ${creds.environment} ` +
+          `(${baseUrl(creds.environment)}). Check that the App ID and Secret Key in ` +
+          "admin settings are an unmodified pair from the SAME Cashfree app and " +
+          `environment, and that the account is activated for ${creds.environment}.`,
+        { path, code: json?.code, type: json?.type }
+      );
+      throw new CashfreeError(
+        "Online payment is temporarily unavailable. Please try again later or contact support.",
+        503
+      );
+    }
+
+    // Other Cashfree messages are safe to surface (e.g. "customer_phone is
+    // invalid"); they never echo credentials.
     console.error("cashfree/api-error", { path, status: res.status, message: json?.message });
     throw new CashfreeError(json?.message || `Cashfree request failed (${res.status})`, 502);
   }

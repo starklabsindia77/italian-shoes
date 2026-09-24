@@ -33,3 +33,19 @@ export function formatCurrency(amount: number, currency = "INR", locale = "en-IN
     maximumFractionDigits: 2,
   }).format(amount);
 }
+
+/** Human label for Order.paymentMethod (the Prisma PaymentMethod enum). */
+export function labelForPaymentMethod(method: string | null | undefined) {
+  switch (method) {
+    case "COD":
+      return "Cash on Delivery";
+    case "RAZORPAY":
+      return "Razorpay";
+    case "CASHFREE":
+      return "Cashfree";
+    case "MANUAL":
+      return "Manual / Offline";
+    default:
+      return null;
+  }
+}

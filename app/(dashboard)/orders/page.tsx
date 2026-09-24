@@ -18,6 +18,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { RefreshCcw, Edit3, Search, Trash2 } from "lucide-react";
+import { labelForPaymentMethod } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,8 @@ type OrderLite = {
   customerName?: string | null;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  /** Prisma PaymentMethod enum; null on orders placed before it existed. */
+  paymentMethod?: string | null;
   fulfillmentStatus: FulfillmentStatus;
   total: number;
   currency: Currency;
@@ -194,7 +197,16 @@ export default function OrdersListPage() {
                       <span className="text-xs">{o.customerEmail ?? "—"}</span>
                     </TableCell>
                     <TableCell>{badgeForStatus(o.status)}</TableCell>
-                    <TableCell>{badgeForPayment(o.paymentStatus)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        {badgeForPayment(o.paymentStatus)}
+                        {labelForPaymentMethod(o.paymentMethod) && (
+                          <span className="text-xs text-muted-foreground">
+                            {labelForPaymentMethod(o.paymentMethod)}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{badgeForFulfillment(o.fulfillmentStatus)}</TableCell>
                     <TableCell>{formatCurrency(o.total, o.currency)}</TableCell>
                     <TableCell className="text-muted-foreground">{o.createdAt?.slice(0, 10) ?? "—"}</TableCell>

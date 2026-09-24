@@ -19,7 +19,11 @@ import { toast } from "sonner";
 type PaymentFields =
   | { paymentGateway: "razorpay"; razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }
   | { paymentGateway: "cashfree"; cashfreeOrderId: string }
+  | { paymentGateway: "cod" }
   | { paymentGateway: "none" };
+
+/** What the shopper picks when both online payment and COD are available. */
+type PaymentChoice = "online" | "cod";
 
 /**
  * Stashed before opening Cashfree so that, if a payment method escapes the
@@ -38,7 +42,9 @@ async function saveOrder(orderPayload: Record<string, unknown>, payment: Payment
 
   if (!saveResponse.ok) {
     const body = await saveResponse.json().catch(() => null);
-    if (payment.paymentGateway === "none") {
+    if (payment.paymentGateway === "none" || payment.paymentGateway === "cod") {
+      // Nothing was charged, so there is no payment reference to quote. This is
+      // also the path when the admin switches COD off mid-checkout.
       throw new Error(body?.error || "Your order could not be placed. Please try again.");
     }
     const ref = payment.paymentGateway === "cashfree" ? payment.cashfreeOrderId : payment.razorpayPaymentId;
@@ -57,6 +63,7 @@ const Checkout = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedShipping, setSelectedShipping] = useState<{ id?: string; name: string; price: number }>({ name: "Standard", price: 0 });
 
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("online");
   const [contactData, setContactData] = useState({ email: "", newsletter: false });
   const [shippingData, setShippingData] = useState({
     firstName: "", lastName: "", address: "", apartment: "", city: "", state: "", zip: "", country: "in", phone: ""
@@ -106,6 +113,18 @@ const Checkout = () => {
     // Runs once on landing; clearCart is a stable store action.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Read from the server's settings, never hardcoded: when the admin switches
+  // COD off, it disappears from checkout on the next settings load.
+  const codAvailable = settings?.payments?.codEnabled === true;
+  const onlineAvailable = (settings?.integrations?.paymentGateway ?? "razorpay") !== "none";
+
+  // If COD is withdrawn while this page is open, fall back to online payment so
+  // the shopper is never left on an option the server will reject.
+  useEffect(() => {
+    if (!codAvailable && paymentChoice === "cod") setPaymentChoice("online");
+    if (!onlineAvailable && codAvailable) setPaymentChoice("cod");
+  }, [codAvailable, onlineAvailable, paymentChoice]);
 
   const subtotal = getTotalPrice();
   
@@ -171,7 +190,13 @@ const Checkout = () => {
     const configured = settings?.integrations?.paymentGateway;
     const gateway: "razorpay" | "cashfree" | "none" =
       configured === "cashfree" || configured === "none" ? configured : "razorpay";
-    if (gateway === "cashfree" && !shippingData.phone) {
+
+    // COD only counts if the store has it switched on right now; `codAvailable`
+    // is recomputed from settings on every render, so a shopper cannot keep a
+    // stale selection. The server checks again regardless.
+    const payingByCod = codAvailable && paymentChoice === "cod";
+
+    if (!payingByCod && gateway === "cashfree" && !shippingData.phone) {
       toast.error("Please enter your mobile number.");
       return;
     }
@@ -214,6 +239,14 @@ const Checkout = () => {
     };
 
     try {
+      if (payingByCod) {
+        // Cash on Delivery: nothing is charged now. The server re-checks that
+        // COD is still enabled and records the order as payment-pending.
+        await saveOrder(orderPayload, { paymentGateway: "cod" });
+        finish();
+        return;
+      }
+
       if (gateway === "none") {
         // No online payment: the server records the order as payment-pending.
         await saveOrder(orderPayload, { paymentGateway: "none" });
@@ -410,6 +443,53 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
+            {/* Only shown when there is an actual choice to make: COD enabled
+                by the admin AND an online gateway configured. */}
+            {codAvailable && onlineAvailable && (
+              <Card className="bg-white border shadow-sm">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold">Payment Method</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {([
+                    {
+                      id: "online" as PaymentChoice,
+                      title: "Online Payment",
+                      description: "Pay securely by card, UPI, net banking or wallet.",
+                    },
+                    {
+                      id: "cod" as PaymentChoice,
+                      title: "Cash on Delivery",
+                      description: "Pay in cash when your order is delivered.",
+                    },
+                  ]).map((option) => {
+                    const selected = paymentChoice === option.id;
+                    return (
+                      <label
+                        key={option.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ${
+                          selected ? "border-blue-600 bg-blue-50" : "hover:border-gray-400"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value={option.id}
+                          checked={selected}
+                          onChange={() => setPaymentChoice(option.id)}
+                          className="mt-1 size-4 accent-blue-600"
+                        />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-gray-900">{option.title}</span>
+                          <span className="block text-sm text-gray-600">{option.description}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="pt-4">
               <Button
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-4 lg:py-6 text-base lg:text-lg"
@@ -420,7 +500,8 @@ const Checkout = () => {
                 <Shield className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
                 {isProcessing
                   ? "Processing..."
-                  : settings?.integrations?.paymentGateway === "none"
+                  : (codAvailable && paymentChoice === "cod") ||
+                      settings?.integrations?.paymentGateway === "none"
                     ? "Place Order"
                     : "Complete Order"}
               </Button>

@@ -166,7 +166,9 @@ export const GenerateVariantsSchema = z.object({
 // ("none": no online payment; the order is recorded as payment-pending).
 export const OrderCreateSchema = z.object({
   orderNumber: z.string().min(1),
-  paymentGateway: z.enum(["razorpay", "cashfree", "none"]).default("razorpay"),
+  // "cod" = Cash on Delivery: no gateway ids, and the server checks the store
+  // still has COD switched on before accepting it.
+  paymentGateway: z.enum(["razorpay", "cashfree", "cod", "none"]).default("razorpay"),
   razorpayOrderId: z.string().min(1).optional(),
   razorpayPaymentId: z.string().min(1).optional(),
   razorpaySignature: z.string().min(1).optional(),
@@ -194,7 +196,7 @@ export const OrderCreateSchema = z.object({
   })).min(1)
 }).superRefine((d, ctx) => {
   const missing =
-    d.paymentGateway === "none"
+    d.paymentGateway === "none" || d.paymentGateway === "cod"
       ? false
       : d.paymentGateway === "cashfree"
         ? !d.cashfreeOrderId
@@ -224,6 +226,11 @@ export const OrderUpdateStatusSchema = z.object({
     estimatedDelivery: z.string().nullable().optional(),
     actualDelivery: z.string().nullable().optional(),
   }).optional(),
+});
+
+// Payment settings (admin)
+export const PaymentSettingsUpdateSchema = z.object({
+  codEnabled: z.boolean(),
 });
 
 // Shipments

@@ -9,8 +9,16 @@ export const SETTINGS_DEFAULTS = {
     storefrontUrl: "https://example.com",
     notes: "",
   },
-  currency: { defaultCurrency: "USD" as "USD" | "EUR" | "GBP", multiCurrency: true },
+  // INR is the store's base currency: product prices are stored in it and
+  // checkout charges in it (see BASE_CURRENCY in lib/pricing.ts).
+  currency: { defaultCurrency: "INR" as "INR" | "USD" | "EUR" | "GBP", multiCurrency: true },
   taxes: { enabled: true, taxInclusive: false, defaultRate: 18 },
+  // Customer-facing payment methods that sit alongside the online gateway.
+  // Its own section so further COD rules (minimum/maximum order value, a COD
+  // fee, allowed postcodes) can be added here without touching `integrations`.
+  // COD is off by default: taking payment on delivery has to be a deliberate
+  // choice, not something a fresh install inherits.
+  payments: { codEnabled: false },
   integrations: {
     shiprocketEmail: "",
     shiprocketStatus: "disconnected" as "connected" | "disconnected",

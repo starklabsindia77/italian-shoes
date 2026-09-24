@@ -127,7 +127,7 @@ const Header: React.FC = () => {
 
             {/* Right — Hotline */}
             <a
-              href="tel:+12108019868"
+              href="tel:+916283281964"
               className="flex items-center gap-1.5 transition-colors hover:opacity-80"
               style={{ fontSize: 12, color: '#555555', textDecoration: 'none' }}
               aria-label="Call Hotline"
@@ -140,7 +140,7 @@ const Header: React.FC = () => {
               </div>
               <span style={{ color: '#888888', fontWeight: 400 }}>Hotline:&nbsp;</span>
               <span style={{ color: '#ff3f6c', fontWeight: 600, letterSpacing: '0.2px' }}>
-                +1 (210) 801-9868
+                +91 6283281964
               </span>
             </a>
           </div>

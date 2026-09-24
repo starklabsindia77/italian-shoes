@@ -1,5 +1,5 @@
 import React from 'react';
-import { Facebook, Instagram, Globe } from 'lucide-react';
+import { Facebook, Instagram, Twitter } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
           <div className="flex items-center gap-6 justify-center">
             {/* Instagram */}
             <a 
-              href="https://instagram.com" 
+              href="https://www.instagram.com/italianshoesco/" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="text-[#555555] hover:text-black transition-colors"
@@ -24,7 +24,7 @@ const Footer: React.FC = () => {
             </a>
             {/* Facebook */}
             <a 
-              href="https://facebook.com" 
+              href="https://www.facebook.com/italianshoes.co" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="text-[#555555] hover:text-black transition-colors"
@@ -40,7 +40,7 @@ const Footer: React.FC = () => {
               className="text-[#555555] hover:text-black transition-colors"
               aria-label="Website"
             >
-              <Globe className="w-5 h-5 stroke-[1.5]" />
+              <Twitter className="w-5 h-5 stroke-[1.5]" />
             </a>
           </div>
         </div>
@@ -48,7 +48,7 @@ const Footer: React.FC = () => {
         {/* Copyright Text — centered */}
         <div className="flex justify-center text-[11px] text-[#777777] text-center w-full border-t border-gray-200/60 pt-6">
           <span>
-            © 2009 - 2026 CUSTOM DESIGN ITALY S.R.L. - All rights reserved. VAT: IT12281840962 - Vendor information
+            © 2026 All rights reserved by Italian Shoes Company
           </span>
         </div>
 

@@ -129,6 +129,13 @@ After=app-s3-creds.service imds-guard.service
 [Service]
 ExecStart=
 ExecStart=/usr/bin/env AWS_CONFIG_FILE=/opt/app/shared/aws-config AWS_EC2_METADATA_DISABLED=true /usr/bin/node /opt/app/current/node_modules/next/dist/bin/next start -p ${app_port}
+# Nothing the app can write may be executed. Only system binaries (/usr) and
+# the release tree (node_modules native addons such as Prisma's query engine)
+# are exec-mounted; the writable .next cache, /tmp, /var/tmp and /dev/shm are
+# not. '+' ExecStartPre (refresh-app-env) runs outside this namespace.
+NoExecPaths=/
+ExecPaths=/usr /opt/app/releases
+NoExecPaths=/opt/app/current/.next
 EOF
 
 systemctl daemon-reload
@@ -142,7 +149,9 @@ if [ "$changed" = 1 ] && systemctl is-enabled --quiet app.service && [ -e /opt/a
   healthy=0
   for _ in $(seq 1 20); do
     sleep 3
-    if [ "$(curl -s -o /dev/null -w '%%{http_code}' http://127.0.0.1:${app_port}/api/healthz)" = 200 ]; then
+    # /api/health touches the DB, so it also proves Prisma's native engine
+    # still loads under the exec restrictions.
+    if curl -s -m 10 http://127.0.0.1:${app_port}/api/health | grep -q '"db":"connected"'; then
       healthy=1
       break
     fi
@@ -165,4 +174,13 @@ code=$(runuser -u app -- curl -s -m 2 -o /dev/null -w '%%{http_code}' -X PUT \
 echo "imds_as_app=$${code:-blocked}"
 [ "$code" = 200 ] && { echo "ERROR: app user can still reach IMDS" >&2; exit 1; }
 jq -r '"app_creds_expire=" + .Expiration' /run/app-creds/creds.json
+
+# Report (don't fail on) the exec mounts the app actually sees.
+pid=$(systemctl show -p MainPID --value app.service)
+if [ -n "$pid" ] && [ "$pid" != 0 ]; then
+  for d in /tmp /var/tmp /dev/shm /opt/app/current/.next /opt/app/current/node_modules; do
+    opts=$(nsenter -t "$pid" -m -- findmnt -T "$d" -no OPTIONS | head -1)
+    case ",$opts," in *,noexec,*) echo "exec_guard $d=noexec" ;; *) echo "exec_guard $d=exec" ;; esac
+  done
+fi
 echo "app_isolation ok"

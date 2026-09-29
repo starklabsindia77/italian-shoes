@@ -133,7 +133,9 @@ ExecStart=/usr/bin/env AWS_CONFIG_FILE=/opt/app/shared/aws-config AWS_EC2_METADA
 # the release tree (node_modules native addons such as Prisma's query engine)
 # are exec-mounted; the writable .next cache, /tmp, /var/tmp and /dev/shm are
 # not. '+' ExecStartPre (refresh-app-env) runs outside this namespace.
-NoExecPaths=/
+# PrivateTmp/PrivateDevices create /tmp, /var/tmp and /dev/shm as their own
+# mounts, which NoExecPaths=/ does not reach; they must be listed by name.
+NoExecPaths=/ /tmp /var/tmp /dev/shm
 ExecPaths=/usr /opt/app/releases
 NoExecPaths=/opt/app/current/.next
 EOF

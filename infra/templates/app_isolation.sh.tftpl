@@ -1,0 +1,148 @@
+#!/bin/bash
+# Keeps the app user away from the instance role.
+#
+# Rendered by Terraform templatefile() and delivered by the SSM association in
+# app_credentials.tf, so it reaches the running instance without touching
+# user_data (which would replace it). Runs as root, is idempotent, and only
+# restarts app.service when its configuration actually changed.
+#
+# 1. The app user cannot reach IMDS (nftables uid rule + systemd IPAddressDeny),
+#    so code running as the app cannot mint instance-role credentials.
+# 2. A root-only helper assumes a narrow role (${app_role_arn}) and writes its
+#    short-lived credentials where the app's AWS SDK reads them via
+#    credential_process.
+set -euo pipefail
+
+changed=0
+
+# write_if_changed <path> <owner:group> <mode>  (content on stdin)
+write_if_changed() {
+  local dest=$1 owner=$2 mode=$3 tmp
+  tmp=$(mktemp)
+  cat > "$tmp"
+  if [ -f "$dest" ] && cmp -s "$tmp" "$dest"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  install -o "$${owner%%:*}" -g "$${owner##*:}" -m "$mode" "$tmp" "$dest"
+  rm -f "$tmp"
+  return 0
+}
+
+# --- IMDS block for every process running as the app user ------------------
+command -v nft >/dev/null || dnf -y install nftables
+
+write_if_changed /etc/nftables/imds-guard.nft root:root 0644 <<'EOF' || true
+# Managed by SSM association (app_isolation). Drops IMDS traffic from the app
+# user; root (SSM agent, refresh-app-env, credential helper) is unaffected.
+table inet imds_guard
+delete table inet imds_guard
+table inet imds_guard {
+  chain output {
+    type filter hook output priority 0; policy accept;
+    meta skuid "app" ip daddr 169.254.169.254 counter drop
+    meta skuid "app" ip6 daddr fd00:ec2::254 counter drop
+  }
+}
+EOF
+
+write_if_changed /etc/systemd/system/imds-guard.service root:root 0644 <<'EOF' && changed=1 || true
+[Unit]
+Description=Block IMDS for the app user
+DefaultDependencies=no
+Before=network-pre.target app.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/nftables/imds-guard.nft
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --- Narrow, short-lived credentials for the app ----------------------------
+write_if_changed /usr/local/bin/app-s3-creds root:root 0755 <<'EOF' || true
+#!/bin/bash
+# Assumes the app's narrow role with the instance role (root only) and writes
+# the result in credential_process format, readable by the app group only.
+set -euo pipefail
+DIR=/run/app-creds
+install -d -o root -g app -m 0750 "$DIR"
+TMP=$(mktemp "$DIR/.creds.XXXXXX")
+trap 'rm -f "$TMP"' EXIT
+aws sts assume-role \
+  --region "${region}" \
+  --role-arn "${app_role_arn}" \
+  --role-session-name "app-$(hostname -s)" \
+  --duration-seconds 3600 \
+  --query Credentials --output json |
+  jq '{Version: 1, AccessKeyId, SecretAccessKey, SessionToken, Expiration}' > "$TMP"
+chown root:app "$TMP"
+chmod 0440 "$TMP"
+mv -f "$TMP" "$DIR/creds.json"
+trap - EXIT
+EOF
+
+write_if_changed /etc/systemd/system/app-s3-creds.service root:root 0644 <<'EOF' && changed=1 || true
+[Unit]
+Description=Refresh the app's short-lived S3 credentials
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/app-s3-creds
+EOF
+
+write_if_changed /etc/systemd/system/app-s3-creds.timer root:root 0644 <<'EOF' && changed=1 || true
+[Unit]
+Description=Refresh the app's S3 credentials every 15 minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+write_if_changed /opt/app/shared/aws-config root:app 0440 <<'EOF' && changed=1 || true
+[default]
+region = ${region}
+credential_process = /bin/cat /run/app-creds/creds.json
+EOF
+
+# --- app.service: no IMDS, SDK reads the narrow credentials ----------------
+mkdir -p /etc/systemd/system/app.service.d
+write_if_changed /etc/systemd/system/app.service.d/10-app-isolation.conf root:root 0644 <<'EOF' && changed=1 || true
+[Unit]
+Wants=app-s3-creds.service imds-guard.service
+After=app-s3-creds.service imds-guard.service
+
+[Service]
+IPAddressDeny=169.254.169.254/32 fd00:ec2::254/128
+Environment=AWS_EC2_METADATA_DISABLED=true
+Environment=AWS_CONFIG_FILE=/opt/app/shared/aws-config
+EOF
+
+systemctl daemon-reload
+systemctl enable --now imds-guard.service
+systemctl restart imds-guard.service # re-apply the ruleset if it changed
+systemctl start app-s3-creds.service
+systemctl enable --now app-s3-creds.timer
+
+if [ "$changed" = 1 ] && systemctl is-active --quiet app.service; then
+  systemctl restart app.service
+  echo "app.service restarted with isolation settings"
+fi
+
+# --- Self-check (never prints credentials) ----------------------------------
+code=$(runuser -u app -- curl -s -m 2 -o /dev/null -w '%%{http_code}' -X PUT \
+  -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' http://169.254.169.254/latest/api/token || true)
+echo "imds_as_app=$${code:-blocked}"
+[ "$code" = 200 ] && { echo "ERROR: app user can still reach IMDS" >&2; exit 1; }
+jq -r '"app_creds_expire=" + .Expiration' /run/app-creds/creds.json
+echo "app_isolation ok"

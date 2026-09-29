@@ -61,6 +61,7 @@ terraform.tfvars
 *.auto.tfvars
 crash.log
 tfplan
+*.tfplan
 .next/
 node_modules/
 package-lock.json

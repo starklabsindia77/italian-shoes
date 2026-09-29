@@ -102,19 +102,15 @@ data "aws_iam_policy_document" "instance" {
     ]
   }
 
-  # App asset uploads (product images / GLB models) to the EXISTING assets
-  # bucket, when configured. Not in the original spec's IAM list, added
-  # deliberately: the app's /api/assets/upload writes to S3 and would be
-  # dead without it. Scoped to that one bucket.
+  # App asset uploads (product images / GLB models) no longer use this role.
+  # The app user is blocked from IMDS; a root-only helper assumes the narrow
+  # app_s3 role on its behalf (see app_credentials.tf).
   dynamic "statement" {
     for_each = var.assets_bucket_name != "" ? [1] : []
     content {
-      sid = "AppAssets"
-      actions = [
-        "s3:PutObject",
-        "s3:GetObject",
-      ]
-      resources = ["arn:aws:s3:::${var.assets_bucket_name}/*"]
+      sid       = "AssumeAppS3Role"
+      actions   = ["sts:AssumeRole"]
+      resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project}-app-s3"]
     }
   }
 }

@@ -181,7 +181,9 @@ jq -r '"app_creds_expire=" + .Expiration' /run/app-creds/creds.json
 pid=$(systemctl show -p MainPID --value app.service)
 if [ -n "$pid" ] && [ "$pid" != 0 ]; then
   for d in /tmp /var/tmp /dev/shm /opt/app/current/.next /opt/app/current/node_modules; do
-    opts=$(nsenter -t "$pid" -m -- findmnt -T "$d" -no OPTIONS | head -1)
+    # PrivateTmp stacks the private /tmp over the host's; the last line is the
+    # topmost mount, i.e. the one the process actually sees.
+    opts=$(nsenter -t "$pid" -m -- findmnt -T "$d" -no OPTIONS | tail -1)
     case ",$opts," in *,noexec,*) echo "exec_guard $d=noexec" ;; *) echo "exec_guard $d=exec" ;; esac
   done
 fi

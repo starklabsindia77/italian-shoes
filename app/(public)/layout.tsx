@@ -14,7 +14,7 @@ export default function PublicLayout({
 
       {/* ── Single unified white container: header + page content ── */}
       <div
-        className="grow max-w-[1140px] w-full mx-auto flex flex-col mb-12"
+        className="grow max-w-full w-full mx-auto flex flex-col mb-12"
         style={{
           backgroundColor: '#ffffff',
           border: '1px solid #d1d5db',

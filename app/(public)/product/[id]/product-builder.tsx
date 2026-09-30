@@ -577,7 +577,7 @@ export default function ProductBuilder({
         </div>
 
         {/* Back to list Link */}
-        <div className="max-w-5xl mx-auto px-4 pt-1 pb-2">
+        <div className="max-w-[1320] mx-auto px-4 pt-1 pb-2">
           <Link 
             href="/collections" 
             className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 font-sans hover:underline transition-all"
@@ -588,7 +588,7 @@ export default function ProductBuilder({
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 pt-2 pb-6 w-full overflow-hidden">
+      <main className="max-w-[1320] mx-auto px-4 pt-2 pb-6 w-full overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 xl:gap-12">
           {/* Left: Enhanced Product Viewer */}
           <div className="space-y-6">
@@ -659,11 +659,9 @@ export default function ProductBuilder({
 
             {/* Order Status */}
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {cfg.orderStatus || "4 customers are processing an order"}
-              </span>
+              
               <span className="text-gray-400">•</span>
-              <span className="font-medium">{cfg.vendor || "GIROTTI"}</span>
+              <span className="font-medium">{cfg.vendor}</span>
             </div>
           </div>
 

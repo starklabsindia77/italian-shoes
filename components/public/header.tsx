@@ -109,9 +109,9 @@ const Header: React.FC = () => {
           }}
         >
           <div
-            className="max-w-[1140px] mx-auto flex items-center justify-between"
+            className="max-w-full mx-auto flex items-center justify-between"
             style={{
-              padding: '7px 20px',
+              padding: '7px 60px',
               backgroundColor: '#f0f0f0',
             }}
           >
@@ -158,10 +158,10 @@ const Header: React.FC = () => {
           <div
             className="flex items-start justify-between relative"
             style={{
-              maxWidth: 1140,
+              maxWidth: '100%',
               margin: '0 auto',
-              padding: '28px 30px 28px',
-              minHeight: 130,
+              padding: '28px 60px',
+              minHeight: 110,
             }}
           >
             {/* Left — Search (flush top-left) */}
@@ -198,7 +198,7 @@ const Header: React.FC = () => {
             </div>
 
             {/* Center — Logo (absolutely centered in the row) */}
-            <div
+            {/* <div
               className="absolute left-0 right-0 flex flex-col items-center justify-center text-center pointer-events-none"
               style={{ top: 0, bottom: 0 }}
             >
@@ -244,7 +244,38 @@ const Header: React.FC = () => {
                   Create Men&apos;s Shoes
                 </span>
               )}
-            </div>
+            </div> */}
+
+            <div
+  className="absolute left-0 right-0 flex flex-col items-center justify-center text-center pointer-events-none"
+  style={{ top: 0, bottom: 0 }}
+>
+  <img
+    src="/img/layout/italian_shoes_logo_transparent.png"
+    alt="Italian Shoes"
+    className="select-none object-contain"
+    style={{
+      width: 120,
+      height: 'auto',
+    }}
+  />
+
+  {pathname === '/collections' && (
+    <span
+      className="select-none font-sans"
+      style={{
+        fontSize: 20,
+        fontWeight: 500,
+        letterSpacing: '0.18em',
+        color: '#1a1a1a',
+        marginTop: 8,
+        textTransform: 'uppercase',
+      }}
+    >
+      Create Men&apos;s Shoes
+    </span>
+  )}
+</div>
 
             {/* Right — Log In + Cart (flush top-right) */}
             <div
@@ -295,12 +326,16 @@ const Header: React.FC = () => {
       < div className = "lg:hidden w-full bg-white border-b border-gray-200 shadow-sm" >
         <div className="max-w-[1140px] mx-auto px-4 flex justify-between items-center h-16">
           <div className="flex flex-col items-start">
-            <span className={`${cormorant.className} text-[24px] tracking-[0.05em] text-[#1a1a1a] leading-normal select-none font-[500]`}>
-              ITALIAN SHOES
-            </span>
-            <span className="font-sans text-[8px] tracking-[0.15em] text-gray-400 mt-0.5 uppercase select-none font-[400]">
-              Handcrafted Made In Italy
-            </span>
+            
+  <img
+    src="/img/layout/italian_shoes_logo_transparent.png"
+    alt="Italian Shoes"
+    className="select-none object-contain"
+    style={{
+      width: 80,
+      height: 'auto',
+    }}
+  />
           </div>
           <div className="flex items-center space-x-4">
             <button className="text-gray-700 hover:text-gray-900" aria-label="User Account">
@@ -312,7 +347,7 @@ const Header: React.FC = () => {
             </button>
           </div>
         </div>
-  {
+  {/* {
     isMenuOpen && (
       <div className="px-4 py-4 border-t border-gray-100 bg-white">
         <div className="flex flex-col space-y-4">
@@ -335,7 +370,7 @@ const Header: React.FC = () => {
         </div>
       </div>
     )
-  }
+  } */}
       </div >
     </>
   );

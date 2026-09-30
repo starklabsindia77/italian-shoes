@@ -6,7 +6,7 @@
 # user_data (which would replace it). Runs as root, is idempotent, and only
 # restarts app.service when its configuration actually changed.
 #
-# 1. The app user cannot reach IMDS (nftables uid rule + systemd IPAddressDeny),
+# 1. The app user cannot reach IMDS (nftables uid rule),
 #    so code running as the app cannot mint instance-role credentials.
 # 2. A root-only helper assumes a narrow role (${app_role_arn}) and writes its
 #    short-lived credentials where the app's AWS SDK reads them via
@@ -115,7 +115,11 @@ region = ${region}
 credential_process = /bin/cat /run/app-creds/creds.json
 EOF
 
-# --- app.service: no IMDS, SDK reads the narrow credentials ----------------
+# --- app.service: SDK reads the narrow credentials --------------------------
+# The AWS settings go on ExecStart only. Service-wide Environment= or
+# IPAddressDeny= would also hit ExecStartPre (refresh-app-env, runs as root
+# and needs the instance role for Parameter Store), and the app would fail to
+# start. IMDS for the app user is blocked by the nftables rule above.
 mkdir -p /etc/systemd/system/app.service.d
 write_if_changed /etc/systemd/system/app.service.d/10-app-isolation.conf root:root 0644 <<'EOF' && changed=1 || true
 [Unit]
@@ -123,9 +127,17 @@ Wants=app-s3-creds.service imds-guard.service
 After=app-s3-creds.service imds-guard.service
 
 [Service]
-IPAddressDeny=169.254.169.254/32 fd00:ec2::254/128
-Environment=AWS_EC2_METADATA_DISABLED=true
-Environment=AWS_CONFIG_FILE=/opt/app/shared/aws-config
+ExecStart=
+ExecStart=/usr/bin/env AWS_CONFIG_FILE=/opt/app/shared/aws-config AWS_EC2_METADATA_DISABLED=true /usr/bin/node /opt/app/current/node_modules/next/dist/bin/next start -p ${app_port}
+# Nothing the app can write may be executed. Only system binaries (/usr) and
+# the release tree (node_modules native addons such as Prisma's query engine)
+# are exec-mounted; the writable .next cache, /tmp, /var/tmp and /dev/shm are
+# not. '+' ExecStartPre (refresh-app-env) runs outside this namespace.
+# PrivateTmp/PrivateDevices create /tmp, /var/tmp and /dev/shm as their own
+# mounts, which NoExecPaths=/ does not reach; they must be listed by name.
+NoExecPaths=/ /tmp /var/tmp /dev/shm
+ExecPaths=/usr /opt/app/releases
+NoExecPaths=/opt/app/current/.next
 EOF
 
 systemctl daemon-reload
@@ -134,8 +146,27 @@ systemctl restart imds-guard.service # re-apply the ruleset if it changed
 systemctl start app-s3-creds.service
 systemctl enable --now app-s3-creds.timer
 
-if [ "$changed" = 1 ] && systemctl is-active --quiet app.service; then
-  systemctl restart app.service
+if [ "$changed" = 1 ] && systemctl is-enabled --quiet app.service && [ -e /opt/app/current ]; then
+  systemctl restart app.service || true
+  healthy=0
+  for _ in $(seq 1 20); do
+    sleep 3
+    # /api/health touches the DB, so it also proves Prisma's native engine
+    # still loads under the exec restrictions.
+    if curl -s -m 10 http://127.0.0.1:${app_port}/api/health | grep -q '"db":"connected"'; then
+      healthy=1
+      break
+    fi
+  done
+  if [ "$healthy" != 1 ]; then
+    # Never leave production down: drop the override and restart on the
+    # original unit, then fail the association so it shows up.
+    rm -f /etc/systemd/system/app.service.d/10-app-isolation.conf
+    systemctl daemon-reload
+    systemctl restart app.service || true
+    echo "ERROR: app unhealthy with isolation settings; override rolled back" >&2
+    exit 1
+  fi
   echo "app.service restarted with isolation settings"
 fi
 
@@ -145,4 +176,15 @@ code=$(runuser -u app -- curl -s -m 2 -o /dev/null -w '%%{http_code}' -X PUT \
 echo "imds_as_app=$${code:-blocked}"
 [ "$code" = 200 ] && { echo "ERROR: app user can still reach IMDS" >&2; exit 1; }
 jq -r '"app_creds_expire=" + .Expiration' /run/app-creds/creds.json
+
+# Report (don't fail on) the exec mounts the app actually sees.
+pid=$(systemctl show -p MainPID --value app.service)
+if [ -n "$pid" ] && [ "$pid" != 0 ]; then
+  for d in /tmp /var/tmp /dev/shm /opt/app/current/.next /opt/app/current/node_modules; do
+    # PrivateTmp stacks the private /tmp over the host's; the last line is the
+    # topmost mount, i.e. the one the process actually sees.
+    opts=$(nsenter -t "$pid" -m -- findmnt -T "$d" -no OPTIONS | tail -1)
+    case ",$opts," in *,noexec,*) echo "exec_guard $d=noexec" ;; *) echo "exec_guard $d=exec" ;; esac
+  done
+fi
 echo "app_isolation ok"

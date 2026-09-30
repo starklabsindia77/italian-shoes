@@ -1,7 +1,7 @@
 import React from "react";
 import Header from "@/components/public/header";
 import Footer from "@/components/public/footer";
-import AnnouncementBar from "@/components/public/announcementBar";
+
 
 export default function PublicLayout({
   children,
@@ -10,7 +10,7 @@ export default function PublicLayout({
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f0f0f0', margin: 0, padding: 0 }}>
 
       {/* ── Announcement bar — full-width dark navy, sits above the white container ── */}
-      <AnnouncementBar />
+      {/* <AnnouncementBar /> */}
 
       {/* ── Single unified white container: header + page content ── */}
       <div

@@ -346,11 +346,11 @@ const ProductsPage = () => {
 
       {/* ── Hero Banner Section ─────────────────────────────────────── */}
       <section className="mb-6 w-full select-none" style={{ margin: '0 -16px', width: 'calc(100% + 32px)' }}>
-        <div style={{ overflow: 'hidden' }}>
+        <div style={{ overflow: 'hidden', display: 'flex', justifyContent: 'center', }}>
           <img
             src="/img/layout/GIROTTI-web-model-category-banner-EN-men.jpg"
             alt="Create Custom Design Shoes"
-            style={{ display: 'block', width: '100%', height: 'auto' }}
+            style={{ display: 'inline', width: '80%', height: 'auto' }}
           />
         </div>
       </section>

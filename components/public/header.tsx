@@ -108,42 +108,9 @@ const Header: React.FC = () => {
             margin: 0,
           }}
         >
-          <div
-            className="max-w-full mx-auto flex items-center justify-between"
-            style={{
-              padding: '7px 60px',
-              backgroundColor: '#f0f0f0',
-            }}
-          >
+          
             {/* Left — Free Delivery & Returns */}
-            <div className="flex items-center gap-1.5" style={{ fontSize: 12, fontWeight: 400, color: '#222222' }}>
-              <Plane
-                className="w-3 h-3 fill-current transform rotate-45 flex-shrink-0"
-                style={{ color: '#ff3f6c' }}
-                aria-hidden="true"
-              />
-              <span>Free Delivery &amp; Returns</span>
-            </div>
-
-            {/* Right — Hotline */}
-            <a
-              href="tel:+916283281964"
-              className="flex items-center gap-1.5 transition-colors hover:opacity-80"
-              style={{ fontSize: 12, color: '#555555', textDecoration: 'none' }}
-              aria-label="Call Hotline"
-            >
-              <div
-                className="inline-flex items-center justify-center rounded-full w-[15px] h-[15px] flex-shrink-0"
-                style={{ backgroundColor: '#ff3f6c' }}
-              >
-                <Phone className="w-2 h-2 fill-current text-white" aria-hidden="true" />
-              </div>
-              <span style={{ color: '#888888', fontWeight: 400 }}>Hotline:&nbsp;</span>
-              <span style={{ color: '#ff3f6c', fontWeight: 600, letterSpacing: '0.2px' }}>
-                +91 6283281964
-              </span>
-            </a>
-          </div>
+            
         </div>
 
         {/* LAYER 2 — Main Header */}
@@ -160,8 +127,8 @@ const Header: React.FC = () => {
             style={{
               maxWidth: '100%',
               margin: '0 auto',
-              padding: '28px 60px',
-              minHeight: 110,
+              padding: '34px 60px',
+              minHeight: 170,
             }}
           >
             {/* Left — Search (flush top-left) */}

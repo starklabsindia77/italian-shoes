@@ -6,8 +6,8 @@
 # instance-role credentials (Parameter Store secrets, artifacts bucket, SSM).
 #
 # Now:
-#   - the app user is blocked from IMDS on the instance (nftables uid rule +
-#     systemd IPAddressDeny), applied by the SSM association below;
+#   - the app user is blocked from IMDS on the instance (nftables uid rule),
+#     applied by the SSM association below;
 #   - a root-only helper assumes `app_s3` (below) every 15 minutes and hands the
 #     short-lived credentials to the app via credential_process;
 #   - `app_s3` can only touch the assets bucket, and only from this VPC's NAT
@@ -91,6 +91,7 @@ resource "aws_ssm_document" "app_isolation" {
         timeoutSeconds = "300"
         runCommand = [templatefile("${path.module}/templates/app_isolation.sh.tftpl", {
           region       = var.aws_region
+          app_port     = var.app_port
           app_role_arn = aws_iam_role.app_s3[0].arn
         })]
       }

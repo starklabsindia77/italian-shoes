@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Menu, X, Search, ShoppingBag, Phone, Plane } from 'lucide-react';
+import { User, Search, ShoppingBag, Phone, Plane } from 'lucide-react';
+import Link from 'next/link';
 import { Cormorant_Garamond } from 'next/font/google';
 import { CartIcon } from '@/components/cart/CartIcon';
 import { useCartStore } from '@/lib/stores';
@@ -70,7 +71,6 @@ const navItems = [
 ];
 
 const Header: React.FC = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
   const { getTotalItems, openCart } = useCartStore();
@@ -217,15 +217,20 @@ const Header: React.FC = () => {
   className="absolute left-0 right-0 flex flex-col items-center justify-center text-center pointer-events-none"
   style={{ top: 0, bottom: 0 }}
 >
-  <img
-    src="/img/layout/italian_shoes_logo_transparent.png"
-    alt="Italian Shoes"
-    className="select-none object-contain"
-    style={{
-      width: 120,
-      height: 'auto',
-    }}
-  />
+  
+  {/* The wrapper is pointer-events-none so this centred overlay does not block
+      the search field and nav behind it; the link opts itself back in. */}
+  <Link href="https://italianshoescompany.com/" aria-label="Italian Shoes — go to home" className="pointer-events-auto">
+    <img
+      src="/img/layout/italian_shoes_logo_transparent.png"
+      alt="Italian Shoes"
+      className="select-none object-contain"
+      style={{
+        width: 120,
+        height: 'auto',
+      }}
+    />
+  </Link>
 
   {pathname === '/collections' && (
     <span
@@ -293,51 +298,25 @@ const Header: React.FC = () => {
       < div className = "lg:hidden w-full bg-white border-b border-gray-200 shadow-sm" >
         <div className="max-w-[1140px] mx-auto px-4 flex justify-between items-center h-16">
           <div className="flex flex-col items-start">
-            
-  <img
-    src="/img/layout/italian_shoes_logo_transparent.png"
-    alt="Italian Shoes"
-    className="select-none object-contain"
-    style={{
-      width: 80,
-      height: 'auto',
-    }}
-  />
+            <Link href="https://italianshoescompany.com/" aria-label="Italian Shoes — go to home">
+              <img
+                src="/img/layout/italian_shoes_logo_transparent.png"
+                alt="Italian Shoes"
+                className="select-none object-contain"
+                style={{
+                  width: 80,
+                  height: 'auto',
+                }}
+              />
+            </Link>
           </div>
           <div className="flex items-center space-x-4">
             <button className="text-gray-700 hover:text-gray-900" aria-label="User Account">
               <User className="w-5 h-5" aria-hidden="true" />
             </button>
             <CartIcon showWishlist={false} />
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-700 hover:text-gray-900" aria-label="Toggle Menu">
-              {isMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
-            </button>
           </div>
         </div>
-  {/* {
-    isMenuOpen && (
-      <div className="px-4 py-4 border-t border-gray-100 bg-white">
-        <div className="flex flex-col space-y-4">
-          {navItems.map((item) => (
-            <div key={item.label} className="flex flex-col">
-              <button onClick={() => router.push(item.href)} className="text-gray-700 hover:text-gray-900 font-semibold text-sm text-left py-1">
-                {item.label}
-              </button>
-              {item.dropdown && (
-                <div className="flex flex-wrap gap-2 pl-3 mt-1.5 border-l border-gray-200">
-                  {item.dropdown.map((subItem) => (
-                    <button key={subItem.label} onClick={() => router.push(subItem.href)} className="text-xs text-gray-500 hover:text-gray-800 py-0.5 px-2 bg-gray-50 rounded border border-gray-100">
-                      {subItem.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  } */}
       </div >
     </>
   );

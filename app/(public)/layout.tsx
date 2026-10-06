@@ -14,7 +14,7 @@ export default function PublicLayout({
 
       {/* ── Single unified white container: header + page content ── */}
       <div
-        className="grow max-w-full w-full mx-auto flex flex-col mb-12"
+        className="grow max-w-full w-full mx-auto flex flex-col"
         style={{
           backgroundColor: '#ffffff',
           border: '1px solid #d1d5db',
@@ -25,7 +25,7 @@ export default function PublicLayout({
         <Header />
 
         {/* Page content (breadcrumb, hero, product grid, etc.) */}
-        <main className="grow px-4 py-6">
+        <main className="grow py-6">
           {children}
         </main>
       </div>

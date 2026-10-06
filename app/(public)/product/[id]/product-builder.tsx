@@ -1062,26 +1062,7 @@ export default function ProductBuilder({
               <div className="border-t border-gray-300"></div>
 
               {/* Buttons */}
-              <div className="flex gap-4 justify-center py-1">
-                {/* Save to wishlist */}
-                <WishlistButton
-                  productId={id}
-                  title={productData?.title || ""}
-                  price={productData?.price || 0}
-                  originalPrice={productData?.compareAtPrice || undefined}
-                  image={getAssetUrl(productData?.assets?.thumbnail) || undefined}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors border-0 shadow-none rounded-none text-sm"
-                  buttonVariant="ghost"
-                />
-
-                {/* Send inquiry */}
-                <button className="flex-1 flex items-center justify-center gap-2 bg-white py-1 px-4 font-medium hover:bg-gray-50 transition-colors border-0 shadow-none rounded-none text-sm text-black cursor-pointer">
-                  <MessageCircle className="w-5 h-5 stroke-2 text-black" />
-                  <span>
-                    Send inquiry
-                  </span>
-                </button>
-              </div>
+              
 
               {/* Bottom Divider */}
               <div className="border-t border-gray-300"></div>
@@ -1096,9 +1077,9 @@ export default function ProductBuilder({
               <button className="py-2 px-1 border-b-2 border-red-600 text-sm font-medium text-red-600">
                 Product Description
               </button>
-              <button className="py-2 px-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
+              {/* <button className="py-2 px-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300">
                 More information
-              </button>
+              </button> */}
             </nav>
           </div>
 
@@ -1113,7 +1094,7 @@ export default function ProductBuilder({
         </div>
 
         {/* Key Features Section */}
-        <div className="mt-12 bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="mt-12 border border-black-200 rounded-lg p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <div className="text-sm font-medium text-red-800 mb-1">

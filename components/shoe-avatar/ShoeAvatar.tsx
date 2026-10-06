@@ -12,12 +12,13 @@ import React, {
   memo,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Environment, Bounds, ContactShadows } from "@react-three/drei";
+import { OrbitControls, useGLTF, Environment, ContactShadows } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { Sun, Circle } from "lucide-react";
 import { getAssetUrl } from "@/lib/utils";
 import { applyTiling, clearUvScaleCache } from "@/lib/texture-tiling";
+import { computeFitDistance } from "@/lib/fit-camera";
 
 /* ============================================================================
    Types
@@ -45,6 +46,8 @@ interface AvatarProps {
 
 interface AvatarSceneProps extends AvatarProps {
   roughness: number;
+  /** Reports the grounded model's world bounds so the camera can frame it. */
+  onBounds?: (box: THREE.Box3) => void;
 }
 
 /* ============================================================================
@@ -159,6 +162,7 @@ const Avatar: React.FC<AvatarSceneProps> = ({
   selectedTextureMap = {},
   setIsTextureLoading,
   roughness,
+  onBounds,
 }) => {
   const gltf = useGLTF(avatarData || "");
   const { scene } = gltf as { scene: THREE.Group };
@@ -249,10 +253,14 @@ const Avatar: React.FC<AvatarSceneProps> = ({
       // UV density is measured against the world matrix, so drop any cached
       // values computed before this scale/position pass.
       clearUvScaleCache(meshRef.current);
+
+      // Re-measure after grounding so the camera frames where the model
+      // actually ended up, not where it sat before the Y shift.
+      onBounds?.(new THREE.Box3().setFromObject(meshRef.current));
     } catch (error) {
       console.error("Error setting ground position:", error);
     }
-  }, [scene]);
+  }, [scene, onBounds]);
 
   // --- Material setup: clone per mesh so customisation is isolated ---
   useLayoutEffect(() => {
@@ -532,6 +540,70 @@ const BrightnessControl: React.FC<{ value: number }> = ({ value }) => {
   return null;
 };
 
+/**
+ * Frames the whole model in the viewport.
+ *
+ * Replaces drei's <Bounds>, which clipped the shoe here for three reasons:
+ * it fitted once on mount and never again, so a different viewport aspect
+ * (mobile vs desktop) overflowed; OrbitControls' hard `maxDistance` clamped the
+ * camera closer than the fit needed; and a fixed `target` pulled the framing off
+ * the model's actual centre.
+ *
+ * The distance comes from computeFitDistance (lib/fit-camera.ts), which measures
+ * the model's projected silhouette right around the turntable at the live canvas
+ * aspect, so it fills the frame without clipping at any angle.
+ */
+const FitCamera: React.FC<{
+  box: THREE.Box3 | null;
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  /**
+   * How much of the frame the model spans on its tighter axis. Lower it for
+   * more breathing room, raise it to make the model larger. The slider bar
+   * overlays the bottom of the viewport, hence a little headroom.
+   */
+  fill?: number;
+}> = ({ box, controlsRef, fill = 0.85 }) => {
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  const width = useThree((s) => s.size.width);
+  const height = useThree((s) => s.size.height);
+
+  useEffect(() => {
+    if (!box || box.isEmpty() || !width || !height) return;
+
+    const center = box.getCenter(new THREE.Vector3());
+    const dims = box.getSize(new THREE.Vector3());
+
+    const distance = computeFitDistance(dims, camera.fov, width / height, { fill });
+
+    const controls = controlsRef.current;
+
+    // Keep whatever direction the user is currently looking from; only the
+    // distance and target change, so a refit on resize is not a camera jump.
+    const direction = new THREE.Vector3().subVectors(
+      camera.position,
+      controls ? controls.target : center
+    );
+    if (direction.lengthSq() < 1e-8) direction.set(1, 0, 0.001);
+    direction.normalize();
+
+    camera.position.copy(center).addScaledVector(direction, distance);
+    camera.near = Math.max(distance / 100, 0.01);
+    camera.far = distance * 10;
+    camera.updateProjectionMatrix();
+
+    if (controls) {
+      controls.target.copy(center);
+      // Derive the zoom limits from the fitted distance. Fixed values were what
+      // capped the camera too close for taller/narrower viewports.
+      controls.minDistance = distance * 0.4;
+      controls.maxDistance = distance * 2.5;
+      controls.update();
+    }
+  }, [box, camera, width, height, controlsRef, fill]);
+
+  return null;
+};
+
 /** Slow turntable until the user takes hold of the model. */
 const Turntable: React.FC<{
   enabled: boolean;
@@ -625,6 +697,8 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
     const [isAutoSpinning, setIsAutoSpinning] = useState(true);
 
     const controlsRef = useRef<OrbitControlsImpl | null>(null);
+    // Measured once the model is loaded and grounded; drives FitCamera.
+    const [modelBox, setModelBox] = useState<THREE.Box3 | null>(null);
 
     React.useImperativeHandle(ref, () => ({
       captureScreenshot: () => {
@@ -783,27 +857,26 @@ const ShoeAvatar = React.forwardRef<ShoeAvatarRef, AvatarProps>(
             />
 
             <Suspense fallback={null}>
-              <Bounds margin={1.1}>
-                <Avatar
-                  avatarData={avatarData}
-                  objectList={objectList}
-                  setObjectList={setObjectList}
-                  selectedTextureMap={selectedTextureMap}
-                  setIsTextureLoading={setIsTextureLoading}
-                  roughness={roughness}
-                />
-              </Bounds>
+              <Avatar
+                avatarData={avatarData}
+                objectList={objectList}
+                setObjectList={setObjectList}
+                selectedTextureMap={selectedTextureMap}
+                setIsTextureLoading={setIsTextureLoading}
+                roughness={roughness}
+                onBounds={setModelBox}
+              />
             </Suspense>
 
+            <FitCamera box={modelBox} controlsRef={controlsRef} />
             <Turntable enabled={isAutoSpinning} controlsRef={controlsRef} />
 
+            {/* No target/min/max here on purpose: FitCamera derives them from
+                the model's measured size and the live canvas aspect. */}
             <OrbitControls
               ref={controlsRef}
               enablePan={false}
               enableZoom
-              minDistance={1.2}
-              maxDistance={5}
-              target={[0, 0.5, 0]}
               enableDamping
               dampingFactor={0.08}
               minPolarAngle={Math.PI / 2.2}
